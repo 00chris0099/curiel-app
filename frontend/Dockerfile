@@ -1,9 +1,10 @@
-FROM node:20-alpine
+FROM node:20-slim
 
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install
+# Use legacy peer deps to avoid build failures on strict peer dependency resolution
+RUN npm install --legacy-peer-deps
 
 COPY . .
 
@@ -13,4 +14,4 @@ ENV NODE_ENV=production
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "npm run start -- --host 0.0.0.0 --port ${PORT:-3000}"]
+CMD sh -c "npm run preview -- --port ${PORT:-3000} --host 0.0.0.0"
