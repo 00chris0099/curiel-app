@@ -9,6 +9,7 @@ const {
 } = require('../models');
 const { sequelize } = require('../config/database');
 const { uploadToCloudinary } = require('../utils/cloudinary');
+const { ensureInspectionStatusInfra } = require('../utils/inspectionStatusInfra');
 const { AppError } = require('../middlewares/errorHandler');
 
 const safeUserAttributes = {
@@ -407,6 +408,8 @@ class InspectionExecutionService {
     }
 
     async completeInspection(inspectionId, payload, userId, userRole, isMasterAdmin = false) {
+        await ensureInspectionStatusInfra();
+
         const inspection = await this._getInspectionWithAccess(inspectionId, userId, userRole, isMasterAdmin, true);
 
         const areaCount = await InspectionArea.count({ where: { inspectionId } });

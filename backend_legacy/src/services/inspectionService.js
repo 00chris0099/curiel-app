@@ -3,6 +3,7 @@ const { AppError } = require('../middlewares/errorHandler');
 const { Op } = require('sequelize');
 const { sequelize } = require('../config/database');
 const { triggerN8nWebhook } = require('../utils/n8n');
+const { ensureInspectionStatusInfra } = require('../utils/inspectionStatusInfra');
 
 const safeUserAttributes = {
     exclude: ['passwordHash', '_plainPassword']
@@ -117,6 +118,8 @@ class InspectionService {
      * Obtener inspección por ID con todos sus datos relacionados
      */
     async getInspectionById(inspectionId, userId, userRole, isMasterAdmin = false) {
+        await ensureInspectionStatusInfra();
+
         const inspection = await Inspection.findByPk(inspectionId, {
             include: [
                 {
@@ -286,6 +289,8 @@ class InspectionService {
      * Cambiar estado de inspección
      */
     async updateInspectionStatus(inspectionId, statusData, userId, userRole, isMasterAdmin = false) {
+        await ensureInspectionStatusInfra();
+
         const {
             status: newStatus,
             reasonCode,
