@@ -13,6 +13,8 @@ const { errorHandler, notFound } = require('./middlewares/errorHandler');
 
 const app = express();
 
+app.set('trust proxy', 1);
+
 // ===========================
 // MIDDLEWARES GLOBALES
 // ===========================

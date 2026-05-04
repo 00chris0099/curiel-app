@@ -40,6 +40,11 @@ const areaPriority = [
     'Muros y vanos'
 ];
 
+const defaultExecutablePath =
+    process.env.PUPPETEER_EXECUTABLE_PATH ||
+    process.env.CHROME_BIN ||
+    '/usr/bin/chromium';
+
 class InspectionReportService {
     async generateInspectionReport(inspectionId, userId, userRole, isMasterAdmin = false) {
         const inspection = await Inspection.findByPk(inspectionId, {
@@ -119,15 +124,21 @@ class InspectionReportService {
         });
 
         let browser;
+        const executablePath = this._resolveExecutablePath();
+
         try {
+            console.log('Using Chromium executable:', executablePath);
+
             browser = await puppeteer.launch({
+                executablePath,
                 headless: 'new',
-                executablePath: this._resolveExecutablePath(),
                 args: [
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
                     '--disable-dev-shm-usage',
                     '--disable-gpu',
+                    '--no-zygote',
+                    '--single-process',
                     '--font-render-hinting=medium'
                 ]
             });
@@ -180,15 +191,16 @@ class InspectionReportService {
 
     _resolveExecutablePath() {
         const candidates = [
-            config.pdf.executablePath,
             process.env.PUPPETEER_EXECUTABLE_PATH,
-            '/usr/bin/chromium-browser',
+            process.env.CHROME_BIN,
+            config.pdf.executablePath,
             '/usr/bin/chromium',
+            '/usr/bin/chromium-browser',
             '/usr/bin/google-chrome-stable'
         ].filter(Boolean);
 
         const existingPath = candidates.find((candidate) => fs.existsSync(candidate));
-        return existingPath || undefined;
+        return existingPath || defaultExecutablePath;
     }
 
     _parseInspectionMetadata(notes) {
