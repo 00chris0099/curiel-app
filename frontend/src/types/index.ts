@@ -73,6 +73,68 @@ export interface ProfileResponse {
 
 export type InspectionStatus = 'pendiente' | 'en_proceso' | 'finalizada' | 'cancelada';
 export type InspectionType = 'estructural' | 'electrica' | 'hidraulica' | 'integral' | 'seguridad' | 'general';
+export type DepartmentServiceType = 'Entrega de departamento' | 'Pre-compra' | 'Post-remodelación' | 'General';
+export type ContactChannel = 'WhatsApp' | 'Llamada' | 'Facebook' | 'Referido' | 'Otro';
+export type LimaDistrict =
+    | 'Miraflores'
+    | 'San Isidro'
+    | 'Santiago de Surco'
+    | 'San Borja'
+    | 'La Molina'
+    | 'Jesús María'
+    | 'Magdalena'
+    | 'Pueblo Libre'
+    | 'Lince'
+    | 'Barranco'
+    | 'Chorrillos'
+    | 'San Miguel'
+    | 'Cercado de Lima'
+    | 'Otro';
+export type PropertyType = 'Departamento' | 'Dúplex' | 'Penthouse';
+export type YesNoOption = 'Sí' | 'No';
+export type PropertyCondition =
+    | 'Nuevo / entrega de constructora'
+    | 'Usado'
+    | 'En remodelación'
+    | 'Remodelado recientemente';
+export type ReviewPoint =
+    | 'Humedad / filtraciones'
+    | 'Instalaciones eléctricas'
+    | 'Instalaciones sanitarias'
+    | 'Pisos y acabados'
+    | 'Puertas y ventanas'
+    | 'Grietas o fisuras'
+    | 'Cocina'
+    | 'Baños'
+    | 'Balcón / terraza'
+    | 'Otro';
+export type InspectionPriority = 'Normal' | 'Alta' | 'Urgente';
+
+export interface DepartmentInspectionMetadata {
+    schema: 'department-inspection-v1';
+    serviceType: DepartmentServiceType;
+    scheduledTime: string;
+    contactChannel: ContactChannel;
+    district: LimaDistrict;
+    exactAddress: string;
+    buildingName?: string;
+    arrivalReference?: string;
+    propertyType: PropertyType;
+    apartmentNumber: string;
+    floor?: string;
+    areaSquareMeters?: string;
+    bedrooms?: string;
+    bathrooms?: string;
+    hasParking: YesNoOption;
+    hasStorage: YesNoOption;
+    hasCommonAreas: YesNoOption;
+    propertyCondition: PropertyCondition;
+    reviewPoints: ReviewPoint[];
+    reviewPointOther?: string;
+    priority: InspectionPriority;
+    technicalReport: YesNoOption;
+    observations?: string;
+}
 
 export interface Inspection {
     id: string;
@@ -82,6 +144,8 @@ export interface Inspection {
     clientPhone?: string;
     address: string;
     city?: string;
+    state?: string;
+    zipCode?: string;
     inspectionType: InspectionType;
     status: InspectionStatus;
     scheduledDate: string;
@@ -110,6 +174,8 @@ export interface CreateInspectionDto {
     clientPhone?: string;
     address: string;
     city?: string;
+    state?: string;
+    zipCode?: string;
     inspectionType: InspectionType;
     scheduledDate: string;
     inspectorId: string;

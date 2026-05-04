@@ -7,6 +7,7 @@ import inspectionService from '../services/inspection.service';
 import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
 import type { Inspection, InspectionStatus } from '../types';
+import { getInspectionLocationLabel, getInspectionServiceLabel } from '../utils/inspectionMetadata';
 
 export const Inspections = () => {
     const navigate = useNavigate();
@@ -33,10 +34,16 @@ export const Inspections = () => {
     }, [loadInspections]);
 
     // Filtro local por búsqueda
-    const filteredInspections = inspections.filter((inspection) =>
-        inspection.projectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        inspection.clientName.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredInspections = inspections.filter((inspection) => {
+        const query = searchTerm.toLowerCase();
+        const serviceLabel = getInspectionServiceLabel(inspection).toLowerCase();
+        const locationLabel = getInspectionLocationLabel(inspection).toLowerCase();
+
+        return inspection.projectName.toLowerCase().includes(query)
+            || inspection.clientName.toLowerCase().includes(query)
+            || serviceLabel.includes(query)
+            || locationLabel.includes(query);
+    });
 
     const statusColors: Record<string, string> = {
         pendiente: 'badge-warning',
@@ -63,7 +70,7 @@ export const Inspections = () => {
                 <div>
                     <h1 className="text-2xl font-bold">Inspecciones</h1>
                     <p className="text-gray-600 dark:text-gray-400 mt-1">
-                        Gestión de inspecciones técnicas
+                        Gestión de inspecciones de departamentos en Lima
                     </p>
                 </div>
 
@@ -88,7 +95,7 @@ export const Inspections = () => {
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                             <input
                                 type="text"
-                                placeholder="Proyecto o cliente..."
+                                placeholder="Servicio, cliente o distrito..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="input pl-10"
@@ -124,13 +131,13 @@ export const Inspections = () => {
                         <thead className="bg-gray-50 dark:bg-gray-700/50">
                             <tr>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                                    Proyecto
+                                    Inmueble
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                                     Cliente
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                                    Tipo
+                                    Servicio
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                                     Estado
@@ -156,15 +163,20 @@ export const Inspections = () => {
                             ) : (
                                 filteredInspections.map((inspection) => (
                                     <tr key={inspection.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                        <td className="px-6 py-4 font-medium">
-                                            {inspection.projectName}
-                                        </td>
+                                         <td className="px-6 py-4 font-medium">
+                                             <div>
+                                                 <p>{inspection.projectName}</p>
+                                                 <p className="mt-1 text-xs font-normal text-gray-500 dark:text-gray-400">
+                                                     {getInspectionLocationLabel(inspection)}
+                                                 </p>
+                                             </div>
+                                         </td>
                                         <td className="px-6 py-4">
                                             {inspection.clientName}
                                         </td>
-                                        <td className="px-6 py-4 capitalize">
-                                            {inspection.inspectionType}
-                                        </td>
+                                         <td className="px-6 py-4">
+                                             {getInspectionServiceLabel(inspection)}
+                                         </td>
                                         <td className="px-6 py-4">
                                             <span className={`badge ${statusColors[inspection.status]}`}>
                                                 {statusLabels[inspection.status]}

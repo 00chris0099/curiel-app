@@ -7,6 +7,7 @@ import { Loader } from '../components/Loader';
 import inspectionService from '../services/inspection.service';
 import { useAuthStore } from '../store/authStore';
 import type { Inspection, InspectionStatus } from '../types';
+import { getInspectionLocationLabel, getInspectionServiceLabel, parseDepartmentInspectionNotes } from '../utils/inspectionMetadata';
 
 const statusLabels: Record<InspectionStatus, string> = {
     pendiente: 'Pendiente',
@@ -93,6 +94,10 @@ export const InspectionDetail = () => {
     }
 
     const canDelete = user?.role === 'admin';
+    const { metadata, plainNotes } = parseDepartmentInspectionNotes(inspection.notes);
+    const reviewPointsLabel = metadata?.reviewPoints?.length
+        ? metadata.reviewPoints.join(', ')
+        : 'Sin puntos específicos';
 
     return (
         <div className="max-w-4xl mx-auto space-y-6">
@@ -106,7 +111,9 @@ export const InspectionDetail = () => {
                     </button>
                     <div>
                         <h1 className="text-2xl font-bold">{inspection.projectName}</h1>
-                        <p className="text-gray-600 dark:text-gray-400 mt-1">{inspection.clientName}</p>
+                        <p className="text-gray-600 dark:text-gray-400 mt-1">
+                            {getInspectionServiceLabel(inspection)} · {inspection.clientName}
+                        </p>
                     </div>
                 </div>
 
@@ -124,8 +131,8 @@ export const InspectionDetail = () => {
 
             <div className="card grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Tipo</p>
-                    <p className="font-medium capitalize">{inspection.inspectionType}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Servicio</p>
+                    <p className="font-medium">{getInspectionServiceLabel(inspection)}</p>
                 </div>
                 <div>
                     <p className="text-sm text-gray-500 dark:text-gray-400">Estado</p>
@@ -144,12 +151,49 @@ export const InspectionDetail = () => {
                     </p>
                 </div>
                 <div className="md:col-span-2">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Direccion</p>
-                    <p className="font-medium">{inspection.address}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Ubicación</p>
+                    <p className="font-medium">{getInspectionLocationLabel(inspection)}</p>
                 </div>
+                {metadata && (
+                    <>
+                        <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Canal de contacto</p>
+                            <p className="font-medium">{metadata.contactChannel}</p>
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Prioridad</p>
+                            <p className="font-medium">{metadata.priority}</p>
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Inmueble</p>
+                            <p className="font-medium">{metadata.propertyType}</p>
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Departamento</p>
+                            <p className="font-medium">{metadata.apartmentNumber}</p>
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Estado del inmueble</p>
+                            <p className="font-medium">{metadata.propertyCondition}</p>
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Informe técnico</p>
+                            <p className="font-medium">{metadata.technicalReport}</p>
+                        </div>
+                        <div className="md:col-span-2">
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Puntos a revisar</p>
+                            <p className="font-medium">{reviewPointsLabel}</p>
+                            {metadata.reviewPointOther && (
+                                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Otro: {metadata.reviewPointOther}</p>
+                            )}
+                        </div>
+                    </>
+                )}
                 <div className="md:col-span-2">
                     <p className="text-sm text-gray-500 dark:text-gray-400">Notas</p>
-                    <p className="font-medium">{inspection.notes || 'Sin observaciones'}</p>
+                    <p className="font-medium whitespace-pre-wrap">
+                        {metadata?.observations || plainNotes || 'Sin observaciones'}
+                    </p>
                 </div>
             </div>
 
