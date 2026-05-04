@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Trash2 } from 'lucide-react';
+import { ArrowLeft, ClipboardCheck, FileText, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getApiErrorMessage } from '../api/axios';
 import { Loader } from '../components/Loader';
@@ -23,6 +23,7 @@ export const InspectionDetail = () => {
     const [inspection, setInspection] = useState<Inspection | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isUpdating, setIsUpdating] = useState(false);
+    const [isDownloadingReport, setIsDownloadingReport] = useState(false);
 
     const loadInspection = useCallback(async () => {
         if (!id) {
@@ -85,6 +86,30 @@ export const InspectionDetail = () => {
         }
     };
 
+    const handleDownloadReport = async () => {
+        if (!inspection || !id) {
+            return;
+        }
+
+        setIsDownloadingReport(true);
+        try {
+            const blob = await inspectionService.downloadReport(id);
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `informe-inspeccion-${inspection.projectName}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+            toast.success('Informe generado');
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, 'No se pudo generar el informe PDF'));
+        } finally {
+            setIsDownloadingReport(false);
+        }
+    };
+
     if (isLoading) {
         return <Loader fullScreen />;
     }
@@ -94,6 +119,11 @@ export const InspectionDetail = () => {
     }
 
     const canDelete = user?.role === 'admin';
+    const canExecute = Boolean(
+        user?.role === 'admin'
+        || user?.role === 'arquitecto'
+        || (user?.role === 'inspector' && user.id === inspection.inspectorId)
+    );
     const { metadata, plainNotes } = parseDepartmentInspectionNotes(inspection.notes);
     const reviewPointsLabel = metadata?.reviewPoints?.length
         ? metadata.reviewPoints.join(', ')
@@ -117,16 +147,37 @@ export const InspectionDetail = () => {
                     </div>
                 </div>
 
-                {canDelete && (
+                <div className="flex flex-wrap items-center justify-end gap-3">
                     <button
-                        onClick={handleDelete}
-                        disabled={isUpdating}
-                        className="btn btn-danger flex items-center gap-2"
+                        onClick={handleDownloadReport}
+                        disabled={isDownloadingReport}
+                        className="btn btn-primary flex items-center gap-2"
                     >
-                        <Trash2 className="w-4 h-4" />
-                        Eliminar
+                        <FileText className="w-4 h-4" />
+                        {isDownloadingReport ? 'Generando...' : 'Generar informe'}
                     </button>
-                )}
+
+                    {canExecute && (
+                        <button
+                            onClick={() => navigate(`/inspections/${inspection.id}/execute`)}
+                            className="btn btn-secondary flex items-center gap-2"
+                        >
+                            <ClipboardCheck className="w-4 h-4" />
+                            Ejecutar inspección
+                        </button>
+                    )}
+
+                    {canDelete && (
+                        <button
+                            onClick={handleDelete}
+                            disabled={isUpdating}
+                            className="btn btn-danger flex items-center gap-2"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                            Eliminar
+                        </button>
+                    )}
+                </div>
             </div>
 
             <div className="card grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -188,6 +188,142 @@ export interface UpdateInspectionDto extends Partial<CreateInspectionDto> {
     completedDate?: string;
 }
 
+export type ExecutionAreaStatus = 'pendiente' | 'en_revision' | 'observado' | 'aprobado';
+export type ObservationSeverity = 'leve' | 'media' | 'alta' | 'critica';
+export type ObservationType = 'humedad' | 'electrico' | 'sanitario' | 'acabados' | 'carpinteria' | 'estructura' | 'seguridad' | 'otro';
+export type ObservationResolutionStatus = 'pendiente' | 'corregido' | 'requiere_revision';
+export type ExecutionPhotoType = 'edificio' | 'plano' | 'area' | 'observacion' | 'general';
+export type ExecutionReportStatus = 'borrador' | 'listo_para_revision' | 'aprobado';
+
+export interface InspectionArea {
+    id: string;
+    inspectionId: string;
+    name: string;
+    category: string;
+    lengthM: number | null;
+    widthM: number | null;
+    calculatedAreaM2: number | null;
+    ceilingHeightM: number | null;
+    notes?: string | null;
+    status: ExecutionAreaStatus;
+    sortOrder: number;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface InspectionObservation {
+    id: string;
+    inspectionId: string;
+    areaId: string;
+    title: string;
+    description: string;
+    severity: ObservationSeverity;
+    type: ObservationType;
+    recommendation?: string | null;
+    metricValue: number | null;
+    metricUnit?: string | null;
+    status: ObservationResolutionStatus;
+    createdBy: string;
+    creator?: User;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface InspectionPhoto {
+    id: string;
+    inspectionId: string;
+    areaId?: string | null;
+    observationId?: string | null;
+    type: ExecutionPhotoType;
+    url: string;
+    publicId?: string | null;
+    caption?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+    uploadedById: string;
+    uploader?: User;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface InspectionExecutionSummary {
+    id: string;
+    inspectionId: string;
+    totalAreaM2: number;
+    totalObservations: number;
+    criticalObservations: number;
+    highObservations: number;
+    mediumObservations: number;
+    lightObservations: number;
+    generalConclusion?: string | null;
+    finalRecommendations?: string | null;
+    reportStatus: ExecutionReportStatus;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface InspectionExecutionStats {
+    totalAreaM2: number;
+    areasRegistered: number;
+    totalObservations: number;
+    criticalObservations: number;
+    highObservations: number;
+    mediumObservations: number;
+    lightObservations: number;
+    photosCount: number;
+    reportStatus: ExecutionReportStatus;
+}
+
+export interface InspectionExecutionData {
+    inspection: Inspection;
+    areas: InspectionArea[];
+    observations: InspectionObservation[];
+    photos: InspectionPhoto[];
+    summary: InspectionExecutionSummary | null;
+    stats: InspectionExecutionStats;
+}
+
+export interface CreateInspectionAreaDto {
+    name: string;
+    category: string;
+    lengthM?: number | null;
+    widthM?: number | null;
+    ceilingHeightM?: number | null;
+    notes?: string;
+    status?: ExecutionAreaStatus;
+    sortOrder?: number;
+}
+
+export interface UpdateInspectionAreaDto extends Partial<CreateInspectionAreaDto> {}
+
+export interface CreateInspectionObservationDto {
+    areaId: string;
+    title: string;
+    description: string;
+    severity: ObservationSeverity;
+    type: ObservationType;
+    recommendation?: string;
+    metricValue?: number | null;
+    metricUnit?: string;
+    status?: ObservationResolutionStatus;
+}
+
+export interface UpdateInspectionObservationDto extends Partial<CreateInspectionObservationDto> {}
+
+export interface CreateInspectionPhotoDto {
+    areaId?: string;
+    observationId?: string;
+    type: ExecutionPhotoType;
+    caption?: string;
+    url?: string;
+}
+
+export interface UpdateInspectionExecutionSummaryDto {
+    generalConclusion?: string;
+    finalRecommendations?: string;
+    reportStatus?: ExecutionReportStatus;
+}
+
 // ============================================
 // API RESPONSE TYPES
 // ============================================

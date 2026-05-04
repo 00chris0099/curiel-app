@@ -110,7 +110,11 @@ module.exports = {
   // PDF
   pdf: {
     companyLogo: process.env.COMPANY_LOGO_URL,
-    storagePath: process.env.PDF_STORAGE_PATH || './storage/reports'
+    storagePath: process.env.PDF_STORAGE_PATH || './storage/reports',
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || null,
+    footerPhone: process.env.COMPANY_PHONE || '+51 999 999 999',
+    footerEmail: process.env.COMPANY_EMAIL || 'informes@curiel.pe',
+    companyTagline: process.env.COMPANY_TAGLINE || 'Tu hogar, nuestro compromiso'
   },
 
   // URLs

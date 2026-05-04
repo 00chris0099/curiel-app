@@ -12,6 +12,7 @@ import { Profile } from './pages/Profile';
 import { Inspections } from './pages/Inspections';
 import { CreateInspection } from './pages/CreateInspection';
 import { InspectionDetail } from './pages/InspectionDetail';
+import { InspectionExecution } from './pages/InspectionExecution';
 import { Users } from './pages/Users';
 
 // Layout con Navbar y Sidebar
@@ -120,6 +121,17 @@ function App() {
             <PrivateRoute>
               <DashboardLayout>
                 <InspectionDetail />
+              </DashboardLayout>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/inspections/:id/execute"
+          element={
+            <PrivateRoute allowedRoles={['admin', 'arquitecto', 'inspector']}>
+              <DashboardLayout>
+                <InspectionExecution />
               </DashboardLayout>
             </PrivateRoute>
           }

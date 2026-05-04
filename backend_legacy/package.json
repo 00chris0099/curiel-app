@@ -38,6 +38,7 @@
     "pdfkit": "^0.14.0",
     "pg": "^8.11.3",
     "pg-hstore": "^2.3.4",
+    "puppeteer": "^24.9.0",
     "sequelize": "^6.37.8",
     "streamifier": "^0.1.1",
     "swagger-jsdoc": "^6.2.8",

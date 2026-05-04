@@ -24,6 +24,29 @@ const Photo = sequelize.define('Photo', {
         },
         comment: 'Ítem asociado (opcional)'
     },
+    areaId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        field: 'area_id',
+        references: {
+            model: 'inspection_areas',
+            key: 'id'
+        }
+    },
+    observationId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        field: 'observation_id',
+        references: {
+            model: 'inspection_observations',
+            key: 'id'
+        }
+    },
+    type: {
+        type: DataTypes.ENUM('edificio', 'plano', 'area', 'observacion', 'general'),
+        allowNull: false,
+        defaultValue: 'general'
+    },
     url: {
         type: DataTypes.STRING,
         allowNull: false,
@@ -31,7 +54,7 @@ const Photo = sequelize.define('Photo', {
     },
     publicId: {
         type: DataTypes.STRING,
-        allowNull: false,
+        allowNull: true,
         comment: 'Public ID de Cloudinary para eliminación'
     },
     caption: {

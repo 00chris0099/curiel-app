@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Filter, Eye } from 'lucide-react';
+import { Plus, Search, Filter, Eye, ClipboardCheck } from 'lucide-react';
 import { Loader } from '../components/Loader';
 import { getApiErrorMessage } from '../api/axios';
 import inspectionService from '../services/inspection.service';
@@ -193,12 +193,22 @@ export const Inspections = () => {
                                             )}
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <button
-                                                onClick={() => navigate(`/inspections/${inspection.id}`)}
-                                                className="text-primary-600 hover:text-primary-700 dark:text-primary-400"
-                                            >
-                                                <Eye className="w-5 h-5" />
-                                            </button>
+                                            <div className="flex items-center justify-end gap-3">
+                                                <button
+                                                    onClick={() => navigate(`/inspections/${inspection.id}/execute`)}
+                                                    className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
+                                                    title="Ejecutar inspección"
+                                                >
+                                                    <ClipboardCheck className="w-5 h-5" />
+                                                </button>
+                                                <button
+                                                    onClick={() => navigate(`/inspections/${inspection.id}`)}
+                                                    className="text-primary-600 hover:text-primary-700 dark:text-primary-400"
+                                                    title="Ver detalle"
+                                                >
+                                                    <Eye className="w-5 h-5" />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))

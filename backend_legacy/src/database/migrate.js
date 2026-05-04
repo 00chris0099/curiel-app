@@ -121,6 +121,9 @@ const migrate = async () => {
         console.log('📊 Tablas creadas:');
         console.log('  - users');
         console.log('  - inspections');
+        console.log('  - inspection_areas');
+        console.log('  - inspection_observations');
+        console.log('  - inspection_summaries');
         console.log('  - checklist_templates');
         console.log('  - checklist_items');
         console.log('  - inspection_responses');

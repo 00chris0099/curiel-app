@@ -2,6 +2,9 @@ const User = require('./User');
 const Role = require('./Role');
 const UserRole = require('./UserRole');
 const Inspection = require('./Inspection');
+const InspectionArea = require('./InspectionArea');
+const InspectionObservation = require('./InspectionObservation');
+const InspectionSummary = require('./InspectionSummary');
 const ChecklistTemplate = require('./ChecklistTemplate');
 const ChecklistItem = require('./ChecklistItem');
 const InspectionResponse = require('./InspectionResponse');
@@ -55,6 +58,50 @@ InspectionResponse.belongsTo(Inspection, {
     as: 'inspection'
 });
 
+// Inspection - InspectionArea
+Inspection.hasMany(InspectionArea, {
+    foreignKey: 'inspectionId',
+    as: 'areas',
+    onDelete: 'CASCADE'
+});
+InspectionArea.belongsTo(Inspection, {
+    foreignKey: 'inspectionId',
+    as: 'inspection'
+});
+
+// Inspection - InspectionObservation
+Inspection.hasMany(InspectionObservation, {
+    foreignKey: 'inspectionId',
+    as: 'technicalObservations',
+    onDelete: 'CASCADE'
+});
+InspectionObservation.belongsTo(Inspection, {
+    foreignKey: 'inspectionId',
+    as: 'inspection'
+});
+
+// Inspection - InspectionSummary
+Inspection.hasOne(InspectionSummary, {
+    foreignKey: 'inspectionId',
+    as: 'summary',
+    onDelete: 'CASCADE'
+});
+InspectionSummary.belongsTo(Inspection, {
+    foreignKey: 'inspectionId',
+    as: 'inspection'
+});
+
+// InspectionArea - InspectionObservation
+InspectionArea.hasMany(InspectionObservation, {
+    foreignKey: 'areaId',
+    as: 'observations',
+    onDelete: 'CASCADE'
+});
+InspectionObservation.belongsTo(InspectionArea, {
+    foreignKey: 'areaId',
+    as: 'area'
+});
+
 // ChecklistItem - InspectionResponse
 ChecklistItem.hasMany(InspectionResponse, {
     foreignKey: 'checklistItemId',
@@ -76,6 +123,26 @@ Photo.belongsTo(Inspection, {
     as: 'inspection'
 });
 
+// InspectionArea - Photo
+InspectionArea.hasMany(Photo, {
+    foreignKey: 'areaId',
+    as: 'photos'
+});
+Photo.belongsTo(InspectionArea, {
+    foreignKey: 'areaId',
+    as: 'area'
+});
+
+// InspectionObservation - Photo
+InspectionObservation.hasMany(Photo, {
+    foreignKey: 'observationId',
+    as: 'photos'
+});
+Photo.belongsTo(InspectionObservation, {
+    foreignKey: 'observationId',
+    as: 'observation'
+});
+
 // ChecklistItem - Photo (opcional)
 ChecklistItem.hasMany(Photo, {
     foreignKey: 'checklistItemId',
@@ -94,6 +161,16 @@ User.hasMany(Photo, {
 Photo.belongsTo(User, {
     foreignKey: 'uploadedById',
     as: 'uploader'
+});
+
+// User - InspectionObservation
+User.hasMany(InspectionObservation, {
+    foreignKey: 'createdBy',
+    as: 'createdTechnicalObservations'
+});
+InspectionObservation.belongsTo(User, {
+    foreignKey: 'createdBy',
+    as: 'creator'
 });
 
 // Inspection - Signature
@@ -151,6 +228,9 @@ module.exports = {
     Role,
     UserRole,
     Inspection,
+    InspectionArea,
+    InspectionObservation,
+    InspectionSummary,
     ChecklistTemplate,
     ChecklistItem,
     InspectionResponse,

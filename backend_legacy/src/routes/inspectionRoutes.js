@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { authenticate, authorize } = require('../middlewares/auth');
 const inspectionController = require('../controllers/inspectionController');
+const inspectionExecutionRoutes = require('./inspectionExecutionRoutes');
+const inspectionReportController = require('../controllers/inspectionReportController');
 
 // Todas las rutas requieren autenticación
 router.use(authenticate);
@@ -19,8 +21,14 @@ router.post(
     inspectionController.createInspection
 );
 
+// GET /api/v1/inspections/:id/report - Generar informe PDF profesional
+router.get('/:id/report', inspectionReportController.downloadInspectionReport);
+
 // GET /api/v1/inspections/:id - Obtener inspección por ID
 router.get('/:id', inspectionController.getInspectionById);
+
+// /api/v1/inspections/:id/execution - Módulo de ejecución técnica
+router.use('/:id/execution', inspectionExecutionRoutes);
 
 // PUT /api/v1/inspections/:id - Actualizar inspección
 router.put('/:id', inspectionController.updateInspection);
