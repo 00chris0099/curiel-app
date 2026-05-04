@@ -1,5 +1,13 @@
 import axios from 'axios';
 
+declare global {
+    interface Window {
+        __APP_CONFIG__?: {
+            VITE_API_URL?: string;
+        };
+    }
+}
+
 type ApiErrorPayload = {
     message?: string;
     error?: {
@@ -23,8 +31,17 @@ export const getApiErrorMessage = (error: unknown, fallback = 'Ocurrio un error 
     return fallback;
 };
 
+const normalizeApiUrl = (value?: string) => value?.trim().replace(/\/+$/, '');
+
+const API_URL = normalizeApiUrl(window.__APP_CONFIG__?.VITE_API_URL)
+    || normalizeApiUrl(import.meta.env.VITE_API_URL);
+
+if (!API_URL) {
+    throw new Error('VITE_API_URL no esta configurado');
+}
+
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL,
+    baseURL: API_URL,
     headers: {
         'Content-Type': 'application/json',
     },
