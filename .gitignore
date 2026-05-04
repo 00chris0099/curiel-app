@@ -19,6 +19,8 @@ yarn-debug.log*
 yarn-error.log*
 package-lock.json
 yarn.lock
+!backend_legacy/package-lock.json
+!frontend/package-lock.json
 
 # ============ BACKEND ============
 backend/.env
