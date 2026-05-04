@@ -13,19 +13,20 @@ const createUserSchema = Joi.object({
         'string.min': 'La contraseña debe tener al menos 8 caracteres',
         'any.required': 'La contraseña es requerida'
     }),
-    firstName: Joi.string().min(2).required().messages({
-        'string.min': 'El nombre debe tener al menos 2 caracteres',
-        'any.required': 'El nombre es requerido'
+    fullName: Joi.string().min(3).optional().messages({
+        'string.min': 'El nombre completo debe tener al menos 3 caracteres'
     }),
-    lastName: Joi.string().min(2).required().messages({
-        'string.min': 'El apellido debe tener al menos 2 caracteres',
-        'any.required': 'El apellido es requerido'
+    firstName: Joi.string().min(2).optional().messages({
+        'string.min': 'El nombre debe tener al menos 2 caracteres'
+    }),
+    lastName: Joi.string().min(2).optional().messages({
+        'string.min': 'El apellido debe tener al menos 2 caracteres'
     }),
     role: Joi.string().valid('admin', 'arquitecto', 'inspector').default('inspector').messages({
         'any.only': 'El rol debe ser admin, arquitecto o inspector'
     }),
     phone: Joi.string().optional().allow('', null)
-});
+}).or('fullName', 'firstName');
 
 const updateUserSchema = Joi.object({
     firstName: Joi.string().min(2).optional().messages({

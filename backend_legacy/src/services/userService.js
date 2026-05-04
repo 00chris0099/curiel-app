@@ -2,6 +2,7 @@ const { User, Role } = require('../models');
 const { AppError } = require('../middlewares/errorHandler');
 const { Op } = require('sequelize');
 const { sequelize } = require('../config/database');
+const bcrypt = require('bcryptjs');
 
 /**
  * Servicio de gestión de usuarios
@@ -114,20 +115,46 @@ class UserService {
      * Crear nuevo usuario
      */
     async createUser(userData, creatorId) {
-        const { email, password, firstName, lastName, role, phone } = userData;
+        const {
+            email,
+            password,
+            fullName,
+            firstName,
+            lastName,
+            role,
+            phone
+        } = userData;
+
+        const normalizedEmail = email?.trim().toLowerCase();
+        const normalizedFullName = (fullName || `${firstName || ''} ${lastName || ''}`).trim();
+
+        if (!normalizedEmail) {
+            throw new AppError('El email es requerido', 400, 'INVALID_EMAIL');
+        }
+
+        if (!password) {
+            throw new AppError('La contraseña es requerida', 400, 'MISSING_PASSWORD');
+        }
+
+        if (!normalizedFullName) {
+            throw new AppError('El nombre completo es requerido', 400, 'MISSING_FULL_NAME');
+        }
 
         // Verificar si el email ya existe
-        const existingUser = await User.findOne({ where: { email } });
+        const existingUser = await User.findOne({ where: { email: normalizedEmail } });
         if (existingUser) {
             throw new AppError('El email ya está registrado', 409, 'DUPLICATE_EMAIL');
         }
 
+        const passwordHash = await bcrypt.hash(password, 10);
+
         // Crear usuario (no permitimos establecer isMasterAdmin desde el request)
         const user = await User.create({
-            email,
-            password,
-            fullName: `${firstName || ''} ${lastName || ''}`.trim(),
-            phone
+            email: normalizedEmail,
+            fullName: normalizedFullName,
+            phone,
+            passwordHash,
+            createdBy: creatorId || null
         });
 
         // Asignar rol (si se provee) o inspector por defecto
