@@ -85,10 +85,10 @@ export const Dashboard = () => {
     ];
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 pb-10">
             {/* Bienvenida */}
             <div className="card">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                             ¡Bienvenido, {user?.firstName}!
@@ -101,7 +101,7 @@ export const Dashboard = () => {
                     {(user?.role === 'admin' || user?.role === 'arquitecto') && (
                         <button
                             onClick={() => navigate('/inspections/create')}
-                            className="btn btn-primary flex items-center gap-2"
+                            className="btn btn-primary flex w-full items-center justify-center gap-2 sm:w-auto"
                         >
                             <Plus className="w-5 h-5" />
                             Nueva Inspección
@@ -113,7 +113,7 @@ export const Dashboard = () => {
             {/* Estadísticas */}
             <div>
                 <h2 className="text-lg font-semibold mb-4">Resumen de Inspecciones</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
                     {statsCards.map((stat) => (
                         <div
                             key={stat.title}
@@ -140,7 +140,7 @@ export const Dashboard = () => {
             {/* Accesos rápidos */}
             <div>
                 <h2 className="text-lg font-semibold mb-4">Accesos Rápidos</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                     <button
                         onClick={() => navigate('/inspections')}
                         className="card hover:shadow-md transition-shadow text-left"

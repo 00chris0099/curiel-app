@@ -34,8 +34,8 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
             {/* Sidebar */}
             <aside
                 className={`
-          fixed top-0 left-0 z-50 h-screen w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-transform duration-300
-          lg:translate-x-0 lg:z-30 lg:mt-[57px]
+          fixed bottom-0 left-0 top-0 z-50 flex w-72 max-w-[calc(100vw-1rem)] flex-col overflow-hidden border-r border-gray-200 bg-white shadow-xl transition-transform duration-300 dark:border-gray-700 dark:bg-gray-800
+          lg:top-16 lg:w-64 lg:max-w-none lg:translate-x-0 lg:shadow-none
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
             >
@@ -51,7 +51,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                 </div>
 
                 {/* Navigation */}
-                <nav className="p-4 space-y-2">
+                <nav className="flex-1 space-y-2 overflow-y-auto p-4">
                     {filteredNavigation.map((item) => (
                         <NavLink
                             key={item.name}
@@ -71,7 +71,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                 </nav>
 
                 {/* Footer */}
-                <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="mt-auto border-t border-gray-200 p-4 dark:border-gray-700">
                     <div className="text-xs text-gray-500 dark:text-gray-400">
                         <p>Sistema de Inspecciones</p>
                         <p className="mt-1">v1.0.0</p>

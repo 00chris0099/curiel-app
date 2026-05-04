@@ -225,18 +225,21 @@ export const Users = () => {
     }
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold">Usuarios</h1>
-                    <p className="mt-1 text-gray-600 dark:text-gray-400">
+        <div className="space-y-6 pb-10">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="max-w-2xl">
+                    <p className="text-sm font-medium uppercase tracking-[0.18em] text-primary-600 dark:text-primary-400">
+                        Administracion
+                    </p>
+                    <h1 className="mt-2 text-2xl font-bold sm:text-3xl">Usuarios</h1>
+                    <p className="mt-2 text-gray-600 dark:text-gray-400">
                         Desde aqui el administrador puede crear, editar, activar y desactivar cuentas.
                     </p>
                 </div>
 
                 <button
                     onClick={handleCreate}
-                    className="btn btn-primary flex items-center gap-2"
+                    className="btn btn-primary flex w-full items-center justify-center gap-2 sm:w-auto sm:self-start"
                     type="button"
                 >
                     <UserPlus className="h-5 w-5" />
@@ -244,7 +247,7 @@ export const Users = () => {
                 </button>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-5">
                 <div className="card">
                     <div className="flex items-center justify-between">
                         <div>
@@ -296,10 +299,10 @@ export const Users = () => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.4fr_0.9fr]">
-                <div className="space-y-6">
+            <div className="grid grid-cols-1 items-start gap-6 2xl:grid-cols-[minmax(0,1.55fr)_minmax(340px,0.95fr)]">
+                <div className="min-w-0 space-y-6">
                     <div className="card">
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                             <div>
                                 <label className="mb-2 block text-sm font-medium">Buscar</label>
                                 <div className="relative">
@@ -344,7 +347,7 @@ export const Users = () => {
 
                     <div className="card overflow-hidden p-0">
                         <div className="overflow-x-auto">
-                            <table className="w-full">
+                            <table className="min-w-[760px] w-full">
                                 <thead className="bg-gray-50 dark:bg-gray-700/50">
                                     <tr>
                                         <th className="px-6 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Usuario</th>
@@ -370,13 +373,13 @@ export const Users = () => {
 
                                         return (
                                             <tr key={listedUser.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                                <td className="px-6 py-4">
+                                                <td className="px-6 py-4 align-top">
                                                     <div className="flex items-center gap-3">
                                                         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-100 font-semibold text-primary-700 dark:bg-primary-900/30 dark:text-primary-300">
                                                             {listedUser.firstName?.[0] ?? '?'}{listedUser.lastName?.[0] ?? ''}
                                                         </div>
-                                                        <div>
-                                                            <div className="flex items-center gap-2">
+                                                        <div className="min-w-0">
+                                                            <div className="flex flex-wrap items-center gap-2">
                                                                 <p className="font-medium">{listedUser.firstName} {listedUser.lastName}</p>
                                                                 {listedUser.isMasterAdmin && (
                                                                     <span className="badge badge-warning flex items-center gap-1">
@@ -385,25 +388,25 @@ export const Users = () => {
                                                                     </span>
                                                                 )}
                                                             </div>
-                                                            <p className="text-sm text-gray-500 dark:text-gray-400">{listedUser.email}</p>
+                                                            <p className="break-all text-sm text-gray-500 dark:text-gray-400">{listedUser.email}</p>
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-4">
+                                                <td className="px-6 py-4 align-top">
                                                     <span className={`badge ${roleBadgeColors[listedUser.role]}`}>
                                                         {roleLabels[listedUser.role]}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-4">
+                                                <td className="px-6 py-4 align-top">
                                                     <span className={`badge ${listedUser.isActive ? 'badge-success' : 'badge-danger'}`}>
                                                         {listedUser.isActive ? 'Activo' : 'Inactivo'}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
+                                                <td className="px-6 py-4 align-top text-sm text-gray-600 dark:text-gray-300">
                                                     {listedUser.phone || 'Sin telefono'}
                                                 </td>
-                                                <td className="px-6 py-4">
-                                                    <div className="flex flex-wrap items-center justify-end gap-2">
+                                                <td className="px-6 py-4 align-top">
+                                                    <div className="flex flex-wrap items-center justify-start gap-2 xl:justify-end">
                                                         {canTransferMaster && (
                                                             <button
                                                                 type="button"
@@ -453,8 +456,8 @@ export const Users = () => {
                     </div>
                 </div>
 
-                <div className="card h-fit">
-                    <div className="mb-6 flex items-center justify-between gap-3">
+                <div className="card self-start">
+                    <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                             <h2 className="text-lg font-semibold">{isEditing ? 'Editar usuario' : 'Crear usuario'}</h2>
                             <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
@@ -469,7 +472,7 @@ export const Users = () => {
                         )}
                     </div>
 
-                    <form className="space-y-4" onSubmit={handleSubmit}>
+                    <form className="space-y-5" onSubmit={handleSubmit}>
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div>
                                 <label htmlFor="firstName" className="mb-2 block text-sm font-medium">Nombre</label>
