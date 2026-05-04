@@ -3,6 +3,7 @@ import type {
     DepartmentServiceType,
     Inspection,
     InspectionType,
+    User,
 } from '../types';
 
 const METADATA_START = '[department-inspection-meta]';
@@ -105,6 +106,16 @@ export const getInspectionLocationLabel = (inspection: Pick<Inspection, 'address
 
     const segments = [inspection.state, inspection.city, inspection.address].filter(Boolean);
     return segments.join(' - ');
+};
+
+export const getInspectorName = (inspection: Pick<Inspection, 'inspector' | 'inspectorName' | 'inspectorId'>) => {
+    const inspector = inspection.inspector as (User | undefined);
+
+    return inspector?.fullName
+        || inspector?.name
+        || [inspector?.firstName, inspector?.lastName].filter(Boolean).join(' ')
+        || inspection.inspectorName
+        || (inspection.inspectorId ? 'Inspector asignado' : 'Sin inspector');
 };
 
 function escapeRegExp(value: string) {

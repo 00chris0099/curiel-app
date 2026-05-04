@@ -13,6 +13,7 @@ export interface User {
     firstName: string;
     lastName: string;
     fullName?: string;
+    name?: string;
     role: UserRole;
     roles?: UserRole[];
     phone?: string;
@@ -158,6 +159,7 @@ export interface Inspection {
     updatedAt: string;
     inspector?: User;
     creator?: User;
+    inspectorName?: string;
 }
 
 export interface InspectionStats {

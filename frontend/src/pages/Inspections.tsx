@@ -7,7 +7,7 @@ import inspectionService from '../services/inspection.service';
 import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
 import type { Inspection, InspectionStatus } from '../types';
-import { getInspectionLocationLabel, getInspectionServiceLabel } from '../utils/inspectionMetadata';
+import { getInspectionLocationLabel, getInspectionServiceLabel, getInspectorName } from '../utils/inspectionMetadata';
 
 export const Inspections = () => {
     const navigate = useNavigate();
@@ -184,14 +184,10 @@ export const Inspections = () => {
                                         </td>
                                         <td className="px-6 py-4">
                                             {new Date(inspection.scheduledDate).toLocaleDateString('es-ES')}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            {inspection.inspector ? (
-                                                `${inspection.inspector.firstName} ${inspection.inspector.lastName}`
-                                            ) : (
-                                                <span className="text-gray-400">Sin asignar</span>
-                                            )}
-                                        </td>
+                                         </td>
+                                         <td className="px-6 py-4">
+                                             {getInspectorName(inspection)}
+                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-3">
                                                 <button

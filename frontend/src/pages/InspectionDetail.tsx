@@ -7,7 +7,7 @@ import { Loader } from '../components/Loader';
 import inspectionService from '../services/inspection.service';
 import { useAuthStore } from '../store/authStore';
 import type { Inspection, InspectionStatus } from '../types';
-import { getInspectionLocationLabel, getInspectionServiceLabel, parseDepartmentInspectionNotes } from '../utils/inspectionMetadata';
+import { getInspectionLocationLabel, getInspectionServiceLabel, getInspectorName, parseDepartmentInspectionNotes } from '../utils/inspectionMetadata';
 
 const statusLabels: Record<InspectionStatus, string> = {
     pendiente: 'Pendiente',
@@ -195,11 +195,7 @@ export const InspectionDetail = () => {
                 </div>
                 <div>
                     <p className="text-sm text-gray-500 dark:text-gray-400">Inspector</p>
-                    <p className="font-medium">
-                        {inspection.inspector
-                            ? `${inspection.inspector.firstName} ${inspection.inspector.lastName}`
-                            : 'Sin asignar'}
-                    </p>
+                    <p className="font-medium">{getInspectorName(inspection)}</p>
                 </div>
                 <div className="md:col-span-2">
                     <p className="text-sm text-gray-500 dark:text-gray-400">Ubicación</p>
