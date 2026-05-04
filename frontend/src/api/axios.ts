@@ -23,7 +23,7 @@ export const getApiErrorMessage = (error: unknown, fallback = 'Ocurrio un error 
     return fallback;
 };
 
-const apiClient = axios.create({
+const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL,
     headers: {
         'Content-Type': 'application/json',
@@ -31,10 +31,12 @@ const apiClient = axios.create({
     timeout: 15000,
 });
 
-apiClient.interceptors.request.use(
+api.interceptors.request.use(
     (config) => {
+        const requestUrl = config.url || '';
         const token = localStorage.getItem('token');
-        if (token) {
+
+        if (token && requestUrl !== '/auth/login' && requestUrl !== '/auth/register') {
             config.headers.Authorization = `Bearer ${token}`;
         }
         return config;
@@ -42,7 +44,7 @@ apiClient.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-apiClient.interceptors.response.use(
+api.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response?.status === 401) {
@@ -59,4 +61,4 @@ apiClient.interceptors.response.use(
     }
 );
 
-export default apiClient;
+export default api;
