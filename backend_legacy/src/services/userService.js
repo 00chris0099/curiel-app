@@ -1,6 +1,6 @@
 const { User, Role } = require('../models');
 const { AppError } = require('../middlewares/errorHandler');
-const { Op, Sequelize } = require('sequelize');
+const { Op } = require('sequelize');
 const { sequelize } = require('../config/database');
 
 /**
@@ -280,32 +280,71 @@ class UserService {
      * Obtener estadísticas de usuarios
      */
     async getUserStats() {
-        const total = await User.count();
-        const active = await User.count({ where: { isActive: true } });
-        const inactive = await User.count({ where: { isActive: false } });
+        try {
+            const users = await User.findAll({
+                attributes: ['id', 'isActive'],
+                include: [
+                    {
+                        model: Role,
+                        as: 'roles',
+                        attributes: ['name'],
+                        through: { attributes: [] },
+                        required: false
+                    }
+                ]
+            });
 
-        const byRole = await User.findAll({
-            attributes: [
-                [sequelize.col('roles.name'), 'role'],
-                [sequelize.fn('COUNT', sequelize.col('User.id')), 'count']
-            ],
-            include: [
-                {
-                    model: Role,
-                    as: 'roles',
-                    attributes: []
+            const stats = {
+                total: 0,
+                active: 0,
+                inactive: 0,
+                activos: 0,
+                admins: 0,
+                arquitectos: 0,
+                inspectores: 0,
+                byRole: [
+                    { role: 'admin', count: 0 },
+                    { role: 'arquitecto', count: 0 },
+                    { role: 'inspector', count: 0 }
+                ]
+            };
+
+            users.forEach((user) => {
+                stats.total += 1;
+
+                if (user.isActive) {
+                    stats.active += 1;
+                    stats.activos += 1;
+                } else {
+                    stats.inactive += 1;
                 }
-            ],
-            group: ['roles.name'],
-            raw: true
-        });
 
-        return {
-            total,
-            active,
-            inactive,
-            byRole
-        };
+                const roleNames = new Set((user.roles || []).map((role) => role.name));
+
+                if (roleNames.has('admin')) {
+                    stats.admins += 1;
+                }
+
+                if (roleNames.has('arquitecto')) {
+                    stats.arquitectos += 1;
+                }
+
+                if (roleNames.has('inspector')) {
+                    stats.inspectores += 1;
+                }
+            });
+
+            stats.byRole = [
+                { role: 'admin', count: stats.admins },
+                { role: 'arquitecto', count: stats.arquitectos },
+                { role: 'inspector', count: stats.inspectores }
+            ];
+
+            return stats;
+        } catch (error) {
+            console.log(error);
+            throw new AppError('Error en la base de datos', 500, 'DATABASE_ERROR');
+        }
     }
 }
 
