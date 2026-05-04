@@ -49,7 +49,8 @@ const testConnection = async () => {
         console.log('✅ Base de datos conectada exitosamente');
         return true;
     } catch (error) {
-        console.error('❌ Error al conectar a la base de datos:', error.message);
+        const details = error.parent?.message || error.original?.message || error.message || error;
+        console.error('❌ Error al conectar a la base de datos:', details);
         return false;
     }
 };

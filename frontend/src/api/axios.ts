@@ -1,42 +1,11 @@
 import axios from 'axios';
 
-type RuntimeConfig = {
-    VITE_API_URL?: string;
-};
-
 type ApiErrorPayload = {
     message?: string;
     error?: {
         message?: string;
         code?: string;
     };
-};
-
-declare global {
-    interface Window {
-        __APP_CONFIG__?: RuntimeConfig;
-    }
-}
-
-const normalizeBaseUrl = (value?: string) => value?.trim().replace(/\/+$/, '');
-
-const getApiBaseUrl = () => {
-    const runtimeUrl = normalizeBaseUrl(window.__APP_CONFIG__?.VITE_API_URL);
-    const envUrl = normalizeBaseUrl(import.meta.env.VITE_API_URL);
-
-    if (runtimeUrl) {
-        return runtimeUrl;
-    }
-
-    if (envUrl) {
-        return envUrl;
-    }
-
-    if (import.meta.env.DEV) {
-        return 'http://localhost:4000/api/v1';
-    }
-
-    return '/api/v1';
 };
 
 export const getApiErrorMessage = (error: unknown, fallback = 'Ocurrio un error inesperado') => {
@@ -55,7 +24,7 @@ export const getApiErrorMessage = (error: unknown, fallback = 'Ocurrio un error 
 };
 
 const apiClient = axios.create({
-    baseURL: getApiBaseUrl(),
+    baseURL: import.meta.env.VITE_API_URL,
     headers: {
         'Content-Type': 'application/json',
     },
