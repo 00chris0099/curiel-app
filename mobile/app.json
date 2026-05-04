@@ -1,0 +1,48 @@
+{
+    "expo": {
+        "name": "CURIEL",
+        "slug": "curiel-inspections",
+        "version": "1.0.0",
+        "orientation": "portrait",
+        "icon": "./assets/icon.png",
+        "userInterfaceStyle": "light",
+        "splash": {
+            "image": "./assets/splash.png",
+            "resizeMode": "contain",
+            "backgroundColor": "#1a237e"
+        },
+        "assetBundlePatterns": [
+            "**/*"
+        ],
+        "ios": {
+            "supportsTablet": true,
+            "bundleIdentifier": "com.curiel.inspections",
+            "infoPlist": {
+                "NSCameraUsageDescription": "Esta app necesita acceso a la cámara para tomar fotos de las inspecciones",
+                "NSPhotoLibraryUsageDescription": "Esta app necesita acceso a la galería para seleccionar fotos",
+                "NSLocationWhenInUseUsageDescription": "Esta app necesita tu ubicación para registrar dónde se tomaron las fotos"
+            }
+        },
+        "android": {
+            "adaptiveIcon": {
+                "foregroundImage": "./assets/adaptive-icon.png",
+                "backgroundColor": "#1a237e"
+            },
+            "package": "com.curiel.inspections",
+            "permissions": [
+                "CAMERA",
+                "READ_EXTERNAL_STORAGE",
+                "WRITE_EXTERNAL_STORAGE",
+                "ACCESS_FINE_LOCATION",
+                "ACCESS_COARSE_LOCATION"
+            ]
+        },
+        "web": {
+            "favicon": "./assets/favicon.png"
+        },
+        "plugins": [
+            "expo-camera",
+            "expo-location"
+        ]
+    }
+}

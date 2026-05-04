@@ -1,0 +1,77 @@
+# ==========================================
+# CURIEL - .gitignore
+# ==========================================
+
+# ============ GENERAL ============
+.DS_Store
+.env
+.env.local
+.env.production
+*.log
+*.lock
+.vscode/
+.idea/
+
+# ============ NODE ============
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# ============ BACKEND ============
+backend/.env
+backend/node_modules/
+backend/uploads/*
+!backend/uploads/.gitkeep
+backend/storage/reports/*
+!backend/storage/reports/.gitkeep
+backend/dist/
+backend/build/
+
+# ============ MOBILE ============
+mobile/node_modules/
+mobile/.expo/
+mobile/.expo-shared/
+mobile/dist/
+mobile/web-build/
+mobile/*.jks
+mobile/*.p8
+mobile/*.p12
+mobile/*.key
+mobile/*.mobileprovision
+mobile/*.orig.*
+
+# ============ SECRETS ============
+*.pem
+*.key
+*.cert
+.env*
+!.env.example
+
+# ============ BUILDS ============
+*.apk
+*.aab
+*.ipa
+build/
+dist/
+
+# ============ DATABASES ============
+*.sqlite
+*.db
+
+# ============ OS ============
+Thumbs.db
+Desktop.ini
+._*
+
+# ============ TESTING ============
+coverage/
+.nyc_output/
+*.test.js.snap
+
+# ============ TEMP ============
+temp/
+tmp/
+.cache/
