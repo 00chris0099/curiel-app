@@ -43,6 +43,7 @@ export const Users = () => {
     const [stats, setStats] = useState<UserStats | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showCreateForm, setShowCreateForm] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [search, setSearch] = useState('');
     const [roleFilter, setRoleFilter] = useState<UserRole | ''>('');
@@ -50,6 +51,7 @@ export const Users = () => {
     const [form, setForm] = useState<UserFormState>(emptyForm);
 
     const isEditing = Boolean(editingUser);
+    const isFormVisible = showCreateForm || isEditing;
 
     const loadUsers = useCallback(async () => {
         try {
@@ -78,15 +80,24 @@ export const Users = () => {
 
     const resetForm = () => {
         setEditingUser(null);
+        setShowCreateForm(false);
         setForm(emptyForm);
     };
 
     const handleCreate = () => {
-        resetForm();
+        if (isFormVisible) {
+            resetForm();
+            return;
+        }
+
+        setEditingUser(null);
+        setForm(emptyForm);
+        setShowCreateForm(true);
     };
 
     const handleEdit = (selectedUser: User) => {
         setEditingUser(selectedUser);
+        setShowCreateForm(false);
         setForm({
             firstName: selectedUser.firstName || '',
             lastName: selectedUser.lastName || '',
@@ -100,13 +111,39 @@ export const Users = () => {
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
-        if (!form.firstName.trim() || !form.lastName.trim()) {
+        const firstName = form.firstName.trim();
+        const lastName = form.lastName.trim();
+        const email = form.email.trim();
+        const phone = form.phone.trim();
+        const fullName = `${firstName} ${lastName}`.trim();
+
+        if (!firstName || !lastName || !fullName) {
             toast.error('Nombre y apellido son obligatorios');
             return;
         }
 
-        if (!isEditing && (!form.email.trim() || !form.password.trim())) {
+        if (firstName.length < 2 || lastName.length < 2) {
+            toast.error('Nombre y apellido deben tener al menos 2 caracteres');
+            return;
+        }
+
+        if (!email) {
+            toast.error('El correo electronico es obligatorio');
+            return;
+        }
+
+        if (!form.role) {
+            toast.error('Debes seleccionar un rol');
+            return;
+        }
+
+        if (!isEditing && !form.password.trim()) {
             toast.error('Email y contraseña son obligatorios');
+            return;
+        }
+
+        if (!isEditing && form.password.trim().length < 8) {
+            toast.error('La contraseña debe tener al menos 8 caracteres');
             return;
         }
 
@@ -115,34 +152,36 @@ export const Users = () => {
         try {
             if (isEditing && editingUser) {
                 const payload: UpdateUserDto = {
-                    firstName: form.firstName.trim(),
-                    lastName: form.lastName.trim(),
-                    phone: form.phone.trim() || undefined,
+                    firstName,
+                    lastName,
+                    phone: phone || undefined,
                     role: form.role,
                 };
 
                 await userService.updateUser(editingUser.id, payload);
                 toast.success('Usuario actualizado correctamente');
-
-                if (editingUser.id === user?.id) {
-                    await refreshProfile();
-                }
             } else {
                 const payload: CreateUserDto = {
-                    firstName: form.firstName.trim(),
-                    lastName: form.lastName.trim(),
-                    email: form.email.trim(),
-                    phone: form.phone.trim() || undefined,
+                    fullName,
+                    firstName,
+                    lastName,
+                    email,
+                    phone: phone || undefined,
                     role: form.role,
-                    password: form.password,
+                    password: form.password.trim(),
                 };
 
                 await userService.createUser(payload);
                 toast.success('Usuario creado correctamente');
             }
 
-            resetForm();
             await loadUsers();
+
+            if (isEditing && editingUser?.id === user?.id) {
+                await refreshProfile();
+            }
+
+            resetForm();
         } catch (error: unknown) {
             toast.error(getApiErrorMessage(error, 'No se pudo guardar el usuario'));
         } finally {
@@ -239,11 +278,11 @@ export const Users = () => {
 
                 <button
                     onClick={handleCreate}
-                    className="btn btn-primary flex w-full items-center justify-center gap-2 sm:w-auto sm:self-start"
+                    className={`btn flex w-full items-center justify-center gap-2 sm:w-auto sm:self-start ${isFormVisible ? 'btn-secondary' : 'btn-primary'}`}
                     type="button"
                 >
                     <UserPlus className="h-5 w-5" />
-                    Nuevo Usuario
+                    {isFormVisible ? 'Cerrar formulario' : 'Nuevo Usuario'}
                 </button>
             </div>
 
@@ -299,7 +338,7 @@ export const Users = () => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 items-start gap-6 2xl:grid-cols-[minmax(0,1.55fr)_minmax(340px,0.95fr)]">
+            <div className={`grid grid-cols-1 items-start gap-6 ${isFormVisible ? '2xl:grid-cols-[minmax(0,1.55fr)_minmax(340px,0.95fr)]' : ''}`}>
                 <div className="min-w-0 space-y-6">
                     <div className="card">
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -456,6 +495,7 @@ export const Users = () => {
                     </div>
                 </div>
 
+                {isFormVisible && (
                 <div className="card self-start">
                     <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
@@ -465,11 +505,9 @@ export const Users = () => {
                             </p>
                         </div>
 
-                        {isEditing && (
-                            <button type="button" onClick={resetForm} className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400">
-                                Cancelar
-                            </button>
-                        )}
+                        <button type="button" onClick={resetForm} className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400">
+                            {isEditing ? 'Cancelar' : 'Cerrar formulario'}
+                        </button>
                     </div>
 
                     <form className="space-y-5" onSubmit={handleSubmit}>
@@ -478,9 +516,11 @@ export const Users = () => {
                                 <label htmlFor="firstName" className="mb-2 block text-sm font-medium">Nombre</label>
                                 <input
                                     id="firstName"
+                                    name="firstName"
                                     className="input"
                                     value={form.firstName}
                                     onChange={(event) => setForm((current) => ({ ...current, firstName: event.target.value }))}
+                                    minLength={2}
                                 />
                             </div>
 
@@ -488,9 +528,11 @@ export const Users = () => {
                                 <label htmlFor="lastName" className="mb-2 block text-sm font-medium">Apellido</label>
                                 <input
                                     id="lastName"
+                                    name="lastName"
                                     className="input"
                                     value={form.lastName}
                                     onChange={(event) => setForm((current) => ({ ...current, lastName: event.target.value }))}
+                                    minLength={2}
                                 />
                             </div>
                         </div>
@@ -499,6 +541,7 @@ export const Users = () => {
                             <label htmlFor="email" className="mb-2 block text-sm font-medium">Correo electronico</label>
                             <input
                                 id="email"
+                                name="email"
                                 type="email"
                                 className="input"
                                 value={form.email}
@@ -512,10 +555,12 @@ export const Users = () => {
                                 <label htmlFor="password" className="mb-2 block text-sm font-medium">Contraseña</label>
                                 <input
                                     id="password"
+                                    name="password"
                                     type="password"
                                     className="input"
                                     value={form.password}
                                     onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
+                                    minLength={8}
                                 />
                             </div>
                         )}
@@ -525,6 +570,7 @@ export const Users = () => {
                                 <label htmlFor="phone" className="mb-2 block text-sm font-medium">Telefono</label>
                                 <input
                                     id="phone"
+                                    name="phone"
                                     className="input"
                                     value={form.phone}
                                     onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))}
@@ -535,6 +581,7 @@ export const Users = () => {
                                 <label htmlFor="role" className="mb-2 block text-sm font-medium">Rol</label>
                                 <select
                                     id="role"
+                                    name="role"
                                     className="input"
                                     value={form.role}
                                     onChange={(event) => setForm((current) => ({ ...current, role: event.target.value as UserRole }))}
@@ -551,6 +598,7 @@ export const Users = () => {
                         </button>
                     </form>
                 </div>
+                )}
             </div>
         </div>
     );

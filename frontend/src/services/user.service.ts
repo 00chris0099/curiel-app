@@ -35,6 +35,15 @@ interface UsersQueryParams {
     limit?: number;
 }
 
+interface CreateUserApiPayload {
+    email: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+    role: UserRole;
+    phone?: string;
+}
+
 const userService = {
     async getInspectors(): Promise<User[]> {
         const response = await apiClient.get<ApiResponse<User[]>>('/users/inspectors');
@@ -47,7 +56,16 @@ const userService = {
     },
 
     async createUser(data: CreateUserDto): Promise<User> {
-        const response = await apiClient.post<UserMutationResponse>('/users', data);
+        const payload: CreateUserApiPayload = {
+            email: data.email.trim(),
+            password: data.password,
+            firstName: data.firstName.trim(),
+            lastName: data.lastName.trim(),
+            role: data.role,
+            phone: data.phone?.trim() || undefined,
+        };
+
+        const response = await apiClient.post<UserMutationResponse>('/users', payload);
         return response.data.data.user;
     },
 

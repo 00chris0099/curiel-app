@@ -23,6 +23,7 @@ export interface User {
 }
 
 export interface CreateUserDto {
+    fullName?: string;
     email: string;
     password: string;
     firstName: string;
