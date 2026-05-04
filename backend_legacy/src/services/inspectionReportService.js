@@ -1,4 +1,5 @@
 const puppeteer = require('puppeteer');
+const fs = require('fs');
 const config = require('../config');
 const {
     Inspection,
@@ -117,13 +118,20 @@ class InspectionReportService {
             generatedAt: new Date().toISOString()
         });
 
-        const browser = await puppeteer.launch({
-            headless: true,
-            executablePath: config.pdf.executablePath || undefined,
-            args: ['--no-sandbox', '--disable-setuid-sandbox', '--font-render-hinting=medium']
-        });
-
+        let browser;
         try {
+            browser = await puppeteer.launch({
+                headless: 'new',
+                executablePath: this._resolveExecutablePath(),
+                args: [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-gpu',
+                    '--font-render-hinting=medium'
+                ]
+            });
+
             const page = await browser.newPage();
             await page.setViewport({ width: 1240, height: 1754, deviceScaleFactor: 1.5 });
             await page.setContent(html, { waitUntil: 'networkidle0' });
@@ -153,9 +161,34 @@ class InspectionReportService {
                 buffer: pdfBuffer,
                 filename: this._buildFileName(inspection)
             };
+        } catch (error) {
+            console.error('PUPPETEER_REPORT_ERROR:', error);
+            console.error('message:', error?.message);
+            console.error('stack:', error?.stack);
+
+            throw new AppError(
+                error?.message || 'No se pudo generar el PDF de la inspección',
+                500,
+                'PUPPETEER_REPORT_ERROR'
+            );
         } finally {
-            await browser.close();
+            if (browser) {
+                await browser.close();
+            }
         }
+    }
+
+    _resolveExecutablePath() {
+        const candidates = [
+            config.pdf.executablePath,
+            process.env.PUPPETEER_EXECUTABLE_PATH,
+            '/usr/bin/chromium-browser',
+            '/usr/bin/chromium',
+            '/usr/bin/google-chrome-stable'
+        ].filter(Boolean);
+
+        const existingPath = candidates.find((candidate) => fs.existsSync(candidate));
+        return existingPath || undefined;
     }
 
     _parseInspectionMetadata(notes) {
