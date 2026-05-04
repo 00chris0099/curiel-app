@@ -6,6 +6,7 @@ const InspectionStatusHistory = require('./InspectionStatusHistory');
 const InspectionArea = require('./InspectionArea');
 const InspectionObservation = require('./InspectionObservation');
 const InspectionSummary = require('./InspectionSummary');
+const Notification = require('./Notification');
 const ChecklistTemplate = require('./ChecklistTemplate');
 const ChecklistItem = require('./ChecklistItem');
 const InspectionResponse = require('./InspectionResponse');
@@ -226,6 +227,28 @@ AuditLog.belongsTo(User, {
     as: 'user'
 });
 
+// User - Notification
+User.hasMany(Notification, {
+    foreignKey: 'userId',
+    as: 'notifications',
+    onDelete: 'CASCADE'
+});
+Notification.belongsTo(User, {
+    foreignKey: 'userId',
+    as: 'user'
+});
+
+// Inspection - Notification
+Inspection.hasMany(Notification, {
+    foreignKey: 'inspectionId',
+    as: 'notifications',
+    onDelete: 'CASCADE'
+});
+Notification.belongsTo(Inspection, {
+    foreignKey: 'inspectionId',
+    as: 'inspection'
+});
+
 // User - Role (many-to-many)
 User.belongsToMany(Role, {
     through: UserRole,
@@ -254,6 +277,7 @@ module.exports = {
     InspectionArea,
     InspectionObservation,
     InspectionSummary,
+    Notification,
     ChecklistTemplate,
     ChecklistItem,
     InspectionResponse,

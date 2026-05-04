@@ -141,6 +141,7 @@ const migrate = async () => {
         console.log('  - inspection_areas');
         console.log('  - inspection_observations');
         console.log('  - inspection_summaries');
+        console.log('  - notifications');
         console.log('  - checklist_templates');
         console.log('  - checklist_items');
         console.log('  - inspection_responses');

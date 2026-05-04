@@ -19,6 +19,7 @@ import {
 import toast from 'react-hot-toast';
 import { getApiErrorMessage } from '../api/axios';
 import { Loader } from '../components/Loader';
+import { useOfflineSync } from '../hooks/useOfflineSync';
 import inspectionService from '../services/inspection.service';
 import { useAuthStore } from '../store/authStore';
 import type {
@@ -33,12 +34,25 @@ import type {
     ObservationResolutionStatus,
     ObservationSeverity,
     ObservationType,
+    UpdateInspectionAreaDto,
 } from '../types';
 import {
     getInspectionLocationLabel,
     getInspectionServiceLabel,
     parseDepartmentInspectionNotes,
 } from '../utils/inspectionMetadata';
+import {
+    addSyncQueueItem,
+    createLocalId,
+    fileToDataUrl,
+    getExecutionDraft,
+    getInspectionQueueItems,
+    getExecutionSnapshot,
+    mergeExecutionWithQueue,
+    saveExecutionDraft,
+    saveExecutionSnapshot,
+    type OfflineSyncItem,
+} from '../utils/offlineDb';
 
 const areaStatusOptions: ExecutionAreaStatus[] = ['pendiente', 'en_revision', 'observado', 'aprobado'];
 const observationSeverityOptions: ObservationSeverity[] = ['leve', 'media', 'alta', 'critica'];
@@ -46,6 +60,20 @@ const observationTypeOptions: ObservationType[] = ['humedad', 'electrico', 'sani
 const observationStatusOptions: ObservationResolutionStatus[] = ['pendiente', 'corregido', 'requiere_revision'];
 const generalPhotoTypeOptions: ExecutionPhotoType[] = ['edificio', 'plano', 'general'];
 const areaPhotoTypeOptions: ExecutionPhotoType[] = ['area', 'observacion'];
+const defaultAreaDefinitions = [
+    { name: 'Entrada', category: 'interior' },
+    { name: 'Sala', category: 'social' },
+    { name: 'Comedor', category: 'social' },
+    { name: 'Kitchenette', category: 'cocina' },
+    { name: 'Centro de lavado', category: 'servicio' },
+    { name: 'Balcón', category: 'exterior' },
+    { name: 'Estudio', category: 'privado' },
+    { name: 'Dormitorio principal', category: 'privado' },
+    { name: 'Dormitorio secundario', category: 'privado' },
+    { name: 'Baño principal', category: 'baño' },
+    { name: 'Baño 2', category: 'baño' },
+    { name: 'Muros y vanos', category: 'estructura/acabados' },
+];
 
 type AreaFormState = {
     name: string;
@@ -184,6 +212,7 @@ export const InspectionExecution = () => {
     const [summaryForm, setSummaryForm] = useState<SummaryFormState>(emptySummaryForm);
     const [generalPhotoForm, setGeneralPhotoForm] = useState<PhotoFormState>(emptyGeneralPhotoForm);
     const [areaPhotoForm, setAreaPhotoForm] = useState<PhotoFormState>(emptyAreaPhotoForm);
+    const [queueItems, setQueueItems] = useState<OfflineSyncItem[]>([]);
 
     const loadExecution = useCallback(async (preferredAreaId?: string | null) => {
         if (!id) {
@@ -195,10 +224,27 @@ export const InspectionExecution = () => {
         setErrorMessage(null);
 
         try {
-            const data = await inspectionService.getExecution(id);
-            setExecution(data);
+            let remoteExecution: InspectionExecutionData | null = null;
 
-            const safeAreas = Array.isArray(data?.areas) ? data.areas : [];
+            try {
+                remoteExecution = await inspectionService.getExecution(id);
+                await saveExecutionSnapshot(id, remoteExecution);
+            } catch (remoteError) {
+                const snapshot = await getExecutionSnapshot(id);
+                if (!snapshot?.data) {
+                    throw remoteError;
+                }
+
+                remoteExecution = snapshot.data;
+            }
+
+            const pendingQueueItems = await getInspectionQueueItems(id);
+            setQueueItems(pendingQueueItems);
+            const mergedExecution = mergeExecutionWithQueue(remoteExecution, pendingQueueItems);
+
+            setExecution(mergedExecution);
+
+            const safeAreas = Array.isArray(mergedExecution?.areas) ? mergedExecution.areas : [];
 
             const nextSelectedAreaId = preferredAreaId
                 && safeAreas.some((area) => area.id === preferredAreaId)
@@ -215,6 +261,10 @@ export const InspectionExecution = () => {
             setIsLoading(false);
         }
     }, [id]);
+
+    const { isOnline, pendingCount, isSyncing, syncNow, refreshPendingCount } = useOfflineSync(id, async () => {
+        await loadExecution(selectedAreaId);
+    });
 
     useEffect(() => {
         loadExecution();
@@ -279,11 +329,84 @@ export const InspectionExecution = () => {
         setEditingObservationId(null);
     }, [selectedArea]);
 
+    useEffect(() => {
+        if (!id) {
+            return;
+        }
+
+        void (async () => {
+            const draft = await getExecutionDraft(id);
+            if (!draft) {
+                return;
+            }
+
+            if (draft.areaForm) {
+                setAreaForm((current) => ({ ...current, ...draft.areaForm as AreaFormState }));
+            }
+
+            if (draft.manualAreaForm) {
+                setManualAreaForm((current) => ({ ...current, ...draft.manualAreaForm as AreaFormState }));
+            }
+
+            if (draft.observationForm) {
+                setObservationForm((current) => ({ ...current, ...draft.observationForm as ObservationFormState }));
+            }
+
+            if (draft.summaryForm) {
+                setSummaryForm((current) => ({ ...current, ...draft.summaryForm as SummaryFormState }));
+            }
+
+            if (draft.generalPhotoForm) {
+                setGeneralPhotoForm((current) => ({ ...current, ...draft.generalPhotoForm as PhotoFormState }));
+            }
+
+            if (draft.areaPhotoForm) {
+                setAreaPhotoForm((current) => ({ ...current, ...draft.areaPhotoForm as PhotoFormState }));
+            }
+
+            if (draft.selectedAreaId) {
+                setSelectedAreaId(draft.selectedAreaId);
+            }
+        })();
+    }, [id, selectedArea?.id]);
+
+    useEffect(() => {
+        if (!id) {
+            return;
+        }
+
+        void saveExecutionDraft({
+            inspectionId: id,
+            areaForm,
+            manualAreaForm,
+            observationForm,
+            summaryForm,
+            generalPhotoForm: {
+                ...generalPhotoForm,
+                file: null,
+            },
+            areaPhotoForm: {
+                ...areaPhotoForm,
+                file: null,
+            },
+            selectedAreaId,
+            updatedAt: new Date().toISOString(),
+        })
+    }, [id, areaForm, manualAreaForm, observationForm, summaryForm, generalPhotoForm.type, generalPhotoForm.caption, areaPhotoForm.type, areaPhotoForm.caption, areaPhotoForm.observationId, selectedAreaId]);
+
     const selectedAreaObservations = observations.filter((observation) => observation.areaId === selectedAreaId);
     const selectedAreaPhotos = photos.filter((photo) => photo.areaId === selectedAreaId);
     const generalPhotos = photos.filter((photo) => ['edificio', 'plano', 'general'].includes(photo.type));
     const metadata = inspection ? parseDepartmentInspectionNotes(inspection.notes).metadata : null;
     const canApproveReport = user?.role === 'admin' || user?.role === 'arquitecto';
+    const getEntitySyncState = useCallback((entityType: OfflineSyncItem['entityType'], entityId: string) => {
+        const related = queueItems.find((item) => item.entityType === entityType && (
+            ('clientId' in item && item.clientId === entityId)
+            || ('targetId' in item && item.targetId === entityId)
+        ));
+
+        return related?.syncStatus || 'synced';
+    }, [queueItems]);
 
     const areaCalculated = useMemo(() => {
         const length = Number(areaForm.lengthM);
@@ -320,10 +443,51 @@ export const InspectionExecution = () => {
         }
     };
 
+    const queueMutation = async (
+        item: Parameters<typeof addSyncQueueItem>[0],
+        preferredAreaId?: string | null,
+        successMessage = 'Guardado offline'
+    ) => {
+        await addSyncQueueItem(item);
+        await refreshPendingCount();
+        await loadExecution(preferredAreaId ?? selectedAreaId);
+
+        if (isOnline) {
+            await syncNow();
+            await loadExecution(preferredAreaId ?? selectedAreaId);
+        } else {
+            toast.success(successMessage);
+        }
+    };
+
     const handleCreateDefaultAreas = async () => {
         if (!id) return;
 
         await withBusyAction('default-areas', async () => {
+            if (!isOnline) {
+                const existingNames = new Set(areas.map((area) => area.name));
+                const missingAreas = defaultAreaDefinitions.filter((definition) => !existingNames.has(definition.name));
+
+                for (const definition of missingAreas) {
+                    await addSyncQueueItem({
+                        inspectionId: id,
+                        entityType: 'area',
+                        action: 'create',
+                        clientId: createLocalId('local-area'),
+                        data: {
+                            name: definition.name,
+                            category: definition.category,
+                            status: 'pendiente',
+                        },
+                    })
+                }
+
+                await refreshPendingCount();
+                await loadExecution(selectedAreaId);
+                toast.success(missingAreas.length > 0 ? 'Áreas base guardadas offline' : 'Las áreas base ya estaban registradas');
+                return;
+            }
+
             const result = await inspectionService.createDefaultAreas(id);
             toast.success(result.createdCount > 0 ? 'Áreas base creadas correctamente' : 'Las áreas base ya existían');
             await loadExecution(selectedAreaId);
@@ -340,6 +504,7 @@ export const InspectionExecution = () => {
         }
 
         await withBusyAction('create-area', async () => {
+            const clientId = createLocalId('local-area');
             const payload: CreateInspectionAreaDto = {
                 name: manualAreaForm.name.trim(),
                 category: manualAreaForm.category.trim() || 'interior',
@@ -350,11 +515,20 @@ export const InspectionExecution = () => {
                 notes: manualAreaForm.notes.trim() || undefined,
             };
 
-            const result = await inspectionService.createExecutionArea(id, payload);
-            toast.success('Área creada correctamente');
             setManualAreaForm(emptyAreaForm);
             setShowAreaCreator(false);
-            await loadExecution(result.area.id);
+
+            await queueMutation({
+                inspectionId: id,
+                entityType: 'area',
+                action: 'create',
+                clientId,
+                data: payload,
+            }, clientId, 'Área guardada offline');
+
+            if (isOnline) {
+                toast.success('Área creada correctamente');
+            }
         });
     };
 
@@ -363,7 +537,7 @@ export const InspectionExecution = () => {
         if (!id || !selectedArea) return;
 
         await withBusyAction('save-area', async () => {
-            await inspectionService.updateExecutionArea(id, selectedArea.id, {
+            const payload: UpdateInspectionAreaDto = {
                 name: areaForm.name.trim(),
                 category: areaForm.category.trim(),
                 lengthM: areaForm.lengthM ? Number(areaForm.lengthM) : null,
@@ -371,10 +545,19 @@ export const InspectionExecution = () => {
                 ceilingHeightM: areaForm.ceilingHeightM ? Number(areaForm.ceilingHeightM) : null,
                 status: areaForm.status,
                 notes: areaForm.notes.trim() || undefined,
-            });
+            };
 
-            toast.success('Área actualizada');
-            await loadExecution(selectedArea.id);
+            await queueMutation({
+                inspectionId: id,
+                entityType: 'area',
+                action: 'update',
+                targetId: selectedArea.id,
+                data: payload,
+            }, selectedArea.id, 'Área guardada offline');
+
+            if (isOnline) {
+                toast.success('Área actualizada');
+            }
         });
     };
 
@@ -383,9 +566,16 @@ export const InspectionExecution = () => {
         if (!window.confirm(`¿Eliminar el área ${area.name}?`)) return;
 
         await withBusyAction(`delete-area-${area.id}`, async () => {
-            await inspectionService.deleteExecutionArea(id, area.id);
-            toast.success('Área eliminada');
-            await loadExecution();
+            await queueMutation({
+                inspectionId: id,
+                entityType: 'area',
+                action: 'delete',
+                targetId: area.id,
+            }, null, 'Área eliminada offline');
+
+            if (isOnline) {
+                toast.success('Área eliminada');
+            }
         });
     };
 
@@ -399,6 +589,7 @@ export const InspectionExecution = () => {
         }
 
         await withBusyAction('save-observation', async () => {
+            const clientId = createLocalId('local-observation');
             const payload: CreateInspectionObservationDto = {
                 areaId: selectedArea.id,
                 title: observationForm.title.trim(),
@@ -412,16 +603,31 @@ export const InspectionExecution = () => {
             };
 
             if (editingObservationId) {
-                await inspectionService.updateExecutionObservation(id, editingObservationId, payload);
-                toast.success('Observación actualizada');
+                await queueMutation({
+                    inspectionId: id,
+                    entityType: 'observation',
+                    action: 'update',
+                    targetId: editingObservationId,
+                    data: payload,
+                }, selectedArea.id, 'Observación guardada offline');
+                if (isOnline) {
+                    toast.success('Observación actualizada');
+                }
             } else {
-                await inspectionService.createExecutionObservation(id, payload);
-                toast.success('Observación registrada');
+                await queueMutation({
+                    inspectionId: id,
+                    entityType: 'observation',
+                    action: 'create',
+                    clientId,
+                    data: payload,
+                }, selectedArea.id, 'Observación guardada offline');
+                if (isOnline) {
+                    toast.success('Observación registrada');
+                }
             }
 
             setObservationForm(emptyObservationForm);
             setEditingObservationId(null);
-            await loadExecution(selectedArea.id);
         });
     };
 
@@ -444,11 +650,18 @@ export const InspectionExecution = () => {
         if (!window.confirm('¿Eliminar esta observación técnica?')) return;
 
         await withBusyAction(`delete-observation-${observationId}`, async () => {
-            await inspectionService.deleteExecutionObservation(id, observationId);
-            toast.success('Observación eliminada');
+            await queueMutation({
+                inspectionId: id,
+                entityType: 'observation',
+                action: 'delete',
+                targetId: observationId,
+            }, selectedArea.id, 'Observación eliminada offline');
+
+            if (isOnline) {
+                toast.success('Observación eliminada');
+            }
             setObservationForm(emptyObservationForm);
             setEditingObservationId(null);
-            await loadExecution(selectedArea.id);
         });
     };
 
@@ -457,14 +670,20 @@ export const InspectionExecution = () => {
         if (!id) return;
 
         await withBusyAction('save-summary', async () => {
-            await inspectionService.updateExecutionSummary(id, {
-                generalConclusion: summaryForm.generalConclusion.trim() || undefined,
-                finalRecommendations: summaryForm.finalRecommendations.trim() || undefined,
-                reportStatus: summaryForm.reportStatus,
-            });
+            await queueMutation({
+                inspectionId: id,
+                entityType: 'summary',
+                action: 'upsert',
+                data: {
+                    generalConclusion: summaryForm.generalConclusion.trim() || undefined,
+                    finalRecommendations: summaryForm.finalRecommendations.trim() || undefined,
+                    reportStatus: summaryForm.reportStatus,
+                },
+            }, selectedAreaId, 'Resumen guardado offline');
 
-            toast.success('Resumen técnico actualizado');
-            await loadExecution(selectedAreaId);
+            if (isOnline) {
+                toast.success('Resumen técnico actualizado');
+            }
         });
     };
 
@@ -487,22 +706,33 @@ export const InspectionExecution = () => {
         }
 
         await withBusyAction(`photo-${source}`, async () => {
-            await inspectionService.createExecutionPhoto(id, {
-                type: form.type,
-                caption: form.caption.trim() || undefined,
-                areaId: source === 'area' && selectedArea ? selectedArea.id : undefined,
-                observationId: form.type === 'observacion' ? form.observationId || undefined : undefined,
-            }, form.file || undefined);
+            const previewUrl = await fileToDataUrl(form.file as Blob);
+            await queueMutation({
+                inspectionId: id,
+                entityType: 'photo',
+                action: 'create',
+                clientId: createLocalId('local-photo'),
+                data: {
+                    type: form.type,
+                    caption: form.caption.trim() || undefined,
+                    areaId: source === 'area' && selectedArea ? selectedArea.id : undefined,
+                    observationId: form.type === 'observacion' ? form.observationId || undefined : undefined,
+                },
+                file: form.file,
+                fileName: form.file?.name,
+                fileType: form.file?.type,
+                previewUrl,
+            }, selectedAreaId, 'Foto guardada offline');
 
-            toast.success('Foto registrada');
+            if (isOnline) {
+                toast.success('Foto registrada');
+            }
 
             if (source === 'general') {
                 setGeneralPhotoForm(emptyGeneralPhotoForm);
             } else {
                 setAreaPhotoForm(emptyAreaPhotoForm);
             }
-
-            await loadExecution(selectedAreaId);
         });
     };
 
@@ -512,21 +742,34 @@ export const InspectionExecution = () => {
         if (!confirmed) return;
 
         await withBusyAction('complete-inspection', async () => {
-            await inspectionService.updateExecutionSummary(id, {
-                generalConclusion: summaryForm.generalConclusion.trim() || undefined,
-                finalRecommendations: summaryForm.finalRecommendations.trim() || undefined,
-                reportStatus: canApproveReport && summaryForm.reportStatus === 'aprobado'
-                    ? 'aprobado'
-                    : 'listo_para_revision',
-            });
+            const reportStatus = canApproveReport && summaryForm.reportStatus === 'aprobado'
+                ? 'aprobado'
+                : 'listo_para_revision';
 
-            await inspectionService.completeExecution(
-                id,
-                canApproveReport && summaryForm.reportStatus === 'aprobado' ? 'aprobado' : 'listo_para_revision'
-            );
+            await queueMutation({
+                inspectionId: id,
+                entityType: 'summary',
+                action: 'upsert',
+                data: {
+                    generalConclusion: summaryForm.generalConclusion.trim() || undefined,
+                    finalRecommendations: summaryForm.finalRecommendations.trim() || undefined,
+                    reportStatus,
+                },
+            }, selectedAreaId, 'Resumen guardado offline');
 
-            toast.success('Inspección enviada a revisión');
-            await loadExecution(selectedAreaId);
+            await queueMutation({
+                inspectionId: id,
+                entityType: 'status',
+                action: 'upsert',
+                data: {
+                    status: 'lista_revision',
+                },
+            }, selectedAreaId, 'Cambio de estado guardado offline');
+
+            if (isOnline) {
+                toast.success('Inspección enviada a revisión');
+                await loadExecution(selectedAreaId);
+            }
         });
     };
 
@@ -599,6 +842,24 @@ export const InspectionExecution = () => {
 
     return (
         <div className="space-y-6 pb-10">
+            <div className={`rounded-2xl border px-4 py-3 ${isOnline ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-900/20 dark:text-emerald-200' : 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-900/20 dark:text-amber-200'}`}>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <p className="font-semibold">{isOnline ? 'Modo online' : 'Modo offline: tus cambios se guardarán localmente'}</p>
+                        <p className="text-sm opacity-80">{pendingCount} cambios pendientes por sincronizar</p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => void syncNow()}
+                        disabled={!isOnline || isSyncing || pendingCount === 0}
+                        className="btn btn-secondary flex items-center justify-center gap-2"
+                    >
+                        {isSyncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                        Sincronizar ahora
+                    </button>
+                </div>
+            </div>
+
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="flex items-start gap-4">
                     <button
@@ -705,7 +966,7 @@ export const InspectionExecution = () => {
                     {generalPhotos.length === 0 ? (
                         <EmptyPanel message="Aún no hay fotos generales registradas." />
                     ) : generalPhotos.map((photo) => (
-                        <PhotoCard key={photo.id} photo={photo} />
+                        <PhotoCard key={photo.id} photo={photo} syncStatus={getEntitySyncState('photo', photo.id)} />
                     ))}
                 </div>
             </div>
@@ -771,6 +1032,11 @@ export const InspectionExecution = () => {
                                         <span>{(area.calculatedAreaM2 || 0).toFixed(2)} m²</span>
                                         <span>{observations.filter((item) => item.areaId === area.id).length} obs.</span>
                                     </div>
+                                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                                        {getEntitySyncState('area', area.id) === 'pending' && 'Pendiente de sincronizar'}
+                                        {getEntitySyncState('area', area.id) === 'failed' && 'Error al sincronizar'}
+                                        {getEntitySyncState('area', area.id) === 'synced' && 'Guardado'}
+                                    </p>
                                 </button>
                             ))}
                         </div>
@@ -898,10 +1164,15 @@ export const InspectionExecution = () => {
                                                             <h3 className="font-semibold text-gray-900 dark:text-white">{observation.title}</h3>
                                                             <span className={`badge ${severityBadges[observation.severity]}`}>{observation.severity}</span>
                                                         </div>
-                                                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                                                            {observation.type} · {observation.status}
-                                                        </p>
-                                                    </div>
+                                                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                                                    {observation.type} · {observation.status}
+                                                </p>
+                                                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                                                    {getEntitySyncState('observation', observation.id) === 'pending' && 'Pendiente de sincronizar'}
+                                                    {getEntitySyncState('observation', observation.id) === 'failed' && 'Error al sincronizar'}
+                                                    {getEntitySyncState('observation', observation.id) === 'synced' && 'Guardado'}
+                                                </p>
+                                            </div>
                                                     <div className="flex items-center gap-2">
                                                         <button type="button" className="rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600" onClick={() => handleEditObservation(observation)}>
                                                             Editar
@@ -975,7 +1246,7 @@ export const InspectionExecution = () => {
                                             {selectedAreaPhotos.length === 0 ? (
                                                 <EmptyPanel message="No hay fotos asociadas a esta área." compact />
                                             ) : selectedAreaPhotos.map((photo) => (
-                                                <PhotoCard key={photo.id} photo={photo} />
+                                                <PhotoCard key={photo.id} photo={photo} syncStatus={getEntitySyncState('photo', photo.id)} />
                                             ))}
                                         </div>
                                     </div>
@@ -1043,7 +1314,7 @@ const StatCard = ({ icon: Icon, label, value, accent }: { icon: typeof Ruler; la
     </div>
 );
 
-const PhotoCard = ({ photo }: { photo: InspectionExecutionData['photos'][number] }) => (
+const PhotoCard = ({ photo, syncStatus }: { photo: InspectionExecutionData['photos'][number]; syncStatus?: 'pending' | 'failed' | 'synced' }) => (
     <article className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800/80">
         <img src={photo.url} alt={photo.caption || photoTypeLabels[photo.type]} className="h-44 w-full object-cover" />
         <div className="space-y-2 p-4">
@@ -1052,6 +1323,11 @@ const PhotoCard = ({ photo }: { photo: InspectionExecutionData['photos'][number]
                 <span className="text-xs text-gray-500 dark:text-gray-400">{new Date(photo.createdAt).toLocaleDateString('es-PE')}</span>
             </div>
             <p className="text-sm text-gray-700 dark:text-gray-200">{photo.caption || 'Sin descripción adicional'}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+                {syncStatus === 'pending' && 'Pendiente de sincronizar'}
+                {syncStatus === 'failed' && 'Error al sincronizar'}
+                {(syncStatus === 'synced' || !syncStatus) && 'Guardado'}
+            </p>
         </div>
     </article>
 );

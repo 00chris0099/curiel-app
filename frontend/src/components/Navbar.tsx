@@ -1,7 +1,8 @@
-import { Menu, Moon, Sun, User, LogOut, Bell } from 'lucide-react';
+import { Menu, Moon, Sun, User, LogOut } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import { useState } from 'react';
+import { NotificationDropdown } from './NotificationDropdown';
 
 interface NavbarProps {
     onMenuClick: () => void;
@@ -48,14 +49,7 @@ export const Navbar = ({ onMenuClick }: NavbarProps) => {
                         )}
                     </button>
 
-                    {/* Notifications (future feature) */}
-                    <button
-                        className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors relative"
-                        aria-label="Notifications"
-                    >
-                        <Bell className="w-5 h-5" />
-                        <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-                    </button>
+                    <NotificationDropdown />
 
                     {/* User menu */}
                     <div className="relative">

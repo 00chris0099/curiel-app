@@ -4,6 +4,7 @@ const { Op } = require('sequelize');
 const { sequelize } = require('../config/database');
 const { triggerN8nWebhook } = require('../utils/n8n');
 const { ensureInspectionStatusInfra } = require('../utils/inspectionStatusInfra');
+const notificationService = require('./notificationService');
 
 const safeUserAttributes = {
     exclude: ['passwordHash', '_plainPassword']
@@ -235,6 +236,13 @@ class InspectionService {
             ]
         });
 
+        await notificationService.createForUser(inspectorId, {
+            inspectionId: inspection.id,
+            type: 'inspection_assigned',
+            title: 'Nueva inspección asignada',
+            message: `Se te asignó la inspección del departamento ${inspection.projectName} en ${state || city || 'Lima'}.`
+        });
+
         return inspection;
     }
 
@@ -409,6 +417,8 @@ class InspectionService {
             userRole
         });
 
+        await this._createStatusNotifications({ inspection, history, notifyInspector: Boolean(notifyInspector) });
+
         return {
             inspection,
             oldStatus,
@@ -565,6 +575,69 @@ class InspectionService {
                 reasonLabel: history.reasonLabel,
                 comment: history.comment,
                 notifyClient: Boolean(notifyClient)
+            });
+        }
+    }
+
+    async _createStatusNotifications({ inspection, history, notifyInspector }) {
+        const district = inspection.state || inspection.city || 'Lima';
+        const inspectionLabel = inspection.projectName || 'inspección';
+
+        if (history.fromStatus === 'pendiente' && history.toStatus === 'en_proceso') {
+            await notificationService.createForRoles(['admin', 'arquitecto'], {
+                inspectionId: inspection.id,
+                type: 'inspection_started',
+                title: 'Inspección iniciada',
+                message: `El inspector inició la inspección del departamento ${inspectionLabel} en ${district}.`
+            }, [inspection.inspectorId]);
+        }
+
+        if (history.toStatus === 'lista_revision') {
+            await notificationService.createForRoles(['admin', 'arquitecto'], {
+                inspectionId: inspection.id,
+                type: 'inspection_ready_for_review',
+                title: 'Inspección lista para revisión',
+                message: `El informe de la inspección ${inspectionLabel} está listo para revisión.`
+            }, [inspection.inspectorId]);
+        }
+
+        if (history.toStatus === 'cancelada' && notifyInspector && inspection.inspectorId) {
+            await notificationService.createForUser(inspection.inspectorId, {
+                inspectionId: inspection.id,
+                type: 'inspection_cancelled',
+                title: 'Inspección cancelada',
+                message: history.reasonLabel
+                    ? `La inspección ${inspectionLabel} fue cancelada. Motivo: ${history.reasonLabel}.`
+                    : `La inspección ${inspectionLabel} fue cancelada.`
+            });
+        }
+
+        if (history.toStatus === 'reprogramada' && inspection.inspectorId) {
+            await notificationService.createForUser(inspection.inspectorId, {
+                inspectionId: inspection.id,
+                type: 'inspection_rescheduled',
+                title: 'Inspección reprogramada',
+                message: `La inspección ${inspectionLabel} fue reprogramada${history.reasonLabel ? `: ${history.reasonLabel}` : ''}.`
+            });
+        }
+
+        if (history.fromStatus === 'lista_revision' && history.toStatus === 'en_proceso' && inspection.inspectorId) {
+            await notificationService.createForUser(inspection.inspectorId, {
+                inspectionId: inspection.id,
+                type: 'inspection_returned_for_correction',
+                title: 'Correcciones solicitadas',
+                message: history.comment
+                    ? `La inspección ${inspectionLabel} volvió a corrección. ${history.comment}`
+                    : `La inspección ${inspectionLabel} volvió a corrección${history.reasonLabel ? `: ${history.reasonLabel}` : ''}.`
+            });
+        }
+
+        if (history.toStatus === 'finalizada' && inspection.inspectorId) {
+            await notificationService.createForUser(inspection.inspectorId, {
+                inspectionId: inspection.id,
+                type: 'inspection_finalized',
+                title: 'Inspección finalizada',
+                message: `El informe de la inspección ${inspectionLabel} fue aprobado.`
             });
         }
     }

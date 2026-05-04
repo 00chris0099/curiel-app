@@ -11,6 +11,7 @@ const { sequelize } = require('../config/database');
 const { uploadToCloudinary } = require('../utils/cloudinary');
 const { ensureInspectionStatusInfra } = require('../utils/inspectionStatusInfra');
 const { AppError } = require('../middlewares/errorHandler');
+const notificationService = require('./notificationService');
 
 const safeUserAttributes = {
     exclude: ['passwordHash', '_plainPassword']
@@ -450,6 +451,13 @@ class InspectionExecutionService {
                 }, { transaction });
             }
         });
+
+        await notificationService.createForRoles(['admin', 'arquitecto'], {
+            inspectionId: inspection.id,
+            type: 'inspection_ready_for_review',
+            title: 'Inspección lista para revisión',
+            message: `El informe de la inspección ${inspection.projectName} ya está listo para ser revisado.`
+        }, [inspection.inspectorId]);
 
         return {
             inspection: this._serializeInspection(inspection),

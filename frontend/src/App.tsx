@@ -15,6 +15,7 @@ import { CreateInspection } from './pages/CreateInspection';
 import { InspectionDetail } from './pages/InspectionDetail';
 import { InspectionExecution } from './pages/InspectionExecution';
 import { Users } from './pages/Users';
+import { Notifications } from './pages/Notifications';
 
 // Layout con Navbar y Sidebar
 const DashboardLayout = ({ children }: { children: ReactNode }) => {
@@ -89,6 +90,17 @@ function App() {
             <PrivateRoute>
               <DashboardLayout>
                 <Profile />
+              </DashboardLayout>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/notifications"
+          element={
+            <PrivateRoute>
+              <DashboardLayout>
+                <Notifications />
               </DashboardLayout>
             </PrivateRoute>
           }

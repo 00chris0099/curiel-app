@@ -50,6 +50,29 @@ export interface UserStats {
     }>;
 }
 
+export type NotificationType =
+    | 'inspection_assigned'
+    | 'inspection_started'
+    | 'inspection_ready_for_review'
+    | 'inspection_returned_for_correction'
+    | 'inspection_finalized'
+    | 'inspection_cancelled'
+    | 'inspection_rescheduled'
+    | 'sync_failed'
+    | 'offline_changes_synced';
+
+export interface Notification {
+    id: string;
+    userId: string;
+    inspectionId?: string | null;
+    type: NotificationType;
+    title: string;
+    message: string;
+    readAt?: string | null;
+    createdAt: string;
+    updatedAt: string;
+}
+
 export interface LoginCredentials {
     email: string;
     password: string;
