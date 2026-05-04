@@ -17,7 +17,7 @@ const uploadInspectionPhoto = asyncHandler(async (req, res) => {
     const { description, caption, checklistItemId } = req.body;
 
     if (!req.file) {
-        throw new AppError('No se proporcionó ninguna imagen', 400, 'NO_FILE');
+        throw new AppError('No se recibió archivo', 400, 'NO_FILE');
     }
 
     // Verificar que la inspección existe
@@ -40,7 +40,7 @@ const uploadInspectionPhoto = asyncHandler(async (req, res) => {
     }
 
     // Subir a Cloudinary
-    const cloudinaryResult = await uploadToCloudinary(req.file.buffer, {
+    const cloudinaryResult = await uploadToCloudinary(req.file, {
         folder: `curiel/inspections/${inspectionId}`
     });
 

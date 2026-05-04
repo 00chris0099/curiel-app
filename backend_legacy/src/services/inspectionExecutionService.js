@@ -332,7 +332,7 @@ class InspectionExecutionService {
         let publicId = null;
 
         if (file) {
-            const cloudinaryResult = await uploadToCloudinary(file.buffer, {
+            const cloudinaryResult = await uploadToCloudinary(file, {
                 folder: `curiel/inspections/${inspectionId}/execution`
             });
 

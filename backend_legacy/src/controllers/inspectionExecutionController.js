@@ -1,5 +1,5 @@
 const inspectionExecutionService = require('../services/inspectionExecutionService');
-const { asyncHandler } = require('../middlewares/errorHandler');
+const { asyncHandler, AppError } = require('../middlewares/errorHandler');
 const { createAuditLog } = require('../middlewares/auditLog');
 const {
     areaCreateSchema,
@@ -160,6 +160,10 @@ const deleteObservation = asyncHandler(async (req, res) => {
 });
 
 const createPhoto = asyncHandler(async (req, res) => {
+    if (!req.file && !req.body?.url) {
+        throw new AppError('No se recibió archivo', 400, 'NO_FILE');
+    }
+
     const payload = validateExecutionPayload(photoCreateSchema, req.body);
     const result = await inspectionExecutionService.createPhoto(
         req.params.id,
