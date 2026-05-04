@@ -172,6 +172,7 @@ export const InspectionExecution = () => {
     const { user } = useAuthStore();
     const [execution, setExecution] = useState<InspectionExecutionData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [busyAction, setBusyAction] = useState<string | null>(null);
     const [isDownloadingReport, setIsDownloadingReport] = useState(false);
     const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
@@ -191,43 +192,65 @@ export const InspectionExecution = () => {
         }
 
         setIsLoading(true);
+        setErrorMessage(null);
 
         try {
             const data = await inspectionService.getExecution(id);
             setExecution(data);
 
+            const safeAreas = Array.isArray(data?.areas) ? data.areas : [];
+
             const nextSelectedAreaId = preferredAreaId
-                && data.areas.some((area) => area.id === preferredAreaId)
+                && safeAreas.some((area) => area.id === preferredAreaId)
                 ? preferredAreaId
-                : data.areas[0]?.id || null;
+                : safeAreas[0]?.id || null;
 
             setSelectedAreaId(nextSelectedAreaId);
         } catch (error: unknown) {
-            toast.error(getApiErrorMessage(error, 'No se pudo cargar la ejecución de la inspección'));
-            navigate('/inspections', { replace: true });
+            const message = getApiErrorMessage(error, 'No se pudo cargar la ejecución de la inspección');
+            setExecution(null);
+            setErrorMessage(message);
+            toast.error(message);
         } finally {
             setIsLoading(false);
         }
-    }, [id, navigate]);
+    }, [id]);
 
     useEffect(() => {
         loadExecution();
     }, [loadExecution]);
 
+    const areas = useMemo(() => Array.isArray(execution?.areas) ? execution.areas : [], [execution?.areas]);
+    const observations = useMemo(() => Array.isArray(execution?.observations) ? execution.observations : [], [execution?.observations]);
+    const photos = useMemo(() => Array.isArray(execution?.photos) ? execution.photos : [], [execution?.photos]);
+    const summary = execution?.summary ?? null;
+    const inspection = execution?.inspection || null;
+    const stats = execution?.stats ?? {
+        totalAreaM2: areas.reduce((sum, area) => sum + Number(area?.calculatedAreaM2 || 0), 0),
+        areasRegistered: areas.length,
+        totalObservations: observations.length,
+        criticalObservations: observations.filter((observation) => observation?.severity === 'critica').length,
+        highObservations: observations.filter((observation) => observation?.severity === 'alta').length,
+        mediumObservations: observations.filter((observation) => observation?.severity === 'media').length,
+        lightObservations: observations.filter((observation) => observation?.severity === 'leve').length,
+        photosCount: photos.length,
+        reportStatus: summary?.reportStatus || 'borrador',
+    };
+
     useEffect(() => {
-        if (!execution?.summary) {
+        if (!summary) {
             setSummaryForm(emptySummaryForm);
             return;
         }
 
         setSummaryForm({
-            generalConclusion: execution.summary.generalConclusion || '',
-            finalRecommendations: execution.summary.finalRecommendations || '',
-            reportStatus: execution.summary.reportStatus,
+            generalConclusion: summary.generalConclusion || '',
+            finalRecommendations: summary.finalRecommendations || '',
+            reportStatus: summary.reportStatus,
         });
-    }, [execution?.summary]);
+    }, [summary]);
 
-    const selectedArea = useMemo(() => execution?.areas.find((area) => area.id === selectedAreaId) || null, [execution?.areas, selectedAreaId]);
+    const selectedArea = useMemo(() => areas.find((area) => area.id === selectedAreaId) || null, [areas, selectedAreaId]);
 
     useEffect(() => {
         if (!selectedArea) {
@@ -256,12 +279,9 @@ export const InspectionExecution = () => {
         setEditingObservationId(null);
     }, [selectedArea]);
 
-    const observations = execution?.observations || [];
-    const photos = execution?.photos || [];
     const selectedAreaObservations = observations.filter((observation) => observation.areaId === selectedAreaId);
     const selectedAreaPhotos = photos.filter((photo) => photo.areaId === selectedAreaId);
     const generalPhotos = photos.filter((photo) => ['edificio', 'plano', 'general'].includes(photo.type));
-    const inspection = execution?.inspection || null;
     const metadata = inspection ? parseDepartmentInspectionNotes(inspection.notes).metadata : null;
     const canApproveReport = user?.role === 'admin' || user?.role === 'arquitecto';
 
@@ -532,8 +552,49 @@ export const InspectionExecution = () => {
         }
     };
 
-    if (isLoading || !execution || !inspection) {
+    if (isLoading) {
         return <Loader fullScreen />;
+    }
+
+    if (errorMessage) {
+        return (
+            <div className="mx-auto max-w-3xl pb-10 pt-6">
+                <div className="card space-y-4 text-center">
+                    <AlertTriangle className="mx-auto h-10 w-10 text-red-500" />
+                    <div>
+                        <h1 className="text-xl font-bold">No se pudo cargar la ejecución</h1>
+                        <p className="mt-2 text-gray-600 dark:text-gray-400">{errorMessage}</p>
+                    </div>
+                    <div className="flex flex-col justify-center gap-3 sm:flex-row">
+                        <button type="button" className="btn btn-secondary" onClick={() => navigate('/inspections')}>
+                            Volver a inspecciones
+                        </button>
+                        <button type="button" className="btn btn-primary" onClick={() => loadExecution()}>
+                            Reintentar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (!inspection) {
+        return (
+            <div className="mx-auto max-w-3xl pb-10 pt-6">
+                <div className="card space-y-4 text-center">
+                    <Home className="mx-auto h-10 w-10 text-primary-600" />
+                    <div>
+                        <h1 className="text-xl font-bold">Inspección no disponible</h1>
+                        <p className="mt-2 text-gray-600 dark:text-gray-400">
+                            No se encontraron datos suficientes para mostrar esta ejecución.
+                        </p>
+                    </div>
+                    <button type="button" className="btn btn-primary" onClick={() => navigate('/inspections')}>
+                        Volver a inspecciones
+                    </button>
+                </div>
+            </div>
+        );
     }
 
     return (
@@ -594,12 +655,12 @@ export const InspectionExecution = () => {
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-                <StatCard icon={Ruler} label="Área total" value={`${execution.stats.totalAreaM2.toFixed(2)} m²`} accent="text-blue-600" />
-                <StatCard icon={Home} label="Áreas registradas" value={execution.stats.areasRegistered.toString()} accent="text-emerald-600" />
-                <StatCard icon={AlertTriangle} label="Observaciones" value={execution.stats.totalObservations.toString()} accent="text-amber-600" />
-                <StatCard icon={AlertTriangle} label="Críticas" value={execution.stats.criticalObservations.toString()} accent="text-red-600" />
-                <StatCard icon={Camera} label="Fotos subidas" value={execution.stats.photosCount.toString()} accent="text-violet-600" />
-                <StatCard icon={FileText} label="Informe" value={reportStatusLabels[execution.stats.reportStatus]} accent="text-primary-600" />
+                <StatCard icon={Ruler} label="Área total" value={`${stats.totalAreaM2.toFixed(2)} m²`} accent="text-blue-600" />
+                <StatCard icon={Home} label="Áreas registradas" value={stats.areasRegistered.toString()} accent="text-emerald-600" />
+                <StatCard icon={AlertTriangle} label="Observaciones" value={stats.totalObservations.toString()} accent="text-amber-600" />
+                <StatCard icon={AlertTriangle} label="Críticas" value={stats.criticalObservations.toString()} accent="text-red-600" />
+                <StatCard icon={Camera} label="Fotos subidas" value={stats.photosCount.toString()} accent="text-violet-600" />
+                <StatCard icon={FileText} label="Informe" value={reportStatusLabels[stats.reportStatus] || 'Borrador'} accent="text-primary-600" />
             </div>
 
             <div className="card space-y-5">
@@ -687,9 +748,9 @@ export const InspectionExecution = () => {
                         )}
 
                         <div className="space-y-3">
-                            {execution.areas.length === 0 ? (
+                            {areas.length === 0 ? (
                                 <EmptyPanel message="Todavía no hay áreas registradas para esta inspección." compact />
-                            ) : execution.areas.map((area) => (
+                            ) : areas.map((area) => (
                                 <button
                                     key={area.id}
                                     type="button"
@@ -956,7 +1017,10 @@ export const InspectionExecution = () => {
                         </>
                     ) : (
                         <div className="card">
-                            <EmptyPanel message="Crea áreas por defecto o agrega un ambiente manual para comenzar la ejecución técnica." />
+                            <EmptyPanel message={areas.length === 0
+                                ? 'Crea áreas por defecto o agrega un ambiente manual para comenzar la ejecución técnica.'
+                                : 'Selecciona un área para registrar medidas, observaciones y fotos.'}
+                            />
                         </div>
                     )}
                 </div>

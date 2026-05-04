@@ -52,6 +52,39 @@ interface ExecutionDefaultAreasResponse {
     areas: Array<Pick<InspectionArea, 'name' | 'category' | 'sortOrder' | 'status'>>;
 }
 
+const normalizeExecutionData = (payload: unknown): InspectionExecutionData => {
+    const source = (payload && typeof payload === 'object' && 'data' in (payload as Record<string, unknown>))
+        ? (payload as { data?: unknown }).data
+        : payload;
+
+    const execution = (source && typeof source === 'object' ? source : {}) as Partial<InspectionExecutionData>;
+    const areas = Array.isArray(execution.areas) ? execution.areas : [];
+    const observations = Array.isArray(execution.observations) ? execution.observations : [];
+    const photos = Array.isArray(execution.photos) ? execution.photos : [];
+    const summary = execution.summary ?? null;
+
+    const stats = execution.stats ?? {
+        totalAreaM2: areas.reduce((sum, area) => sum + Number(area?.calculatedAreaM2 || 0), 0),
+        areasRegistered: areas.length,
+        totalObservations: observations.length,
+        criticalObservations: observations.filter((item) => item?.severity === 'critica').length,
+        highObservations: observations.filter((item) => item?.severity === 'alta').length,
+        mediumObservations: observations.filter((item) => item?.severity === 'media').length,
+        lightObservations: observations.filter((item) => item?.severity === 'leve').length,
+        photosCount: photos.length,
+        reportStatus: summary?.reportStatus || 'borrador',
+    };
+
+    return {
+        inspection: (execution.inspection || null) as InspectionExecutionData['inspection'],
+        areas,
+        observations,
+        photos,
+        summary,
+        stats,
+    };
+};
+
 const parseBlobErrorMessage = async (blob: Blob, fallback: string) => {
     try {
         const text = await blob.text();
@@ -125,7 +158,7 @@ const inspectionService = {
             throw new Error('No se pudo cargar la ejecución de la inspección');
         }
 
-        return response.data.data;
+        return normalizeExecutionData(response.data.data);
     },
 
     async createDefaultAreas(id: string): Promise<ExecutionDefaultAreasResponse> {
