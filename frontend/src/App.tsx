@@ -6,6 +6,7 @@ import { useThemeStore } from './store/themeStore';
 import { PrivateRoute } from './auth/PrivateRoute';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { Profile } from './pages/Profile';
@@ -131,7 +132,9 @@ function App() {
           element={
             <PrivateRoute allowedRoles={['admin', 'arquitecto', 'inspector']}>
               <DashboardLayout>
-                <InspectionExecution />
+                <ErrorBoundary backHref="/inspections">
+                  <InspectionExecution />
+                </ErrorBoundary>
               </DashboardLayout>
             </PrivateRoute>
           }

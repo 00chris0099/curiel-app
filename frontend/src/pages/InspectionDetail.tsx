@@ -33,6 +33,10 @@ const emptyStatusModalState: StatusModalState = {
     scheduledDate: '',
 };
 
+function safeArray<T>(value: T[] | null | undefined) {
+    return Array.isArray(value) ? value : [];
+}
+
 export const InspectionDetail = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
@@ -65,6 +69,29 @@ export const InspectionDetail = () => {
     useEffect(() => {
         loadInspection();
     }, [loadInspection]);
+
+    const safeStatusHistory = useMemo(() => safeArray(inspection?.statusHistory), [inspection?.statusHistory]);
+    const availableStatusActions = useMemo(
+        () => (inspection ? getAllowedStatusActions(inspection, user || null) : []),
+        [inspection, user]
+    );
+    const statusHistory = useMemo(() => {
+        return [...safeStatusHistory].sort((left, right) => {
+            return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
+        });
+    }, [safeStatusHistory]);
+    const reasonOptions = useMemo(() => {
+        if (!inspection || !statusAction) {
+            return [];
+        }
+
+        return getStatusReasonOptions(inspection.status, statusAction.status);
+    }, [inspection, statusAction]);
+
+    useEffect(() => {
+        console.log('DEBUG inspection:', inspection);
+        console.log('DEBUG areas:', safeStatusHistory);
+    }, [inspection, safeStatusHistory]);
 
     const openStatusModal = (action: StatusActionConfig) => {
         if (!inspection) {
@@ -176,7 +203,19 @@ export const InspectionDetail = () => {
     }
 
     if (!inspection) {
-        return null;
+        return (
+            <div className="mx-auto max-w-3xl pb-10 pt-6">
+                <div className="card space-y-4 text-center">
+                    <h1 className="text-xl font-bold">Cargando inspección...</h1>
+                    <p className="text-gray-600 dark:text-gray-400">
+                        No se encontraron datos suficientes para renderizar esta pantalla.
+                    </p>
+                    <button type="button" className="btn btn-primary" onClick={() => navigate('/inspections')}>
+                        Volver a inspecciones
+                    </button>
+                </div>
+            </div>
+        );
     }
 
     const canDelete = user?.role === 'admin';
@@ -185,18 +224,12 @@ export const InspectionDetail = () => {
         || user?.role === 'arquitecto'
         || (user?.role === 'inspector' && user.id === inspection.inspectorId)
     );
-    const { metadata, plainNotes } = parseDepartmentInspectionNotes(inspection.notes);
-    const reviewPointsLabel = metadata?.reviewPoints?.length
+    const parsedNotes = parseDepartmentInspectionNotes(inspection?.notes);
+    const metadata = parsedNotes.metadata;
+    const plainNotes = parsedNotes.plainNotes;
+    const reviewPointsLabel = Array.isArray(metadata?.reviewPoints) && metadata.reviewPoints.length > 0
         ? metadata.reviewPoints.join(', ')
         : 'Sin puntos específicos';
-    const availableStatusActions = useMemo(
-        () => getAllowedStatusActions(inspection, user || null),
-        [inspection, user]
-    );
-    const statusHistory = [...(inspection.statusHistory || [])].sort((left, right) => {
-        return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
-    });
-    const reasonOptions = statusAction ? getStatusReasonOptions(inspection.status, statusAction.status) : [];
 
     return (
         <div className="max-w-4xl mx-auto space-y-6">
