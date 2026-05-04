@@ -8,6 +8,7 @@ import {
     XCircle,
     Plus,
     TrendingUp,
+    Users,
 } from 'lucide-react';
 import { Loader } from '../components/Loader';
 import { getApiErrorMessage } from '../api/axios';
@@ -160,6 +161,19 @@ export const Dashboard = () => {
                             <h3 className="font-semibold text-lg mb-1">Nueva Inspección</h3>
                             <p className="text-sm text-gray-600 dark:text-gray-400">
                                 Crea una nueva inspección técnica
+                            </p>
+                        </button>
+                    )}
+
+                    {user?.role === 'admin' && (
+                        <button
+                            onClick={() => navigate('/users')}
+                            className="card hover:shadow-md transition-shadow text-left"
+                        >
+                            <Users className="w-8 h-8 text-red-600 mb-3" />
+                            <h3 className="font-semibold text-lg mb-1">Gestionar Usuarios</h3>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                                Administra cuentas, roles y estados del sistema
                             </p>
                         </button>
                     )}

@@ -5,16 +5,47 @@
 // AUTH & USER TYPES
 // ============================================
 
+export type UserRole = 'admin' | 'arquitecto' | 'inspector';
+
 export interface User {
     id: string;
     email: string;
     firstName: string;
     lastName: string;
-    role: 'admin' | 'arquitecto' | 'inspector';
+    fullName?: string;
+    role: UserRole;
+    roles?: UserRole[];
     phone?: string;
     isActive: boolean;
+    isMasterAdmin?: boolean;
     createdAt: string;
     updatedAt: string;
+}
+
+export interface CreateUserDto {
+    email: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+    role: UserRole;
+    phone?: string;
+}
+
+export interface UpdateUserDto {
+    firstName?: string;
+    lastName?: string;
+    role?: UserRole;
+    phone?: string;
+}
+
+export interface UserStats {
+    total: number;
+    active: number;
+    inactive: number;
+    byRole: Array<{
+        role: UserRole;
+        count: number | string;
+    }>;
 }
 
 export interface LoginCredentials {

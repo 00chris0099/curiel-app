@@ -12,6 +12,7 @@ import { Profile } from './pages/Profile';
 import { Inspections } from './pages/Inspections';
 import { CreateInspection } from './pages/CreateInspection';
 import { InspectionDetail } from './pages/InspectionDetail';
+import { Users } from './pages/Users';
 
 // Layout con Navbar y Sidebar
 const DashboardLayout = ({ children }: { children: ReactNode }) => {
@@ -87,6 +88,17 @@ function App() {
             <PrivateRoute>
               <DashboardLayout>
                 <Profile />
+              </DashboardLayout>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/users"
+          element={
+            <PrivateRoute allowedRoles={['admin']}>
+              <DashboardLayout>
+                <Users />
               </DashboardLayout>
             </PrivateRoute>
           }

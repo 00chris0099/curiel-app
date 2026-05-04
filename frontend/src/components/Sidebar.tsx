@@ -1,4 +1,4 @@
-import { Home, ClipboardList, X } from 'lucide-react';
+import { Home, ClipboardList, Users, X } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 
@@ -13,6 +13,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     const navigation = [
         { name: 'Dashboard', href: '/dashboard', icon: Home, roles: ['admin', 'arquitecto', 'inspector'] },
         { name: 'Inspecciones', href: '/inspections', icon: ClipboardList, roles: ['admin', 'arquitecto', 'inspector'] },
+        { name: 'Usuarios', href: '/users', icon: Users, roles: ['admin'] },
     ];
 
     // Filtrar navegación según rol del usuario
