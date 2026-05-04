@@ -1,3 +1,4 @@
+import axios from 'axios';
 import apiClient from '../api/axios';
 import type {
     Inspection,
@@ -49,6 +50,16 @@ interface ExecutionDefaultAreasResponse {
     summary: InspectionExecutionSummary;
     areas: Array<Pick<InspectionArea, 'name' | 'category' | 'sortOrder' | 'status'>>;
 }
+
+const parseBlobErrorMessage = async (blob: Blob, fallback: string) => {
+    try {
+        const text = await blob.text();
+        const parsed = JSON.parse(text) as { message?: string; error?: { message?: string } };
+        return parsed.error?.message || parsed.message || text || fallback;
+    } catch {
+        return fallback;
+    }
+};
 
 const inspectionService = {
     async getInspections(filters: InspectionFilters = {}): Promise<PaginatedResponse<Inspection>> {
@@ -221,11 +232,27 @@ const inspectionService = {
     },
 
     async downloadReport(id: string): Promise<Blob> {
-        const response = await apiClient.get(`/inspections/${id}/report`, {
-            responseType: 'blob',
-        });
+        try {
+            const response = await apiClient.get<Blob>(`/inspections/${id}/report`, {
+                responseType: 'blob',
+            });
 
-        return response.data as Blob;
+            const contentType = String(response.headers['content-type'] || response.data.type || '').toLowerCase();
+
+            if (!contentType.includes('application/pdf')) {
+                const message = await parseBlobErrorMessage(response.data, 'El servidor no devolvió un PDF válido');
+                throw new Error(message);
+            }
+
+            return new Blob([response.data], { type: 'application/pdf' });
+        } catch (error: unknown) {
+            if (axios.isAxiosError(error) && error.response?.data instanceof Blob) {
+                const message = await parseBlobErrorMessage(error.response.data, 'No se pudo generar el informe PDF');
+                throw new Error(message);
+            }
+
+            throw error;
+        }
     },
 };
 

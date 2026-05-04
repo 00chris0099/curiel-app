@@ -147,26 +147,30 @@ class InspectionReportService {
             await page.setViewport({ width: 1240, height: 1754, deviceScaleFactor: 1.5 });
             await page.setContent(html, { waitUntil: 'networkidle0' });
 
-            const pdfBuffer = await page.pdf({
+            const pdfBinary = await page.pdf({
                 format: 'A4',
                 printBackground: true,
                 preferCSSPageSize: true,
-                displayHeaderFooter: true,
-                headerTemplate: '<div></div>',
-                footerTemplate: `
-                    <div style="width:100%;padding:0 16mm 8mm;font-size:9px;color:#6b7280;display:flex;justify-content:space-between;align-items:center;">
-                        <span>${config.pdf.footerPhone}</span>
-                        <span>${config.pdf.footerEmail}</span>
-                        <span>Página <span class="pageNumber"></span> de <span class="totalPages"></span></span>
-                    </div>
-                `,
                 margin: {
-                    top: '18mm',
+                    top: '0mm',
                     right: '0mm',
-                    bottom: '18mm',
+                    bottom: '0mm',
                     left: '0mm'
                 }
             });
+
+            const pdfBuffer = Buffer.from(pdfBinary);
+
+            console.log('PDF buffer size:', pdfBuffer.length);
+            console.log('PDF header:', pdfBuffer.subarray(0, 4).toString());
+
+            if (!pdfBuffer || !Buffer.isBuffer(pdfBuffer) || pdfBuffer.length < 1000) {
+                throw new AppError('El PDF generado es inválido o está incompleto', 500, 'INVALID_PDF_BUFFER');
+            }
+
+            if (pdfBuffer.subarray(0, 4).toString() !== '%PDF') {
+                throw new AppError('El archivo generado no es un PDF válido', 500, 'INVALID_PDF_HEADER');
+            }
 
             return {
                 buffer: pdfBuffer,

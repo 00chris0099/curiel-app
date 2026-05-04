@@ -94,7 +94,7 @@ export const InspectionDetail = () => {
         setIsDownloadingReport(true);
         try {
             const blob = await inspectionService.downloadReport(id);
-            const url = window.URL.createObjectURL(blob);
+            const url = window.URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
             const link = document.createElement('a');
             link.href = url;
             link.download = `informe-inspeccion-${inspection.projectName}.pdf`;
