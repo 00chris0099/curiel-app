@@ -2,6 +2,7 @@ const User = require('./User');
 const Role = require('./Role');
 const UserRole = require('./UserRole');
 const Inspection = require('./Inspection');
+const InspectionStatusHistory = require('./InspectionStatusHistory');
 const InspectionArea = require('./InspectionArea');
 const InspectionObservation = require('./InspectionObservation');
 const InspectionSummary = require('./InspectionSummary');
@@ -54,6 +55,17 @@ Inspection.hasMany(InspectionResponse, {
     onDelete: 'CASCADE'
 });
 InspectionResponse.belongsTo(Inspection, {
+    foreignKey: 'inspectionId',
+    as: 'inspection'
+});
+
+// Inspection - InspectionStatusHistory
+Inspection.hasMany(InspectionStatusHistory, {
+    foreignKey: 'inspectionId',
+    as: 'statusHistory',
+    onDelete: 'CASCADE'
+});
+InspectionStatusHistory.belongsTo(Inspection, {
     foreignKey: 'inspectionId',
     as: 'inspection'
 });
@@ -173,6 +185,16 @@ InspectionObservation.belongsTo(User, {
     as: 'creator'
 });
 
+// User - InspectionStatusHistory
+User.hasMany(InspectionStatusHistory, {
+    foreignKey: 'changedByUserId',
+    as: 'inspectionStatusChanges'
+});
+InspectionStatusHistory.belongsTo(User, {
+    foreignKey: 'changedByUserId',
+    as: 'changedByUser'
+});
+
 // Inspection - Signature
 Inspection.hasMany(Signature, {
     foreignKey: 'inspectionId',
@@ -228,6 +250,7 @@ module.exports = {
     Role,
     UserRole,
     Inspection,
+    InspectionStatusHistory,
     InspectionArea,
     InspectionObservation,
     InspectionSummary,

@@ -65,12 +65,20 @@ const updateInspectionSchema = Joi.object({
 
 const updateStatusSchema = Joi.object({
     status: Joi.string()
-        .valid('pendiente', 'en_proceso', 'finalizada', 'cancelada')
+        .valid('pendiente', 'en_proceso', 'lista_revision', 'finalizada', 'cancelada', 'reprogramada')
         .required()
         .messages({
-            'any.only': 'El estado debe ser pendiente, en_proceso, finalizada o cancelada',
+            'any.only': 'El estado debe ser pendiente, en_proceso, lista_revision, finalizada, cancelada o reprogramada',
             'any.required': 'El estado es requerido'
-        })
+        }),
+    reasonCode: Joi.string().optional().allow('', null),
+    reasonLabel: Joi.string().optional().allow('', null),
+    comment: Joi.string().optional().allow('', null),
+    notifyClient: Joi.boolean().optional(),
+    notifyInspector: Joi.boolean().optional(),
+    scheduledDate: Joi.date().iso().optional().allow(null).messages({
+        'date.base': 'La nueva fecha programada debe ser válida'
+    })
 });
 
 module.exports = {

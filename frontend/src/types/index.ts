@@ -73,7 +73,7 @@ export interface ProfileResponse {
 // INSPECTION TYPES
 // ============================================
 
-export type InspectionStatus = 'pendiente' | 'en_proceso' | 'finalizada' | 'cancelada';
+export type InspectionStatus = 'pendiente' | 'en_proceso' | 'lista_revision' | 'finalizada' | 'cancelada' | 'reprogramada';
 export type InspectionType = 'estructural' | 'electrica' | 'hidraulica' | 'integral' | 'seguridad' | 'general';
 export type DepartmentServiceType = 'Entrega de departamento' | 'Pre-compra' | 'Post-remodelación' | 'General';
 export type ContactChannel = 'WhatsApp' | 'Llamada' | 'Facebook' | 'Referido' | 'Otro';
@@ -160,14 +160,33 @@ export interface Inspection {
     inspector?: User;
     creator?: User;
     inspectorName?: string;
+    statusHistory?: InspectionStatusHistory[];
 }
 
 export interface InspectionStats {
     total: number;
     pendiente: number;
     en_proceso: number;
+    lista_revision: number;
     finalizada: number;
     cancelada: number;
+    reprogramada: number;
+}
+
+export interface InspectionStatusHistory {
+    id: string;
+    inspectionId: string;
+    changedByUserId: string;
+    fromStatus: InspectionStatus;
+    toStatus: InspectionStatus;
+    reasonCode?: string | null;
+    reasonLabel?: string | null;
+    comment?: string | null;
+    notifyClient: boolean;
+    notifyInspector: boolean;
+    changedByUser?: User;
+    createdAt: string;
+    updatedAt: string;
 }
 
 export interface CreateInspectionDto {
@@ -188,6 +207,16 @@ export interface CreateInspectionDto {
 export interface UpdateInspectionDto extends Partial<CreateInspectionDto> {
     status?: InspectionStatus;
     completedDate?: string;
+}
+
+export interface UpdateInspectionStatusDto {
+    status: InspectionStatus;
+    reasonCode?: string;
+    reasonLabel?: string;
+    comment?: string;
+    notifyClient?: boolean;
+    notifyInspector?: boolean;
+    scheduledDate?: string;
 }
 
 export type ExecutionAreaStatus = 'pendiente' | 'en_revision' | 'observado' | 'aprobado';

@@ -8,6 +8,7 @@ import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
 import type { Inspection, InspectionStatus } from '../types';
 import { getInspectionLocationLabel, getInspectionServiceLabel, getInspectorName } from '../utils/inspectionMetadata';
+import { inspectionStatusBadgeClasses, inspectionStatusLabels } from '../utils/inspectionStatus';
 
 export const Inspections = () => {
     const navigate = useNavigate();
@@ -44,20 +45,6 @@ export const Inspections = () => {
             || serviceLabel.includes(query)
             || locationLabel.includes(query);
     });
-
-    const statusColors: Record<string, string> = {
-        pendiente: 'badge-warning',
-        en_proceso: 'badge-info',
-        finalizada: 'badge-success',
-        cancelada: 'badge-danger',
-    };
-
-    const statusLabels: Record<string, string> = {
-        pendiente: 'Pendiente',
-        en_proceso: 'En Proceso',
-        finalizada: 'Finalizada',
-        cancelada: 'Cancelada',
-    };
 
     if (isLoading) {
         return <Loader fullScreen />;
@@ -116,8 +103,10 @@ export const Inspections = () => {
                                 <option value="">Todos los estados</option>
                                 <option value="pendiente">Pendiente</option>
                                 <option value="en_proceso">En Proceso</option>
+                                <option value="lista_revision">Lista para revisión</option>
                                 <option value="finalizada">Finalizada</option>
                                 <option value="cancelada">Cancelada</option>
+                                <option value="reprogramada">Reprogramada</option>
                             </select>
                         </div>
                     </div>
@@ -178,8 +167,8 @@ export const Inspections = () => {
                                              {getInspectionServiceLabel(inspection)}
                                          </td>
                                         <td className="px-6 py-4">
-                                            <span className={`badge ${statusColors[inspection.status]}`}>
-                                                {statusLabels[inspection.status]}
+                                            <span className={`badge ${inspectionStatusBadgeClasses[inspection.status]}`}>
+                                                {inspectionStatusLabels[inspection.status]}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4">

@@ -14,6 +14,7 @@ import type {
     CreateInspectionObservationDto,
     CreateInspectionPhotoDto,
     UpdateInspectionDto,
+    UpdateInspectionStatusDto,
     UpdateInspectionAreaDto,
     UpdateInspectionExecutionSummaryDto,
     UpdateInspectionObservationDto,
@@ -96,8 +97,8 @@ const inspectionService = {
         return response.data.data;
     },
 
-    async updateStatus(id: string, status: Inspection['status']): Promise<Inspection> {
-        const response = await apiClient.patch<ApiResponse<Inspection>>(`/inspections/${id}/status`, { status });
+    async updateStatus(id: string, data: UpdateInspectionStatusDto): Promise<Inspection> {
+        const response = await apiClient.patch<ApiResponse<Inspection>>(`/inspections/${id}/status`, data);
         if (!response.data.data) {
             throw new Error('No se pudo actualizar el estado de la inspeccion');
         }

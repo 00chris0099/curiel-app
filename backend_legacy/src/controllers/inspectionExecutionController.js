@@ -220,7 +220,7 @@ const completeInspection = asyncHandler(async (req, res) => {
 
     res.json({
         success: true,
-        message: 'Inspección finalizada y enviada a revisión',
+        message: 'Inspección enviada a revisión',
         data: result
     });
 });

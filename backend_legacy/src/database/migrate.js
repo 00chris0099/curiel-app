@@ -101,6 +101,21 @@ const prepareLegacyUsersTable = async () => {
     await sequelize.query('ALTER TABLE "users" ALTER COLUMN "updated_at" SET NOT NULL;');
 };
 
+const prepareInspectionStatusEnum = async () => {
+    const statusValues = ['lista_revision', 'reprogramada'];
+
+    for (const value of statusValues) {
+        await sequelize.query(`
+            DO $$
+            BEGIN
+                ALTER TYPE "enum_inspections_status" ADD VALUE IF NOT EXISTS '${value}';
+            EXCEPTION
+                WHEN undefined_object THEN NULL;
+            END $$;
+        `);
+    }
+};
+
 /**
  * Script de migración: Crea todas las tablas
  */
@@ -113,6 +128,7 @@ const migrate = async () => {
         console.log('✅ Conexión a base de datos exitosa\n');
 
         await prepareLegacyUsersTable();
+        await prepareInspectionStatusEnum();
 
         // Sincronizar modelos (crear tablas)
         await sequelize.sync({ force: false, alter: true });
@@ -121,6 +137,7 @@ const migrate = async () => {
         console.log('📊 Tablas creadas:');
         console.log('  - users');
         console.log('  - inspections');
+        console.log('  - inspection_status_histories');
         console.log('  - inspection_areas');
         console.log('  - inspection_observations');
         console.log('  - inspection_summaries');

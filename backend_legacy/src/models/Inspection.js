@@ -49,7 +49,7 @@ const Inspection = sequelize.define('Inspection', {
         comment: 'Tipo de inspección (estructural, eléctrica, etc.)'
     },
     status: {
-        type: DataTypes.ENUM('pendiente', 'en_proceso', 'finalizada', 'cancelada'),
+        type: DataTypes.ENUM('pendiente', 'en_proceso', 'lista_revision', 'finalizada', 'cancelada', 'reprogramada'),
         allowNull: false,
         defaultValue: 'pendiente'
     },

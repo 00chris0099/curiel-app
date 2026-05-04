@@ -1,10 +1,50 @@
-const { Inspection, User, Role, InspectionResponse, ChecklistItem, Photo, ChecklistTemplate } = require('../models');
+const { Inspection, User, Role, InspectionResponse, ChecklistItem, Photo, ChecklistTemplate, InspectionStatusHistory } = require('../models');
 const { AppError } = require('../middlewares/errorHandler');
 const { Op } = require('sequelize');
 const { sequelize } = require('../config/database');
+const { triggerN8nWebhook } = require('../utils/n8n');
 
 const safeUserAttributes = {
     exclude: ['passwordHash', '_plainPassword']
+};
+
+const inspectionStatuses = ['pendiente', 'en_proceso', 'lista_revision', 'finalizada', 'cancelada', 'reprogramada'];
+
+const cancellationReasons = {
+    cliente_reprogramo: 'Cliente reprogramó la visita',
+    cliente_no_responde: 'Cliente no responde',
+    cliente_cancelo_servicio: 'Cliente canceló el servicio',
+    inspector_no_disponible: 'Inspector no disponible',
+    direccion_incorrecta: 'Dirección incorrecta',
+    pago_no_confirmado: 'Pago no confirmado',
+    acceso_no_autorizado: 'Acceso no autorizado',
+    problema_interno: 'Problema interno',
+    otro: 'Otro'
+};
+
+const rescheduleReasons = {
+    cliente_solicito_cambio: 'Cliente solicitó cambio',
+    inspector_solicito_cambio: 'Inspector solicitó cambio',
+    falta_acceso: 'Falta acceso al inmueble',
+    emergencia: 'Emergencia',
+    conflicto_horario: 'Conflicto horario',
+    otro: 'Otro'
+};
+
+const correctionReasons = {
+    faltan_fotos: 'Faltan fotos',
+    faltan_observaciones: 'Faltan observaciones',
+    mediciones_incompletas: 'Mediciones incompletas',
+    recomendaciones_insuficientes: 'Recomendaciones insuficientes',
+    error_datos_inmueble: 'Error en datos del inmueble',
+    informe_poco_claro: 'Informe poco claro',
+    otro: 'Otro'
+};
+
+const statusReasonCatalog = {
+    cancelada: cancellationReasons,
+    reprogramada: rescheduleReasons,
+    correction_return: correctionReasons
 };
 
 /**
@@ -102,8 +142,20 @@ class InspectionService {
                 {
                     model: Photo,
                     as: 'photos'
+                },
+                {
+                    model: InspectionStatusHistory,
+                    as: 'statusHistory',
+                    include: [
+                        {
+                            model: User,
+                            as: 'changedByUser',
+                            attributes: safeUserAttributes
+                        }
+                    ]
                 }
-            ]
+            ],
+            order: [[{ model: InspectionStatusHistory, as: 'statusHistory' }, 'createdAt', 'DESC']]
         });
 
         if (!inspection) {
@@ -199,7 +251,7 @@ class InspectionService {
         }
 
         // No permitir editar inspecciones finalizadas
-        if (inspection.status === 'finalizada') {
+        if (['finalizada', 'cancelada'].includes(inspection.status)) {
             throw new AppError('No se puede editar una inspección finalizada', 400, 'INSPECTION_COMPLETED');
         }
 
@@ -233,37 +285,130 @@ class InspectionService {
     /**
      * Cambiar estado de inspección
      */
-    async updateInspectionStatus(inspectionId, newStatus, userId, userRole, isMasterAdmin = false) {
-        const inspection = await Inspection.findByPk(inspectionId);
+    async updateInspectionStatus(inspectionId, statusData, userId, userRole, isMasterAdmin = false) {
+        const {
+            status: newStatus,
+            reasonCode,
+            reasonLabel,
+            comment,
+            notifyClient = false,
+            notifyInspector = false,
+            scheduledDate
+        } = statusData;
+
+        const inspection = await Inspection.findByPk(inspectionId, {
+            include: [
+                {
+                    model: User,
+                    as: 'inspector',
+                    attributes: safeUserAttributes
+                }
+            ]
+        });
 
         if (!inspection) {
             throw new AppError('Inspección no encontrada', 404, 'INSPECTION_NOT_FOUND');
         }
 
-        // Verificar permisos (los master admin tienen acceso completo)
+        if (!inspectionStatuses.includes(newStatus)) {
+            throw new AppError('Estado inválido', 400, 'INVALID_STATUS');
+        }
+
         if (!isMasterAdmin && userRole === 'inspector' && inspection.inspectorId !== userId) {
             throw new AppError('No tienes permisos para cambiar el estado', 403, 'FORBIDDEN');
         }
 
-        const validStatuses = ['pendiente', 'en_proceso', 'finalizada', 'cancelada'];
-        if (!validStatuses.includes(newStatus)) {
-            throw new AppError('Estado inválido', 400, 'INVALID_STATUS');
+        if (inspection.status === newStatus) {
+            throw new AppError('La inspección ya se encuentra en ese estado', 400, 'STATUS_UNCHANGED');
+        }
+
+        if (['finalizada', 'cancelada'].includes(inspection.status)) {
+            throw new AppError('No se puede cambiar el estado de una inspección finalizada o cancelada', 400, 'STATUS_LOCKED');
         }
 
         const oldStatus = inspection.status;
-        inspection.status = newStatus;
+        this._assertAllowedStatusTransition(oldStatus, newStatus, userRole, isMasterAdmin);
 
-        // Si se finaliza, agregar fecha de completado
-        if (newStatus === 'finalizada') {
-            inspection.completedDate = new Date();
+        const resolvedReasonLabel = this._resolveReasonLabel(oldStatus, newStatus, reasonCode, reasonLabel);
+        this._validateStatusTransitionPayload(oldStatus, newStatus, {
+            reasonCode,
+            comment,
+            scheduledDate,
+            reasonLabel: resolvedReasonLabel
+        });
+
+        const normalizedComment = comment?.trim() || null;
+        const nextScheduledDate = scheduledDate ? new Date(scheduledDate) : null;
+
+        if (newStatus === 'reprogramada' && nextScheduledDate) {
+            inspection.scheduledDate = nextScheduledDate;
         }
 
-        await inspection.save();
+        inspection.status = newStatus;
+
+        if (newStatus === 'finalizada') {
+            inspection.completedDate = new Date();
+        } else if (['pendiente', 'en_proceso', 'lista_revision', 'reprogramada'].includes(newStatus)) {
+            inspection.completedDate = null;
+        }
+
+        let history;
+        await sequelize.transaction(async (transaction) => {
+            await inspection.save({ transaction });
+
+            history = await InspectionStatusHistory.create({
+                inspectionId,
+                changedByUserId: userId,
+                fromStatus: oldStatus,
+                toStatus: newStatus,
+                reasonCode: reasonCode || null,
+                reasonLabel: resolvedReasonLabel,
+                comment: normalizedComment,
+                notifyClient: Boolean(notifyClient),
+                notifyInspector: Boolean(notifyInspector)
+            }, { transaction });
+        });
+
+        await inspection.reload({
+            include: [
+                {
+                    model: User,
+                    as: 'inspector',
+                    attributes: safeUserAttributes
+                },
+                {
+                    model: User,
+                    as: 'creator',
+                    attributes: safeUserAttributes
+                },
+                {
+                    model: InspectionStatusHistory,
+                    as: 'statusHistory',
+                    include: [
+                        {
+                            model: User,
+                            as: 'changedByUser',
+                            attributes: safeUserAttributes
+                        }
+                    ]
+                }
+            ],
+            order: [[{ model: InspectionStatusHistory, as: 'statusHistory' }, 'createdAt', 'DESC']]
+        });
+
+        await this._triggerStatusNotifications({
+            inspection,
+            history,
+            notifyClient: Boolean(notifyClient),
+            notifyInspector: Boolean(notifyInspector),
+            userRole
+        });
 
         return {
             inspection,
             oldStatus,
-            newStatus
+            newStatus,
+            history
         };
     }
 
@@ -300,16 +445,123 @@ class InspectionService {
         const total = await Inspection.count({ where });
         const pendiente = await Inspection.count({ where: { ...where, status: 'pendiente' } });
         const enProceso = await Inspection.count({ where: { ...where, status: 'en_proceso' } });
+        const listaRevision = await Inspection.count({ where: { ...where, status: 'lista_revision' } });
         const finalizada = await Inspection.count({ where: { ...where, status: 'finalizada' } });
         const cancelada = await Inspection.count({ where: { ...where, status: 'cancelada' } });
+        const reprogramada = await Inspection.count({ where: { ...where, status: 'reprogramada' } });
 
         return {
             total,
             pendiente,
             en_proceso: enProceso,
+            lista_revision: listaRevision,
             finalizada,
-            cancelada
+            cancelada,
+            reprogramada
         };
+    }
+
+    _assertAllowedStatusTransition(fromStatus, toStatus, userRole, isMasterAdmin) {
+        if (isMasterAdmin) {
+            return;
+        }
+
+        if (userRole === 'inspector') {
+            const allowedInspectorTransitions = {
+                pendiente: ['en_proceso'],
+                en_proceso: ['lista_revision']
+            };
+
+            if (!(allowedInspectorTransitions[fromStatus] || []).includes(toStatus)) {
+                throw new AppError('No tienes permisos para realizar esta transición de estado', 403, 'FORBIDDEN_STATUS_TRANSITION');
+            }
+
+            return;
+        }
+
+        if (!['admin', 'arquitecto'].includes(userRole)) {
+            throw new AppError('No tienes permisos para cambiar el estado de esta inspección', 403, 'FORBIDDEN_STATUS_TRANSITION');
+        }
+
+        const allowedTransitions = {
+            pendiente: ['en_proceso', 'cancelada', 'reprogramada'],
+            en_proceso: ['lista_revision', 'cancelada', 'reprogramada', 'finalizada'],
+            lista_revision: ['en_proceso', 'cancelada', 'reprogramada', 'finalizada'],
+            reprogramada: ['pendiente', 'en_proceso', 'cancelada', 'lista_revision', 'finalizada']
+        };
+
+        if (!(allowedTransitions[fromStatus] || []).includes(toStatus)) {
+            throw new AppError('La transición de estado no está permitida para tu rol', 403, 'FORBIDDEN_STATUS_TRANSITION');
+        }
+    }
+
+    _resolveReasonLabel(fromStatus, toStatus, reasonCode, customReasonLabel) {
+        if (!reasonCode) {
+            return null;
+        }
+
+        if (customReasonLabel?.trim()) {
+            return customReasonLabel.trim();
+        }
+
+        if (toStatus === 'en_proceso' && fromStatus === 'lista_revision') {
+            return statusReasonCatalog.correction_return[reasonCode] || null;
+        }
+
+        return statusReasonCatalog[toStatus]?.[reasonCode] || null;
+    }
+
+    _validateStatusTransitionPayload(fromStatus, toStatus, payload) {
+        const requiresReason = toStatus === 'cancelada'
+            || toStatus === 'reprogramada'
+            || (toStatus === 'en_proceso' && fromStatus === 'lista_revision');
+
+        if (requiresReason && !payload.reasonCode) {
+            throw new AppError('Debes seleccionar un motivo para este cambio de estado', 422, 'MISSING_REASON_CODE');
+        }
+
+        if (toStatus === 'cancelada' && payload.reasonCode && !cancellationReasons[payload.reasonCode]) {
+            throw new AppError('Motivo de cancelación inválido', 422, 'INVALID_REASON_CODE');
+        }
+
+        if (toStatus === 'reprogramada') {
+            if (!rescheduleReasons[payload.reasonCode]) {
+                throw new AppError('Motivo de reprogramación inválido', 422, 'INVALID_REASON_CODE');
+            }
+
+            if (!payload.scheduledDate) {
+                throw new AppError('Debes indicar la nueva fecha y hora al reprogramar', 422, 'MISSING_SCHEDULED_DATE');
+            }
+        }
+
+        if (toStatus === 'en_proceso' && fromStatus === 'lista_revision' && !correctionReasons[payload.reasonCode]) {
+            throw new AppError('Motivo de devolución inválido', 422, 'INVALID_REASON_CODE');
+        }
+    }
+
+    async _triggerStatusNotifications({ inspection, history, notifyClient, notifyInspector }) {
+        const shouldNotifyInspector = notifyInspector
+            || history.toStatus === 'reprogramada'
+            || (history.fromStatus === 'lista_revision' && history.toStatus === 'en_proceso')
+            || history.toStatus === 'finalizada';
+
+        if (shouldNotifyInspector && inspection.inspector) {
+            await triggerN8nWebhook('userNotification', {
+                channel: 'internal',
+                type: 'inspection_status_changed',
+                inspectionId: inspection.id,
+                inspectionStatus: history.toStatus,
+                recipient: {
+                    id: inspection.inspector.id,
+                    email: inspection.inspector.email,
+                    fullName: inspection.inspector.fullName
+                },
+                reasonCode: history.reasonCode,
+                reasonLabel: history.reasonLabel,
+                comment: history.comment,
+                notifyClient: Boolean(notifyClient)
+            });
+        }
     }
 }
 

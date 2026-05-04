@@ -3,6 +3,7 @@ const {
     InspectionArea,
     InspectionObservation,
     InspectionSummary,
+    InspectionStatusHistory,
     Photo,
     User
 } = require('../models');
@@ -378,8 +379,8 @@ class InspectionExecutionService {
 
     async updateSummary(inspectionId, summaryData, userId, userRole, isMasterAdmin = false) {
         const inspection = await this._getInspectionWithAccess(inspectionId, userId, userRole, isMasterAdmin, true);
-        if (inspection.status === 'finalizada' && userRole === 'inspector' && !isMasterAdmin) {
-            throw new AppError('La inspección ya fue finalizada y no puede ser editada por el inspector', 400, 'INSPECTION_COMPLETED');
+        if (!isMasterAdmin && userRole === 'inspector' && ['lista_revision', 'finalizada', 'cancelada'].includes(inspection.status)) {
+            throw new AppError('La inspección ya no puede ser editada por el inspector', 400, 'INSPECTION_COMPLETED');
         }
 
         const summary = await this._recalculateSummary(inspectionId);
@@ -427,9 +428,24 @@ class InspectionExecutionService {
             summary.reportStatus = reportStatus;
             await summary.save({ transaction });
 
-            inspection.status = 'finalizada';
-            inspection.completedDate = new Date();
+            const previousStatus = inspection.status;
+            inspection.status = 'lista_revision';
+            inspection.completedDate = null;
             await inspection.save({ transaction });
+
+            if (previousStatus !== 'lista_revision') {
+                await InspectionStatusHistory.create({
+                    inspectionId,
+                    changedByUserId: userId,
+                    fromStatus: previousStatus,
+                    toStatus: 'lista_revision',
+                    reasonCode: null,
+                    reasonLabel: null,
+                    comment: null,
+                    notifyClient: false,
+                    notifyInspector: false
+                }, { transaction });
+            }
         });
 
         return {
@@ -539,8 +555,8 @@ class InspectionExecutionService {
     }
 
     _assertInspectionEditable(inspection, userRole, isMasterAdmin) {
-        if (inspection.status === 'finalizada' && userRole === 'inspector' && !isMasterAdmin) {
-            throw new AppError('La inspección ya fue finalizada y no puede seguir editándose', 400, 'INSPECTION_COMPLETED');
+        if (!isMasterAdmin && userRole === 'inspector' && ['lista_revision', 'finalizada', 'cancelada'].includes(inspection.status)) {
+            throw new AppError('La inspección ya no está disponible para edición del inspector', 400, 'INSPECTION_COMPLETED');
         }
     }
 

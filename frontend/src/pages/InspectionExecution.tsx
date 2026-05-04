@@ -160,8 +160,10 @@ const photoTypeLabels: Record<ExecutionPhotoType, string> = {
 const inspectionStatusLabels: Record<string, string> = {
     pendiente: 'Pendiente',
     en_proceso: 'En proceso',
+    lista_revision: 'Lista para revisión',
     finalizada: 'Finalizada',
     cancelada: 'Cancelada',
+    reprogramada: 'Reprogramada',
 };
 
 export const InspectionExecution = () => {
@@ -503,7 +505,7 @@ export const InspectionExecution = () => {
                 canApproveReport && summaryForm.reportStatus === 'aprobado' ? 'aprobado' : 'listo_para_revision'
             );
 
-            toast.success('Inspección finalizada correctamente');
+            toast.success('Inspección enviada a revisión');
             await loadExecution(selectedAreaId);
         });
     };
@@ -587,7 +589,7 @@ export const InspectionExecution = () => {
                     className="btn btn-primary flex w-full items-center justify-center gap-2 sm:w-auto"
                 >
                     {busyAction === 'complete-inspection' ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle2 className="h-5 w-5" />}
-                    Finalizar inspección
+                    Enviar a revisión
                 </button>
             </div>
 

@@ -101,7 +101,7 @@ const updateInspectionStatus = asyncHandler(async (req, res) => {
 
     const result = await inspectionService.updateInspectionStatus(
         req.params.id,
-        status,
+        req.body,
         req.userId,
         req.userRole,
         req.isMasterAdmin
@@ -109,7 +109,13 @@ const updateInspectionStatus = asyncHandler(async (req, res) => {
 
     await createAuditLog(req.userId, 'change_inspection_status', 'Inspection', result.inspection.id, {
         oldStatus: result.oldStatus,
-        newStatus: result.newStatus
+        newStatus: result.newStatus,
+        reasonCode: req.body.reasonCode,
+        reasonLabel: req.body.reasonLabel,
+        comment: req.body.comment,
+        notifyClient: req.body.notifyClient,
+        notifyInspector: req.body.notifyInspector,
+        scheduledDate: req.body.scheduledDate
     });
 
     res.json({
