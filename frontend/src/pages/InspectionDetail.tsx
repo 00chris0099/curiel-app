@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, ClipboardCheck, FileText, MessageSquare, Trash2 } from 'lucide-react';
+import { ArrowLeft, ClipboardCheck, FileText, Database } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getApiErrorMessage } from '../api/axios';
 import { Loader } from '../components/Loader';
 import inspectionService from '../services/inspection.service';
 import { useAuthStore } from '../store/authStore';
+import { useOnlineStatus } from '../hooks/useOnlineStatus';
+import { saveCachedInspectionDetail, getCachedInspectionDetail } from '../utils/offlineDb';
 import type { Inspection, UpdateInspectionStatusDto } from '../types';
 import { getInspectionLocationLabel, getInspectionServiceLabel, getInspectorName, parseDepartmentInspectionNotes } from '../utils/inspectionMetadata';
 import {
@@ -41,12 +43,14 @@ export const InspectionDetail = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { user } = useAuthStore();
+    const { effectiveOnline } = useOnlineStatus();
     const [inspection, setInspection] = useState<Inspection | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isUpdating, setIsUpdating] = useState(false);
     const [isDownloadingReport, setIsDownloadingReport] = useState(false);
     const [statusAction, setStatusAction] = useState<StatusActionConfig | null>(null);
     const [statusModal, setStatusModal] = useState<StatusModalState>(emptyStatusModalState);
+    const [isOfflineData, setIsOfflineData] = useState(false);
 
     const loadInspection = useCallback(async () => {
         if (!id) {
@@ -55,16 +59,45 @@ export const InspectionDetail = () => {
         }
 
         setIsLoading(true);
-        try {
-            const data = await inspectionService.getInspectionById(id);
-            setInspection(data);
-        } catch (error: unknown) {
-            toast.error(getApiErrorMessage(error, 'Error al cargar la inspeccion'));
-            navigate('/inspections', { replace: true });
-        } finally {
-            setIsLoading(false);
+        setIsOfflineData(false);
+
+        if (effectiveOnline) {
+            try {
+                const data = await inspectionService.getInspectionById(id);
+                setInspection(data);
+                // Cache for offline use
+                await saveCachedInspectionDetail(id, data);
+            } catch (error: unknown) {
+                // If API fails, try to load from cache
+                const cached = await getCachedInspectionDetail(id);
+                if (cached) {
+                    setInspection(cached.data);
+                    setIsOfflineData(true);
+                    toast.success('Mostrando datos guardados offline');
+                } else {
+                    toast.error(getApiErrorMessage(error, 'Error al cargar la inspeccion'));
+                    navigate('/inspections', { replace: true });
+                }
+            } finally {
+                setIsLoading(false);
+            }
+        } else {
+            // Offline: load from cache
+            try {
+                const cached = await getCachedInspectionDetail(id);
+                if (cached) {
+                    setInspection(cached.data);
+                    setIsOfflineData(true);
+                } else {
+                    toast.error('No hay datos disponibles offline para esta inspección. Abre esta inspección con internet al menos una vez.');
+                }
+            } catch (error) {
+                toast.error('Error al cargar datos locales');
+            } finally {
+                setIsLoading(false);
+            }
         }
-    }, [id, navigate]);
+    }, [id, navigate, effectiveOnline]);
 
     useEffect(() => {
         loadInspection();
@@ -87,11 +120,6 @@ export const InspectionDetail = () => {
 
         return getStatusReasonOptions(inspection.status, statusAction.status);
     }, [inspection, statusAction]);
-
-    useEffect(() => {
-        console.log('DEBUG inspection:', inspection);
-        console.log('DEBUG areas:', safeStatusHistory);
-    }, [inspection, safeStatusHistory]);
 
     const openStatusModal = (action: StatusActionConfig) => {
         if (!inspection) {
@@ -152,28 +180,6 @@ export const InspectionDetail = () => {
         }
     };
 
-    const handleDelete = async () => {
-        if (!inspection || !id) {
-            return;
-        }
-
-        const confirmed = window.confirm('¿Seguro que deseas eliminar esta inspeccion?');
-        if (!confirmed) {
-            return;
-        }
-
-        setIsUpdating(true);
-        try {
-            await inspectionService.deleteInspection(id);
-            toast.success('Inspeccion eliminada');
-            navigate('/inspections');
-        } catch (error: unknown) {
-            toast.error(getApiErrorMessage(error, 'No se pudo eliminar la inspeccion'));
-        } finally {
-            setIsUpdating(false);
-        }
-    };
-
     const handleDownloadReport = async () => {
         if (!inspection || !id) {
             return;
@@ -204,13 +210,19 @@ export const InspectionDetail = () => {
 
     if (!inspection) {
         return (
-            <div className="mx-auto max-w-3xl pb-10 pt-6">
-                <div className="card space-y-4 text-center">
-                    <h1 className="text-xl font-bold">Cargando inspección...</h1>
-                    <p className="text-gray-600 dark:text-gray-400">
-                        No se encontraron datos suficientes para renderizar esta pantalla.
+            <div className="space-y-6">
+                <div className="card text-center py-12">
+                    <Database className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No hay datos disponibles</h3>
+                    <p className="text-gray-600 dark:text-gray-400 mb-4">
+                        {effectiveOnline
+                            ? 'La inspección no existe o no tienes acceso.'
+                            : 'No hay datos guardados offline para esta inspección. Abre esta inspección con internet al menos una vez.'}
                     </p>
-                    <button type="button" className="btn btn-primary" onClick={() => navigate('/inspections')}>
+                    <button
+                        onClick={() => navigate('/inspections')}
+                        className="btn btn-primary"
+                    >
                         Volver a inspecciones
                     </button>
                 </div>
@@ -218,300 +230,211 @@ export const InspectionDetail = () => {
         );
     }
 
-    const canDelete = user?.role === 'admin';
-    const canExecute = Boolean(
-        user?.role === 'admin'
-        || user?.role === 'arquitecto'
-        || (user?.role === 'inspector' && user.id === inspection.inspectorId)
-    );
-    const parsedNotes = parseDepartmentInspectionNotes(inspection?.notes);
-    const metadata = parsedNotes.metadata;
-    const plainNotes = parsedNotes.plainNotes;
-    const reviewPointsLabel = Array.isArray(metadata?.reviewPoints) && metadata.reviewPoints.length > 0
-        ? metadata.reviewPoints.join(', ')
-        : 'Sin puntos específicos';
+    const serviceLabel = getInspectionServiceLabel(inspection);
+    const locationLabel = getInspectionLocationLabel(inspection);
+    const inspectorName = getInspectorName(inspection);
+    const notes = parseDepartmentInspectionNotes(inspection?.notes);
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6">
-            <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
+        <div className="space-y-6">
+            {/* Header */}
+            <div className="flex items-start justify-between">
+                <div className="flex items-start gap-4">
                     <button
                         onClick={() => navigate('/inspections')}
-                        className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                        className="mt-1 rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-700"
                     >
-                        <ArrowLeft className="w-6 h-6" />
+                        <ArrowLeft className="w-5 h-5" />
                     </button>
                     <div>
-                        <h1 className="text-2xl font-bold">{inspection.projectName}</h1>
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-2xl font-bold">{inspection.projectName}</h1>
+                            {isOfflineData && (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-800">
+                                    <Database className="w-3 h-3" />
+                                    Datos offline
+                                </span>
+                            )}
+                        </div>
                         <p className="text-gray-600 dark:text-gray-400 mt-1">
-                            {getInspectionServiceLabel(inspection)} · {inspection.clientName}
+                            {serviceLabel} · {inspection.clientName} · {locationLabel}
                         </p>
                     </div>
                 </div>
 
-                <div className="flex flex-wrap items-center justify-end gap-3">
-                    <button
-                        onClick={handleDownloadReport}
-                        disabled={isDownloadingReport}
-                        className="btn btn-primary flex items-center gap-2"
-                    >
-                        <FileText className="w-4 h-4" />
-                        {isDownloadingReport ? 'Generando...' : 'Generar informe'}
-                    </button>
-
-                    {canExecute && (
-                        <button
-                            onClick={() => navigate(`/inspections/${inspection.id}/execute`)}
-                            className="btn btn-secondary flex items-center gap-2"
-                        >
-                            <ClipboardCheck className="w-4 h-4" />
-                            Ejecutar inspección
-                        </button>
-                    )}
-
-                    {canDelete && (
-                        <button
-                            onClick={handleDelete}
-                            disabled={isUpdating}
-                            className="btn btn-danger flex items-center gap-2"
-                        >
-                            <Trash2 className="w-4 h-4" />
-                            Eliminar
-                        </button>
-                    )}
-                </div>
-            </div>
-
-            <div className="card grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Servicio</p>
-                    <p className="font-medium">{getInspectionServiceLabel(inspection)}</p>
-                </div>
-                <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Estado</p>
-                    <p className="font-medium">{inspectionStatusLabels[inspection.status]}</p>
-                </div>
-                <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Fecha programada</p>
-                    <p className="font-medium">{new Date(inspection.scheduledDate).toLocaleString('es-ES')}</p>
-                </div>
-                <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Inspector</p>
-                    <p className="font-medium">{getInspectorName(inspection)}</p>
-                </div>
-                <div className="md:col-span-2">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Ubicación</p>
-                    <p className="font-medium">{getInspectionLocationLabel(inspection)}</p>
-                </div>
-                {metadata && (
-                    <>
-                        <div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Canal de contacto</p>
-                            <p className="font-medium">{metadata.contactChannel}</p>
-                        </div>
-                        <div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Prioridad</p>
-                            <p className="font-medium">{metadata.priority}</p>
-                        </div>
-                        <div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Inmueble</p>
-                            <p className="font-medium">{metadata.propertyType}</p>
-                        </div>
-                        <div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Departamento</p>
-                            <p className="font-medium">{metadata.apartmentNumber}</p>
-                        </div>
-                        <div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Estado del inmueble</p>
-                            <p className="font-medium">{metadata.propertyCondition}</p>
-                        </div>
-                        <div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Informe técnico</p>
-                            <p className="font-medium">{metadata.technicalReport}</p>
-                        </div>
-                        <div className="md:col-span-2">
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Puntos a revisar</p>
-                            <p className="font-medium">{reviewPointsLabel}</p>
-                            {metadata.reviewPointOther && (
-                                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Otro: {metadata.reviewPointOther}</p>
-                            )}
-                        </div>
-                    </>
-                )}
-                <div className="md:col-span-2">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Notas</p>
-                    <p className="font-medium whitespace-pre-wrap">
-                        {metadata?.observations || plainNotes || 'Sin observaciones'}
-                    </p>
-                </div>
-            </div>
-
-            <div className="card">
-                <h2 className="text-lg font-bold mb-4">Actualizar estado</h2>
-                {availableStatusActions.length === 0 ? (
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                        No tienes transiciones disponibles para el estado actual.
-                    </p>
-                ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {availableStatusActions.map((action) => (
+                <div className="flex items-center gap-2">
+                    {(user?.role === 'admin' || user?.role === 'arquitecto') && (
+                        <>
                             <button
-                                key={action.status}
-                                type="button"
-                                disabled={isUpdating}
-                                onClick={() => openStatusModal(action)}
-                                className="rounded-xl border border-gray-200 px-4 py-3 text-left transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+                                onClick={() => navigate(`/inspections/${id}/execute`)}
+                                className="btn btn-primary flex items-center gap-2"
                             >
-                                <div className="flex items-center justify-between gap-3">
-                                    <span className="font-medium text-gray-900 dark:text-white">{action.label}</span>
-                                    <span className={`badge ${inspectionStatusBadgeClasses[action.status]}`}>{inspectionStatusLabels[action.status]}</span>
-                                </div>
-                                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{action.description}</p>
+                                <ClipboardCheck className="w-4 h-4" />
+                                Ejecutar
                             </button>
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            <div className="card">
-                <div className="flex items-center gap-3 mb-4">
-                    <MessageSquare className="w-5 h-5 text-primary-600" />
-                    <h2 className="text-lg font-bold">Historial de estados</h2>
+                            <button
+                                onClick={handleDownloadReport}
+                                disabled={isDownloadingReport}
+                                className="btn btn-secondary flex items-center gap-2"
+                            >
+                                <FileText className="w-4 h-4" />
+                                {isDownloadingReport ? 'Generando...' : 'Informe'}
+                            </button>
+                        </>
+                    )}
                 </div>
-                {statusHistory.length === 0 ? (
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Aún no hay cambios de estado registrados.</p>
-                ) : (
-                    <div className="space-y-4">
-                        {statusHistory.map((entry) => (
-                            <article key={entry.id} className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
-                                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                    <div>
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <span className={`badge ${inspectionStatusBadgeClasses[entry.fromStatus]}`}>{inspectionStatusLabels[entry.fromStatus]}</span>
-                                            <span className="text-gray-400">→</span>
-                                            <span className={`badge ${inspectionStatusBadgeClasses[entry.toStatus]}`}>{inspectionStatusLabels[entry.toStatus]}</span>
-                                        </div>
-                                        <p className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
-                                            {entry.changedByUser?.fullName
-                                                || entry.changedByUser?.name
-                                                || [entry.changedByUser?.firstName, entry.changedByUser?.lastName].filter(Boolean).join(' ')
-                                                || 'Usuario del sistema'}
-                                        </p>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                                            {new Date(entry.createdAt).toLocaleString('es-ES')}
-                                        </p>
-                                    </div>
+            </div>
 
-                                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                                        <p>Notificar cliente: {entry.notifyClient ? 'Sí' : 'No'}</p>
-                                        <p>Notificar inspector: {entry.notifyInspector ? 'Sí' : 'No'}</p>
-                                    </div>
-                                </div>
+            {/* Status and Info */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="card">
+                    <h2 className="text-lg font-semibold mb-4">Información General</h2>
+                    <dl className="space-y-3">
+                        <div>
+                            <dt className="text-sm text-gray-500">Estado</dt>
+                            <dd>
+                                <span className={`badge ${inspectionStatusBadgeClasses[inspection.status]}`}>
+                                    {inspectionStatusLabels[inspection.status]}
+                                </span>
+                            </dd>
+                        </div>
+                        <div>
+                            <dt className="text-sm text-gray-500">Fecha Programada</dt>
+                            <dd className="font-medium">
+                                {new Date(inspection.scheduledDate).toLocaleString('es-ES')}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt className="text-sm text-gray-500">Inspector</dt>
+                            <dd className="font-medium">{inspectorName}</dd>
+                        </div>
+                    </dl>
+                </div>
 
-                                {entry.reasonLabel && (
-                                    <p className="mt-3 text-sm text-gray-700 dark:text-gray-200">
-                                        <span className="font-medium">Motivo:</span> {entry.reasonLabel}
-                                    </p>
-                                )}
-
-                                {entry.comment && (
-                                    <p className="mt-2 text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap">
-                                        <span className="font-medium">Comentario:</span> {entry.comment}
-                                    </p>
-                                )}
-                            </article>
-                        ))}
+                {/* Status Actions */}
+                {availableStatusActions.length > 0 && (
+                    <div className="card">
+                        <h2 className="text-lg font-semibold mb-4">Cambiar Estado</h2>
+                        <div className="flex flex-wrap gap-2">
+                            {availableStatusActions.map((action) => (
+                                <button
+                                    key={action.status}
+                                    onClick={() => openStatusModal(action)}
+                                    className={`btn ${action.primary ? 'btn-primary' : 'btn-secondary'}`}
+                                >
+                                    {action.label}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 )}
             </div>
 
+            {/* Notes */}
+            {notes && notes.plainNotes && (
+                <div className="card">
+                    <h2 className="text-lg font-semibold mb-4">Notas de Inspección</h2>
+                    <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{notes.plainNotes}</p>
+                </div>
+            )}
+
+            {/* Status History */}
+            {statusHistory.length > 0 && (
+                <div className="card">
+                    <h2 className="text-lg font-semibold mb-4">Historial de Estados</h2>
+                    <div className="space-y-4">
+                        {statusHistory.map((entry, index) => (
+                                    <div key={index} className="flex gap-4 pb-4 border-b border-gray-200 dark:border-gray-700 last:border-0">
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2">
+                                                <span className={`badge ${inspectionStatusBadgeClasses[entry.toStatus]}`}>
+                                                    {inspectionStatusLabels[entry.toStatus]}
+                                                </span>
+                                                <span className="text-sm text-gray-500">
+                                                    {new Date(entry.createdAt).toLocaleString('es-ES')}
+                                                </span>
+                                            </div>
+                                            {entry.reasonLabel && <p className="text-sm mt-1">{entry.reasonLabel}</p>}
+                                            {entry.comment && (
+                                                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{entry.comment}</p>
+                                            )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Status Modal */}
             {statusAction && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6">
-                    <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900">
-                        <div className="flex items-start justify-between gap-4">
-                            <div>
-                                <p className="text-sm font-medium uppercase tracking-[0.16em] text-primary-600 dark:text-primary-400">
-                                    Cambio de estado
-                                </p>
-                                <h2 className="mt-2 text-xl font-bold text-gray-900 dark:text-white">{statusAction.label}</h2>
-                                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{statusAction.description}</p>
-                            </div>
-                            <button type="button" onClick={closeStatusModal} className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800">Cerrar</button>
-                        </div>
-
-                        <div className="mt-6 space-y-5">
-                            <div className="rounded-xl bg-gray-50 p-4 text-sm dark:bg-gray-800/70">
-                                <p>
-                                    <span className="font-medium">Nuevo estado:</span> {inspectionStatusLabels[statusAction.status]}
-                                </p>
-                            </div>
-
-                            {reasonOptions.length > 0 && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                    <div className="card w-full max-w-md mx-4">
+                        <h3 className="text-lg font-semibold mb-4">{statusAction.label}</h3>
+                        <div className="space-y-4">
+                            {statusAction.requiresReason && (
                                 <div>
-                                    <label className="mb-2 block text-sm font-medium">Motivo {statusAction.requiresReason ? '*' : ''}</label>
+                                    <label className="block text-sm font-medium mb-2">Motivo</label>
                                     <select
-                                        className="input"
                                         value={statusModal.reasonCode}
-                                        onChange={(event) => setStatusModal((current) => ({ ...current, reasonCode: event.target.value }))}
+                                        onChange={(e) => setStatusModal(prev => ({ ...prev, reasonCode: e.target.value }))}
+                                        className="input"
                                     >
-                                        <option value="">Selecciona un motivo</option>
-                                        {reasonOptions.map((option) => (
-                                            <option key={option.code} value={option.code}>{option.label}</option>
+                                        <option value="">Seleccionar motivo...</option>
+                                        {reasonOptions.map(opt => (
+                                            <option key={opt.code} value={opt.code}>{opt.label}</option>
                                         ))}
                                     </select>
                                 </div>
                             )}
-
+                            <div>
+                                <label className="block text-sm font-medium mb-2">Comentario</label>
+                                <textarea
+                                    value={statusModal.comment}
+                                    onChange={(e) => setStatusModal(prev => ({ ...prev, comment: e.target.value }))}
+                                    className="input min-h-[100px]"
+                                    placeholder="Agregar comentario..."
+                                />
+                            </div>
                             {statusAction.requiresSchedule && (
                                 <div>
-                                    <label className="mb-2 block text-sm font-medium">Nueva fecha y hora *</label>
+                                    <label className="block text-sm font-medium mb-2">Nueva Fecha</label>
                                     <input
                                         type="datetime-local"
-                                        className="input"
                                         value={statusModal.scheduledDate}
-                                        onChange={(event) => setStatusModal((current) => ({ ...current, scheduledDate: event.target.value }))}
+                                        onChange={(e) => setStatusModal(prev => ({ ...prev, scheduledDate: e.target.value }))}
+                                        className="input"
                                     />
                                 </div>
                             )}
-
-                            <div>
-                                <label className="mb-2 block text-sm font-medium">
-                                    Comentario {statusAction.recommendComment ? '(recomendado)' : '(opcional)'}
+                            <div className="flex items-center gap-4">
+                                <label className="flex items-center gap-2">
+                                    <input
+                                        type="checkbox"
+                                        checked={statusModal.notifyClient}
+                                        onChange={(e) => setStatusModal(prev => ({ ...prev, notifyClient: e.target.checked }))}
+                                    />
+                                    <span className="text-sm">Notificar cliente</span>
                                 </label>
-                                <textarea
-                                    className="input min-h-[120px]"
-                                    value={statusModal.comment}
-                                    onChange={(event) => setStatusModal((current) => ({ ...current, comment: event.target.value }))}
-                                    placeholder="Agrega contexto para el cambio de estado, aprobación o devolución."
-                                />
+                                <label className="flex items-center gap-2">
+                                    <input
+                                        type="checkbox"
+                                        checked={statusModal.notifyInspector}
+                                        onChange={(e) => setStatusModal(prev => ({ ...prev, notifyInspector: e.target.checked }))}
+                                    />
+                                    <span className="text-sm">Notificar inspector</span>
+                                </label>
                             </div>
-
-                            {(statusAction.status === 'cancelada' || statusAction.status === 'reprogramada' || statusAction.status === 'en_proceso' || statusAction.status === 'finalizada') && (
-                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                    <label className="flex items-center gap-3 rounded-xl border border-gray-200 px-4 py-3 dark:border-gray-700">
-                                        <input
-                                            type="checkbox"
-                                            checked={statusModal.notifyClient}
-                                            onChange={(event) => setStatusModal((current) => ({ ...current, notifyClient: event.target.checked }))}
-                                        />
-                                        <span className="text-sm">Preparar notificación al cliente</span>
-                                    </label>
-                                    <label className="flex items-center gap-3 rounded-xl border border-gray-200 px-4 py-3 dark:border-gray-700">
-                                        <input
-                                            type="checkbox"
-                                            checked={statusModal.notifyInspector}
-                                            onChange={(event) => setStatusModal((current) => ({ ...current, notifyInspector: event.target.checked }))}
-                                        />
-                                        <span className="text-sm">Notificar al inspector</span>
-                                    </label>
-                                </div>
-                            )}
                         </div>
-
-                        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
-                            <button type="button" onClick={closeStatusModal} className="btn btn-secondary">Cancelar</button>
-                            <button type="button" onClick={handleStatusChange} disabled={isUpdating} className="btn btn-primary">
-                                {isUpdating ? 'Guardando...' : statusAction.confirmLabel}
+                        <div className="flex justify-end gap-3 mt-6">
+                            <button onClick={closeStatusModal} className="btn btn-secondary">
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleStatusChange}
+                                disabled={isUpdating}
+                                className="btn btn-primary"
+                            >
+                                {isUpdating ? 'Actualizando...' : 'Confirmar'}
                             </button>
                         </div>
                     </div>

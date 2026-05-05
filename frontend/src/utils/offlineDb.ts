@@ -49,22 +49,42 @@ export type OfflineSyncItem = {
   updatedAt: string
 } & OfflineSyncItemPayload
 
-type ExecutionSnapshot = {
-  inspectionId: string
-  data: InspectionExecutionData
-  updatedAt: string
-}
-
 type LocalIdMapping = {
   localId: string
   serverId: string
   updatedAt: string
 }
 
+type CachedInspection = {
+  id: string
+  data: any
+  updatedAt: string
+}
+
+type CachedInspectionDetail = {
+  inspectionId: string
+  data: any
+  updatedAt: string
+}
+
+type CachedExecutionData = {
+  inspectionId: string
+  data: InspectionExecutionData
+  updatedAt: string
+}
+
 interface OfflineDbSchema extends DBSchema {
-  executionSnapshots: {
+  cached_inspections: {
     key: string
-    value: ExecutionSnapshot
+    value: CachedInspection
+  }
+  cached_inspection_details: {
+    key: string
+    value: CachedInspectionDetail
+  }
+  cached_execution_data: {
+    key: string
+    value: CachedExecutionData
   }
   executionDrafts: {
     key: string
@@ -85,26 +105,38 @@ interface OfflineDbSchema extends DBSchema {
 }
 
 const DB_NAME = 'curiel-offline-db'
-const DB_VERSION = 1
+const DB_VERSION = 2
 
 export const dbPromise = openDB<OfflineDbSchema>(DB_NAME, DB_VERSION, {
-  upgrade(db) {
-    if (!db.objectStoreNames.contains('executionSnapshots')) {
-      db.createObjectStore('executionSnapshots', { keyPath: 'inspectionId' })
+  upgrade(db, oldVersion) {
+    if (oldVersion < 1) {
+      if (!db.objectStoreNames.contains('executionDrafts')) {
+        db.createObjectStore('executionDrafts', { keyPath: 'inspectionId' })
+      }
+
+      if (!db.objectStoreNames.contains('syncQueue')) {
+        const store = db.createObjectStore('syncQueue', { keyPath: 'id' })
+        store.createIndex('by-inspection', 'inspectionId')
+        store.createIndex('by-status', 'syncStatus')
+      }
+
+      if (!db.objectStoreNames.contains('localIdMappings')) {
+        db.createObjectStore('localIdMappings', { keyPath: 'localId' })
+      }
     }
 
-    if (!db.objectStoreNames.contains('executionDrafts')) {
-      db.createObjectStore('executionDrafts', { keyPath: 'inspectionId' })
-    }
+    if (oldVersion < 2) {
+      if (!db.objectStoreNames.contains('cached_inspections')) {
+        db.createObjectStore('cached_inspections', { keyPath: 'id' })
+      }
 
-    if (!db.objectStoreNames.contains('syncQueue')) {
-      const store = db.createObjectStore('syncQueue', { keyPath: 'id' })
-      store.createIndex('by-inspection', 'inspectionId')
-      store.createIndex('by-status', 'syncStatus')
-    }
+      if (!db.objectStoreNames.contains('cached_inspection_details')) {
+        db.createObjectStore('cached_inspection_details', { keyPath: 'inspectionId' })
+      }
 
-    if (!db.objectStoreNames.contains('localIdMappings')) {
-      db.createObjectStore('localIdMappings', { keyPath: 'localId' })
+      if (!db.objectStoreNames.contains('cached_execution_data')) {
+        db.createObjectStore('cached_execution_data', { keyPath: 'inspectionId' })
+      }
     }
   },
 })
@@ -122,20 +154,47 @@ export const fileToDataUrl = async (file: Blob) => {
   })
 }
 
-export const saveExecutionSnapshot = async (inspectionId: string, data: InspectionExecutionData) => {
+// Cached inspections list
+export const saveCachedInspections = async (inspections: any[]) => {
   const db = await dbPromise
-  await db.put('executionSnapshots', {
-    inspectionId,
-    data,
-    updatedAt: new Date().toISOString(),
-  })
+  const updatedAt = new Date().toISOString()
+  for (const inspection of inspections) {
+    await db.put('cached_inspections', { id: inspection.id, data: inspection, updatedAt })
+  }
 }
 
-export const getExecutionSnapshot = async (inspectionId: string) => {
+export const getCachedInspections = async () => {
   const db = await dbPromise
-  return db.get('executionSnapshots', inspectionId)
+  return db.getAll('cached_inspections')
 }
 
+// Cached inspection details
+export const saveCachedInspectionDetail = async (inspectionId: string, data: any) => {
+  const db = await dbPromise
+  await db.put('cached_inspection_details', { inspectionId, data, updatedAt: new Date().toISOString() })
+}
+
+export const getCachedInspectionDetail = async (inspectionId: string) => {
+  const db = await dbPromise
+  return db.get('cached_inspection_details', inspectionId)
+}
+
+// Cached execution data
+export const saveCachedExecutionData = async (inspectionId: string, data: InspectionExecutionData) => {
+  const db = await dbPromise
+  await db.put('cached_execution_data', { inspectionId, data, updatedAt: new Date().toISOString() })
+}
+
+export const getCachedExecutionData = async (inspectionId: string) => {
+  const db = await dbPromise
+  return db.get('cached_execution_data', inspectionId)
+}
+
+// Backward compatibility aliases
+export const saveExecutionSnapshot = saveCachedExecutionData
+export const getExecutionSnapshot = getCachedExecutionData
+
+// Execution drafts
 export const saveExecutionDraft = async (draft: ExecutionDraft) => {
   const db = await dbPromise
   await db.put('executionDrafts', draft)
@@ -151,6 +210,7 @@ export const clearExecutionDraft = async (inspectionId: string) => {
   await db.delete('executionDrafts', inspectionId)
 }
 
+// Sync queue
 export const addSyncQueueItem = async (item: ({ inspectionId: string } & OfflineSyncItemPayload) & { id?: string; syncStatus?: OfflineSyncStatus; errorMessage?: string | null }) => {
   const db = await dbPromise
   const now = new Date().toISOString()
@@ -220,6 +280,7 @@ export const getServerIdForLocalId = async (localId: string) => {
   return mapping?.serverId || null
 }
 
+// Merge execution data with pending queue items
 export const mergeExecutionWithQueue = (base: InspectionExecutionData, queueItems: OfflineSyncItem[]): InspectionExecutionData => {
   const result: InspectionExecutionData = {
     inspection: base.inspection,

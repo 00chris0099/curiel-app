@@ -9,6 +9,7 @@ export type StatusActionConfig = {
     status: InspectionStatus;
     label: string;
     description: string;
+    primary?: boolean;
     requiresReason?: boolean;
     requiresSchedule?: boolean;
     recommendComment?: boolean;

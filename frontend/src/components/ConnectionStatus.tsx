@@ -6,17 +6,18 @@ interface ConnectionStatusProps {
     pendingCount?: number;
     onSyncNow?: () => void;
     isSyncing?: boolean;
+    showSyncButton?: boolean;
 }
 
-const ConnectionStatus = ({ pendingCount = 0, onSyncNow, isSyncing = false }: ConnectionStatusProps) => {
-    const { isOnline, isForcedOffline, effectiveOnline, toggleForcedOffline } = useOnlineStatus();
+const ConnectionStatus = ({ pendingCount = 0, onSyncNow, isSyncing = false, showSyncButton = true }: ConnectionStatusProps) => {
+    const { isOnline, manualOfflineMode, effectiveOnline, toggleManualOffline } = useOnlineStatus();
     const [showSynced, setShowSynced] = useState(false);
 
-    const status = isForcedOffline
-        ? { label: 'Offline simulado 🧪', color: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200', icon: AlertTriangle }
+    const status = manualOfflineMode
+        ? { label: 'Trabajando sin conexión', color: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200', icon: AlertTriangle }
         : !isOnline
-        ? { label: 'Offline ❌', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200', icon: WifiOff }
-        : { label: 'Online ✅', color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200', icon: Wifi };
+        ? { label: 'Sin conexión detectada', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200', icon: WifiOff }
+        : { label: 'Online', color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200', icon: Wifi };
 
     const Icon = status.icon;
 
@@ -42,7 +43,7 @@ const ConnectionStatus = ({ pendingCount = 0, onSyncNow, isSyncing = false }: Co
                 </div>
 
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                    {onSyncNow && pendingCount > 0 && effectiveOnline && (
+                    {showSyncButton && onSyncNow && pendingCount > 0 && effectiveOnline && (
                         <button
                             type="button"
                             onClick={handleSyncClick}
@@ -65,25 +66,15 @@ const ConnectionStatus = ({ pendingCount = 0, onSyncNow, isSyncing = false }: Co
                         </button>
                     )}
 
-                    {isForcedOffline ? (
-                        <button
-                            type="button"
-                            onClick={toggleForcedOffline}
-                            className="btn btn-secondary flex items-center justify-center gap-2"
-                        >
-                            Volver online
-                        </button>
-                    ) : (
-                        <button
-                            type="button"
-                            onClick={toggleForcedOffline}
-                            className="btn btn-secondary flex items-center justify-center gap-2"
-                        >
-                            Simular offline
-                        </button>
-                    )}
+                    <button
+                        type="button"
+                        onClick={toggleManualOffline}
+                        className="btn btn-secondary flex items-center justify-center gap-2"
+                    >
+                        {manualOfflineMode ? 'Volver a modo online' : 'Trabajar sin conexión'}
+                    </button>
 
-                    {!isForcedOffline && !effectiveOnline && (
+                    {!manualOfflineMode && !effectiveOnline && isOnline && (
                         <span className="text-sm opacity-80">Sin conexión detectada</span>
                     )}
                 </div>
