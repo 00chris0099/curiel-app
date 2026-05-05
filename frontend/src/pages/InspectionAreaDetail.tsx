@@ -370,7 +370,7 @@ export const InspectionAreaDetail = () => {
                 return;
             }
         }
-        navigate(`/inspections/${id}/execute`);
+        navigate(`/inspections/${id}/execute`, { state: { selectedAreaId: areaId } });
     };
 
     if (isLoading) {
@@ -383,7 +383,7 @@ export const InspectionAreaDetail = () => {
                 <div className="card text-center py-12">
                     <p className="text-red-600">{errorMessage || 'Área no encontrada'}</p>
                     <button
-                        onClick={() => navigate(`/inspections/${id}/execute`)}
+                        onClick={() => navigate(`/inspections/${id}/execute`, { state: { selectedAreaId: areaId } })}
                         className="btn btn-primary mt-4"
                     >
                         <ArrowLeft className="w-4 h-4 mr-2" />

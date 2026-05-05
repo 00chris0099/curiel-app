@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
     AlertTriangle,
     ArrowLeft,
+    ArrowRight,
     Camera,
     CheckCircle2,
     ClipboardCheck,
@@ -165,6 +166,13 @@ const areaStatusBadges: Record<ExecutionAreaStatus, string> = {
     aprobado: 'badge-success',
 };
 
+const areaStatusDots: Record<ExecutionAreaStatus, string> = {
+    pendiente: 'bg-amber-500',
+    en_revision: 'bg-sky-500',
+    observado: 'bg-rose-500',
+    aprobado: 'bg-emerald-500',
+};
+
 const severityBadges: Record<ObservationSeverity, string> = {
     leve: 'badge-success',
     media: 'badge-info',
@@ -195,8 +203,13 @@ const inspectionStatusLabels: Record<string, string> = {
     reprogramada: 'Reprogramada',
 };
 
+type InspectionExecutionRouteState = {
+    selectedAreaId?: string;
+};
+
 export const InspectionExecution = () => {
     const { id } = useParams<{ id: string }>();
+    const location = useLocation();
     const navigate = useNavigate();
     const { user } = useAuthStore();
     const [execution, setExecution] = useState<InspectionExecutionData | null>(null);
@@ -214,6 +227,9 @@ export const InspectionExecution = () => {
     const [generalPhotoForm, setGeneralPhotoForm] = useState<PhotoFormState>(emptyGeneralPhotoForm);
     const [areaPhotoForm, setAreaPhotoForm] = useState<PhotoFormState>(emptyAreaPhotoForm);
     const [queueItems, setQueueItems] = useState<OfflineSyncItem[]>([]);
+
+    const routeState = location.state as InspectionExecutionRouteState | null;
+    const routeSelectedAreaId = typeof routeState?.selectedAreaId === 'string' ? routeState.selectedAreaId : null;
 
     const loadExecution = useCallback(async (preferredAreaId?: string | null) => {
         if (!id) {
@@ -274,8 +290,8 @@ export const InspectionExecution = () => {
     });
 
     useEffect(() => {
-        loadExecution();
-    }, [loadExecution]);
+        loadExecution(routeSelectedAreaId);
+    }, [loadExecution, routeSelectedAreaId]);
 
     const areas = useMemo(() => Array.isArray(execution?.areas) ? execution.areas : [], [execution?.areas]);
     const observations = useMemo(() => Array.isArray(execution?.observations) ? execution.observations : [], [execution?.observations]);
@@ -399,6 +415,12 @@ export const InspectionExecution = () => {
     const selectedAreaObservations = observations.filter((observation) => observation.areaId === selectedAreaId);
     const selectedAreaPhotos = photos.filter((photo) => photo.areaId === selectedAreaId);
     const generalPhotos = photos.filter((photo) => ['edificio', 'plano', 'general'].includes(photo.type));
+    const areaObservationCounts = useMemo(() => observations.reduce<Record<string, number>>((acc, observation) => {
+        if (observation.areaId) {
+            acc[observation.areaId] = (acc[observation.areaId] || 0) + 1;
+        }
+        return acc;
+    }, {}), [observations]);
     const metadata = inspection ? parseDepartmentInspectionNotes(inspection.notes).metadata : null;
     const canApproveReport = user?.role === 'admin' || user?.role === 'arquitecto';
     const getEntitySyncState = useCallback((entityType: OfflineSyncItem['entityType'], entityId: string) => {
@@ -797,6 +819,17 @@ export const InspectionExecution = () => {
         }
     };
 
+    const handleOpenAreaDetail = useCallback((areaId: string) => {
+        if (!id) {
+            return;
+        }
+
+        setSelectedAreaId(areaId);
+        navigate(`/inspections/${id}/execute/areas/${areaId}`, {
+            state: { selectedAreaId: areaId },
+        });
+    }, [id, navigate]);
+
     if (isLoading) {
         return <Loader fullScreen />;
     }
@@ -914,6 +947,94 @@ export const InspectionExecution = () => {
                 <StatCard icon={FileText} label="Informe" value={reportStatusLabels[stats.reportStatus] || 'Borrador'} accent="text-primary-600" />
             </div>
 
+            <div className="card space-y-4 lg:hidden">
+                <div className="flex flex-col gap-3">
+                    <div>
+                        <h2 className="text-lg font-semibold">Áreas del departamento</h2>
+                        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                            Recorre las áreas en horizontal y abre el detalle del ambiente que quieras inspeccionar.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        className="btn btn-secondary flex items-center justify-center gap-2"
+                        onClick={handleCreateDefaultAreas}
+                        disabled={busyAction === 'default-areas'}
+                    >
+                        {busyAction === 'default-areas' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Home className="h-4 w-4" />}
+                        Crear áreas por defecto
+                    </button>
+                </div>
+
+                {areas.length === 0 ? (
+                    <EmptyPanel message="Crea áreas por defecto para comenzar la ejecución técnica del departamento." compact />
+                ) : (
+                    <>
+                        <div className="-mx-1 overflow-x-auto pb-2">
+                            <div className="flex min-w-max gap-3 px-1">
+                                {areas.map((area) => {
+                                    const isSelected = area.id === selectedAreaId;
+
+                                    return (
+                                        <button
+                                            key={area.id}
+                                            type="button"
+                                            onClick={() => handleOpenAreaDetail(area.id)}
+                                            className={`shrink-0 rounded-2xl border px-4 py-3 text-left transition-colors ${isSelected
+                                                ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-500/10'
+                                                : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900'
+                                                }`}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <span className={`h-2.5 w-2.5 rounded-full ${areaStatusDots[area.status]}`} />
+                                                <span className="text-sm font-semibold text-gray-900 dark:text-white">{area.name}</span>
+                                            </div>
+                                            <div className="mt-2 flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+                                                <span>{areaStatusLabels[area.status]}</span>
+                                                <span>{areaObservationCounts[area.id] || 0} obs.</span>
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {selectedArea && (
+                            <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/60">
+                                <div className="flex items-start justify-between gap-3">
+                                    <div>
+                                        <p className="font-semibold text-gray-900 dark:text-white">{selectedArea.name}</p>
+                                        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                                            {selectedArea.category} · {(selectedArea.calculatedAreaM2 || 0).toFixed(2)} m²
+                                        </p>
+                                    </div>
+                                    <span className={`badge ${areaStatusBadges[selectedArea.status]}`}>{areaStatusLabels[selectedArea.status]}</span>
+                                </div>
+
+                                <div className="mt-3 flex items-center justify-between gap-3 text-xs text-gray-500 dark:text-gray-400">
+                                    <span>
+                                        {getEntitySyncState('area', selectedArea.id) === 'pending' && 'Pendiente de sincronizar'}
+                                        {getEntitySyncState('area', selectedArea.id) === 'failed' && 'Error al sincronizar'}
+                                        {getEntitySyncState('area', selectedArea.id) === 'synced' && 'Guardado'}
+                                    </span>
+                                    <span>{areaObservationCounts[selectedArea.id] || 0} observaciones</span>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    className="btn btn-primary mt-4 flex w-full items-center justify-center gap-2"
+                                    onClick={() => handleOpenAreaDetail(selectedArea.id)}
+                                >
+                                    Abrir detalle del área
+                                    <ArrowRight className="h-4 w-4" />
+                                </button>
+                            </div>
+                        )}
+                    </>
+                )}
+            </div>
+
             <div className="card space-y-5">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
@@ -961,7 +1082,7 @@ export const InspectionExecution = () => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
+            <div className="hidden items-start gap-6 lg:grid lg:grid-cols-[320px_minmax(0,1fr)]">
                 <aside className="space-y-4">
                     <div className="card space-y-4 xl:sticky xl:top-24">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between xl:flex-col xl:items-stretch">
@@ -1003,8 +1124,11 @@ export const InspectionExecution = () => {
                                     <button
                                         key={area.id}
                                         type="button"
-                                        onClick={() => navigate(`/inspections/${id}/execute/areas/${area.id}`)}
-                                        className="w-full rounded-2xl border border-gray-200 p-4 text-left hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800/80 transition-colors"
+                                        onClick={() => setSelectedAreaId(area.id)}
+                                        className={`w-full rounded-2xl border p-4 text-left transition-colors ${area.id === selectedAreaId
+                                            ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-500/10'
+                                            : 'border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800/80'
+                                            }`}
                                     >
                                         <div className="flex items-start justify-between gap-3">
                                             <div>
@@ -1015,7 +1139,7 @@ export const InspectionExecution = () => {
                                         </div>
                                         <div className="mt-3 flex items-center justify-between text-sm text-gray-600 dark:text-gray-300">
                                             <span>{(area.calculatedAreaM2 || 0).toFixed(2)} m²</span>
-                                            <span>{observations.filter((item) => item.areaId === area.id).length} obs.</span>
+                                            <span>{areaObservationCounts[area.id] || 0} obs.</span>
                                         </div>
                                         <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                                             {getEntitySyncState('area', area.id) === 'pending' && 'Pendiente de sincronizar'}
