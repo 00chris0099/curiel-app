@@ -370,10 +370,6 @@ export const InspectionExecution = () => {
             if (draft.areaPhotoForm) {
                 setAreaPhotoForm((current) => ({ ...current, ...draft.areaPhotoForm as PhotoFormState }));
             }
-
-            if (draft.selectedAreaId) {
-                setSelectedAreaId(draft.selectedAreaId);
-            }
         })();
     }, [id, selectedArea?.id]);
 
@@ -396,10 +392,9 @@ export const InspectionExecution = () => {
                 ...areaPhotoForm,
                 file: null,
             },
-            selectedAreaId,
             updatedAt: new Date().toISOString(),
-        })
-    }, [id, areaForm, manualAreaForm, observationForm, summaryForm, generalPhotoForm.type, generalPhotoForm.caption, areaPhotoForm.type, areaPhotoForm.caption, areaPhotoForm.observationId, selectedAreaId]);
+        });
+    }, [id, areaForm, manualAreaForm, observationForm, summaryForm, generalPhotoForm.type, generalPhotoForm.caption, areaPhotoForm.type, areaPhotoForm.caption, areaPhotoForm.observationId]);
 
     const selectedAreaObservations = observations.filter((observation) => observation.areaId === selectedAreaId);
     const selectedAreaPhotos = photos.filter((photo) => photo.areaId === selectedAreaId);
@@ -1004,36 +999,31 @@ export const InspectionExecution = () => {
                         )}
 
                         <div className="space-y-3">
-                            {areas.length === 0 ? (
-                                <EmptyPanel message="Todavía no hay áreas registradas para esta inspección." compact />
-                            ) : areas.map((area) => (
-                                <button
-                                    key={area.id}
-                                    type="button"
-                                    onClick={() => setSelectedAreaId(area.id)}
-                                    className={`w-full rounded-2xl border p-4 text-left transition-colors ${selectedAreaId === area.id
-                                        ? 'border-primary-400 bg-primary-50 dark:border-primary-700 dark:bg-primary-900/20'
-                                        : 'border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800/80'
-                                        }`}
-                                >
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div>
-                                            <p className="font-semibold text-gray-900 dark:text-white">{area.name}</p>
-                                            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{area.category}</p>
+                                {areas.map((area) => (
+                                    <button
+                                        key={area.id}
+                                        type="button"
+                                        onClick={() => navigate(`/inspections/${id}/execute/areas/${area.id}`)}
+                                        className="w-full rounded-2xl border border-gray-200 p-4 text-left hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800/80 transition-colors"
+                                    >
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div>
+                                                <p className="font-semibold text-gray-900 dark:text-white">{area.name}</p>
+                                                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{area.category}</p>
+                                            </div>
+                                            <span className={`badge ${areaStatusBadges[area.status]}`}>{areaStatusLabels[area.status]}</span>
                                         </div>
-                                        <span className={`badge ${areaStatusBadges[area.status]}`}>{areaStatusLabels[area.status]}</span>
-                                    </div>
-                                    <div className="mt-3 flex items-center justify-between text-sm text-gray-600 dark:text-gray-300">
-                                        <span>{(area.calculatedAreaM2 || 0).toFixed(2)} m²</span>
-                                        <span>{observations.filter((item) => item.areaId === area.id).length} obs.</span>
-                                    </div>
-                                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                                        {getEntitySyncState('area', area.id) === 'pending' && 'Pendiente de sincronizar'}
-                                        {getEntitySyncState('area', area.id) === 'failed' && 'Error al sincronizar'}
-                                        {getEntitySyncState('area', area.id) === 'synced' && 'Guardado'}
-                                    </p>
-                                </button>
-                            ))}
+                                        <div className="mt-3 flex items-center justify-between text-sm text-gray-600 dark:text-gray-300">
+                                            <span>{(area.calculatedAreaM2 || 0).toFixed(2)} m²</span>
+                                            <span>{observations.filter((item) => item.areaId === area.id).length} obs.</span>
+                                        </div>
+                                        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                                            {getEntitySyncState('area', area.id) === 'pending' && 'Pendiente de sincronizar'}
+                                            {getEntitySyncState('area', area.id) === 'failed' && 'Error al sincronizar'}
+                                            {getEntitySyncState('area', area.id) === 'synced' && 'Guardado'}
+                                        </p>
+                                    </button>
+                                ))}
                         </div>
                     </div>
                 </aside>

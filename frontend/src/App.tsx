@@ -14,6 +14,7 @@ import { Inspections } from './pages/Inspections';
 import { CreateInspection } from './pages/CreateInspection';
 import { InspectionDetail } from './pages/InspectionDetail';
 import { InspectionExecution } from './pages/InspectionExecution';
+import { InspectionAreaDetail } from './pages/InspectionAreaDetail';
 import { Users } from './pages/Users';
 import { Notifications } from './pages/Notifications';
 
@@ -146,6 +147,19 @@ function App() {
               <DashboardLayout>
                 <ErrorBoundary backHref="/inspections">
                   <InspectionExecution />
+                </ErrorBoundary>
+              </DashboardLayout>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/inspections/:id/execute/areas/:areaId"
+          element={
+            <PrivateRoute allowedRoles={['admin', 'arquitecto', 'inspector']}>
+              <DashboardLayout>
+                <ErrorBoundary backHref="/inspections">
+                  <InspectionAreaDetail />
                 </ErrorBoundary>
               </DashboardLayout>
             </PrivateRoute>
