@@ -485,6 +485,10 @@ class InspectionExecutionService {
             throw new AppError('Inspección no encontrada', 404, 'INSPECTION_NOT_FOUND');
         }
 
+        if (!isMasterAdmin && !['admin', 'arquitecto', 'inspector'].includes(userRole)) {
+            throw new AppError('No tienes permisos para acceder a esta inspección', 403, 'FORBIDDEN');
+        }
+
         if (!isMasterAdmin && userRole === 'inspector' && inspection.inspectorId !== userId) {
             throw new AppError('No tienes permisos para acceder a esta inspección', 403, 'FORBIDDEN');
         }

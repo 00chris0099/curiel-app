@@ -15,6 +15,7 @@ import { getApiErrorMessage } from '../api/axios';
 import inspectionService from '../services/inspection.service';
 import toast from 'react-hot-toast';
 import type { InspectionStats } from '../types';
+import { canCreateInspection, canManageUsers } from '../utils/inspectionPermissions';
 
 export const Dashboard = () => {
     const { user } = useAuthStore();
@@ -98,7 +99,7 @@ export const Dashboard = () => {
                         </p>
                     </div>
 
-                    {(user?.role === 'admin' || user?.role === 'arquitecto') && (
+                    {canCreateInspection(user) && (
                         <button
                             onClick={() => navigate('/inspections/create')}
                             className="btn btn-primary flex w-full items-center justify-center gap-2 sm:w-auto"
@@ -152,7 +153,7 @@ export const Dashboard = () => {
                         </p>
                     </button>
 
-                    {(user?.role === 'admin' || user?.role === 'arquitecto') && (
+                    {canCreateInspection(user) && (
                         <button
                             onClick={() => navigate('/inspections/create')}
                             className="card hover:shadow-md transition-shadow text-left"
@@ -165,7 +166,7 @@ export const Dashboard = () => {
                         </button>
                     )}
 
-                    {user?.role === 'admin' && (
+                    {canManageUsers(user) && (
                         <button
                             onClick={() => navigate('/users')}
                             className="card hover:shadow-md transition-shadow text-left"

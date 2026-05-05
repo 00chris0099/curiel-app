@@ -14,6 +14,7 @@ import { Loader } from '../components/Loader';
 import ConnectionStatus from '../components/ConnectionStatus';
 import { useOfflineSync } from '../hooks/useOfflineSync';
 import inspectionService from '../services/inspection.service';
+import { useAuthStore } from '../store/authStore';
 import type {
     ExecutionAreaStatus,
     InspectionArea,
@@ -32,6 +33,7 @@ import {
     mergeExecutionWithQueue,
     saveExecutionSnapshot,
 } from '../utils/offlineDb';
+import { canManageExecutionContent } from '../utils/inspectionPermissions';
 
 const areaStatusOptions: ExecutionAreaStatus[] = ['pendiente', 'en_revision', 'observado', 'aprobado'];
 const observationSeverityOptions: ObservationSeverity[] = ['leve', 'media', 'alta', 'critica'];
@@ -76,6 +78,7 @@ const emptyAreaPhotoForm: PhotoFormState = {
 export const InspectionAreaDetail = () => {
     const { id, areaId } = useParams<{ id: string; areaId: string }>();
     const navigate = useNavigate();
+    const { user } = useAuthStore();
     const [execution, setExecution] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -155,6 +158,7 @@ export const InspectionAreaDetail = () => {
         if (!execution?.photos || !areaId) return [];
         return execution.photos.filter((p: any) => p.areaId === areaId);
     }, [execution?.photos, areaId]);
+    const canEditExecutionContent = canManageExecutionContent(execution?.inspection ?? null, user || null);
 
     useEffect(() => {
         if (selectedArea) {
@@ -504,32 +508,36 @@ export const InspectionAreaDetail = () => {
                         className="input min-h-[100px]"
                     />
                 </div>
-                <div className="mt-4 flex gap-3">
-                    <button
-                        type="submit"
-                        disabled={isSaving}
-                        className="btn btn-primary flex items-center gap-2"
-                    >
-                        {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                        Guardar cambios
-                    </button>
-                </div>
+                {canEditExecutionContent && (
+                    <div className="mt-4 flex gap-3">
+                        <button
+                            type="submit"
+                            disabled={isSaving}
+                            className="btn btn-primary flex items-center gap-2"
+                        >
+                            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                            Guardar cambios
+                        </button>
+                    </div>
+                )}
             </form>
 
             {/* Observations */}
             <div className="card">
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-lg font-semibold">Observaciones técnicas</h2>
-                    <button
-                        onClick={() => {
-                            setEditingObservationId(null);
-                            setObservationForm(emptyObservationForm);
-                        }}
-                        className="btn btn-secondary flex items-center gap-2"
-                    >
-                        <Plus className="w-4 h-4" />
-                        Agregar observación
-                    </button>
+                    {canEditExecutionContent && (
+                        <button
+                            onClick={() => {
+                                setEditingObservationId(null);
+                                setObservationForm(emptyObservationForm);
+                            }}
+                            className="btn btn-secondary flex items-center gap-2"
+                        >
+                            <Plus className="w-4 h-4" />
+                            Agregar observación
+                        </button>
+                    )}
                 </div>
 
                 {editingObservationId && (
@@ -568,21 +576,23 @@ export const InspectionAreaDetail = () => {
                                 />
                             </div>
                         </div>
-                        <div className="mt-3 flex gap-2">
-                            <button type="submit" className="btn btn-primary">
-                                {editingObservationId ? 'Actualizar' : 'Guardar'} observación
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setEditingObservationId(null);
-                                    setObservationForm(emptyObservationForm);
-                                }}
-                                className="btn btn-secondary"
-                            >
-                                Cancelar
-                            </button>
-                        </div>
+                        {canEditExecutionContent && (
+                            <div className="mt-3 flex gap-2">
+                                <button type="submit" className="btn btn-primary">
+                                    {editingObservationId ? 'Actualizar' : 'Guardar'} observación
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setEditingObservationId(null);
+                                        setObservationForm(emptyObservationForm);
+                                    }}
+                                    className="btn btn-secondary"
+                                >
+                                    Cancelar
+                                </button>
+                            </div>
+                        )}
                     </form>
                 )}
 
@@ -597,20 +607,22 @@ export const InspectionAreaDetail = () => {
                                         {obs.severity} · {obs.type}
                                     </p>
                                 </div>
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={() => handleEditObservation(obs)}
-                                        className="text-primary-600 hover:text-primary-700"
-                                    >
-                                        Editar
-                                    </button>
-                                    <button
-                                        onClick={() => handleDeleteObservation(obs.id)}
-                                        className="text-red-600 hover:text-red-700"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                </div>
+                                {canEditExecutionContent && (
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => handleEditObservation(obs)}
+                                            className="text-primary-600 hover:text-primary-700"
+                                        >
+                                            Editar
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeleteObservation(obs.id)}
+                                            className="text-red-600 hover:text-red-700"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     ))}
@@ -657,10 +669,12 @@ export const InspectionAreaDetail = () => {
                             />
                         </div>
                     </div>
-                    <button type="submit" className="btn btn-secondary mt-3 flex items-center gap-2">
-                        <Camera className="w-4 h-4" />
-                        Subir foto
-                    </button>
+                    {canEditExecutionContent && (
+                        <button type="submit" className="btn btn-secondary mt-3 flex items-center gap-2">
+                            <Camera className="w-4 h-4" />
+                            Subir foto
+                        </button>
+                    )}
                 </form>
 
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">

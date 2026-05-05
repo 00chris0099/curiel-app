@@ -1,8 +1,13 @@
 const express = require('express');
 const inspectionExecutionController = require('../controllers/inspectionExecutionController');
 const { uploadSingle } = require('../middlewares/upload');
+const { authorize } = require('../middlewares/auth');
+const { requireInspectionAccess } = require('../middlewares/inspectionPermissions');
 
 const router = express.Router({ mergeParams: true });
+
+router.use(authorize('admin', 'arquitecto', 'inspector'));
+router.use(requireInspectionAccess);
 
 router.get('/', inspectionExecutionController.getInspectionExecution);
 router.post('/areas/default', inspectionExecutionController.createDefaultAreas);

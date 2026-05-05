@@ -44,6 +44,12 @@ import {
     parseDepartmentInspectionNotes,
 } from '../utils/inspectionMetadata';
 import {
+    canApproveInspectionReport,
+    canGenerateInspectionReport,
+    canManageExecutionContent,
+    canSendExecutionToReview,
+} from '../utils/inspectionPermissions';
+import {
     addSyncQueueItem,
     createLocalId,
     fileToDataUrl,
@@ -422,7 +428,10 @@ export const InspectionExecution = () => {
         return acc;
     }, {}), [observations]);
     const metadata = inspection ? parseDepartmentInspectionNotes(inspection.notes).metadata : null;
-    const canApproveReport = user?.role === 'admin' || user?.role === 'arquitecto';
+    const canApproveReport = canApproveInspectionReport(user || null);
+    const canEditExecutionContent = canManageExecutionContent(inspection, user || null);
+    const canDownloadExecutionReport = canGenerateInspectionReport(inspection, user || null);
+    const canCompleteExecution = canSendExecutionToReview(inspection, user || null);
     const getEntitySyncState = useCallback((entityType: OfflineSyncItem['entityType'], entityId: string) => {
         const related = queueItems.find((item) => item.entityType === entityType && (
             ('clientId' in item && item.clientId === entityId)
@@ -917,25 +926,29 @@ export const InspectionExecution = () => {
                     </div>
                 </div>
 
-                <button
-                    type="button"
-                    onClick={handleDownloadReport}
-                    disabled={isDownloadingReport}
-                    className="btn btn-secondary flex w-full items-center justify-center gap-2 sm:w-auto"
-                >
-                    <FileText className="h-5 w-5" />
-                    {isDownloadingReport ? 'Generando informe...' : 'Generar informe'}
-                </button>
+                {canDownloadExecutionReport && (
+                    <button
+                        type="button"
+                        onClick={handleDownloadReport}
+                        disabled={isDownloadingReport}
+                        className="btn btn-secondary flex w-full items-center justify-center gap-2 sm:w-auto"
+                    >
+                        <FileText className="h-5 w-5" />
+                        {isDownloadingReport ? 'Generando informe...' : 'Generar informe'}
+                    </button>
+                )}
 
-                <button
-                    type="button"
-                    onClick={handleCompleteInspection}
-                    disabled={busyAction === 'complete-inspection'}
-                    className="btn btn-primary flex w-full items-center justify-center gap-2 sm:w-auto"
-                >
-                    {busyAction === 'complete-inspection' ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle2 className="h-5 w-5" />}
-                    Enviar a revisión
-                </button>
+                {canCompleteExecution && (
+                    <button
+                        type="button"
+                        onClick={handleCompleteInspection}
+                        disabled={busyAction === 'complete-inspection'}
+                        className="btn btn-primary flex w-full items-center justify-center gap-2 sm:w-auto"
+                    >
+                        {busyAction === 'complete-inspection' ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle2 className="h-5 w-5" />}
+                        Enviar a revisión
+                    </button>
+                )}
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
@@ -956,15 +969,17 @@ export const InspectionExecution = () => {
                         </p>
                     </div>
 
-                    <button
-                        type="button"
-                        className="btn btn-secondary flex items-center justify-center gap-2"
-                        onClick={handleCreateDefaultAreas}
-                        disabled={busyAction === 'default-areas'}
-                    >
-                        {busyAction === 'default-areas' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Home className="h-4 w-4" />}
-                        Crear áreas por defecto
-                    </button>
+                    {canEditExecutionContent && (
+                        <button
+                            type="button"
+                            className="btn btn-secondary flex items-center justify-center gap-2"
+                            onClick={handleCreateDefaultAreas}
+                            disabled={busyAction === 'default-areas'}
+                        >
+                            {busyAction === 'default-areas' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Home className="h-4 w-4" />}
+                            Crear áreas por defecto
+                        </button>
+                    )}
                 </div>
 
                 {areas.length === 0 ? (
@@ -1067,10 +1082,12 @@ export const InspectionExecution = () => {
                         className="input px-3 py-2"
                         onChange={(event) => setGeneralPhotoForm((current) => ({ ...current, file: event.target.files?.[0] || null }))}
                     />
-                    <button type="submit" className="btn btn-secondary flex items-center justify-center gap-2" disabled={busyAction === 'photo-general'}>
-                        {busyAction === 'photo-general' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
-                        Agregar foto
-                    </button>
+                    {canEditExecutionContent && (
+                        <button type="submit" className="btn btn-secondary flex items-center justify-center gap-2" disabled={busyAction === 'photo-general'}>
+                            {busyAction === 'photo-general' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+                            Agregar foto
+                        </button>
+                    )}
                 </form>
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -1092,19 +1109,21 @@ export const InspectionExecution = () => {
                                     Selecciona un ambiente para cargar medidas, hallazgos y fotos.
                                 </p>
                             </div>
-                            <div className="flex flex-col gap-2">
-                                <button type="button" className="btn btn-secondary flex items-center justify-center gap-2" onClick={handleCreateDefaultAreas} disabled={busyAction === 'default-areas'}>
-                                    {busyAction === 'default-areas' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Home className="h-4 w-4" />}
-                                    Crear áreas por defecto
-                                </button>
-                                <button type="button" className="btn btn-primary flex items-center justify-center gap-2" onClick={() => setShowAreaCreator((current) => !current)}>
-                                    <PlusCircle className="h-4 w-4" />
-                                    {showAreaCreator ? 'Cerrar formulario' : 'Agregar área'}
-                                </button>
-                            </div>
+                            {canEditExecutionContent && (
+                                <div className="flex flex-col gap-2">
+                                    <button type="button" className="btn btn-secondary flex items-center justify-center gap-2" onClick={handleCreateDefaultAreas} disabled={busyAction === 'default-areas'}>
+                                        {busyAction === 'default-areas' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Home className="h-4 w-4" />}
+                                        Crear áreas por defecto
+                                    </button>
+                                    <button type="button" className="btn btn-primary flex items-center justify-center gap-2" onClick={() => setShowAreaCreator((current) => !current)}>
+                                        <PlusCircle className="h-4 w-4" />
+                                        {showAreaCreator ? 'Cerrar formulario' : 'Agregar área'}
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
-                        {showAreaCreator && (
+                        {canEditExecutionContent && showAreaCreator && (
                             <form onSubmit={handleCreateArea} className="space-y-3 rounded-2xl border border-dashed border-gray-300 p-4 dark:border-gray-600">
                                 <input className="input" placeholder="Nombre del área" value={manualAreaForm.name} onChange={(event) => setManualAreaForm((current) => ({ ...current, name: event.target.value }))} />
                                 <input className="input" placeholder="Categoría" value={manualAreaForm.category} onChange={(event) => setManualAreaForm((current) => ({ ...current, category: event.target.value }))} />
@@ -1163,10 +1182,12 @@ export const InspectionExecution = () => {
                                             Ajusta medidas, estado y notas técnicas del ambiente.
                                         </p>
                                     </div>
-                                    <button type="button" className="btn btn-danger flex items-center justify-center gap-2 sm:w-auto" onClick={() => handleDeleteArea(selectedArea)} disabled={busyAction === `delete-area-${selectedArea.id}`}>
-                                        <Trash2 className="h-4 w-4" />
-                                        Eliminar área
-                                    </button>
+                                    {canEditExecutionContent && (
+                                        <button type="button" className="btn btn-danger flex items-center justify-center gap-2 sm:w-auto" onClick={() => handleDeleteArea(selectedArea)} disabled={busyAction === `delete-area-${selectedArea.id}`}>
+                                            <Trash2 className="h-4 w-4" />
+                                            Eliminar área
+                                        </button>
+                                    )}
                                 </div>
 
                                 <form onSubmit={handleSaveSelectedArea} className="space-y-4">
@@ -1193,10 +1214,12 @@ export const InspectionExecution = () => {
                                         <textarea className="input min-h-[120px]" value={areaForm.notes} onChange={(event) => setAreaForm((current) => ({ ...current, notes: event.target.value }))} placeholder="Estado de pisos, cielorraso, mobiliario fijo, ingreso, etc." />
                                     </div>
 
-                                    <button type="submit" className="btn btn-primary flex items-center gap-2" disabled={busyAction === 'save-area'}>
-                                        {busyAction === 'save-area' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                                        Guardar área
-                                    </button>
+                                    {canEditExecutionContent && (
+                                        <button type="submit" className="btn btn-primary flex items-center gap-2" disabled={busyAction === 'save-area'}>
+                                            {busyAction === 'save-area' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                            Guardar área
+                                        </button>
+                                    )}
                                 </form>
                             </div>
 
@@ -1256,10 +1279,12 @@ export const InspectionExecution = () => {
                                             <InputField label="Unidad" value={observationForm.metricUnit} onChange={(value) => setObservationForm((current) => ({ ...current, metricUnit: value }))} placeholder="m², %, und" />
                                         </div>
 
-                                        <button type="submit" className="btn btn-primary flex items-center gap-2" disabled={busyAction === 'save-observation'}>
-                                            {busyAction === 'save-observation' ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlusCircle className="h-4 w-4" />}
-                                            {editingObservationId ? 'Guardar observación' : 'Agregar observación'}
-                                        </button>
+                                        {canEditExecutionContent && (
+                                            <button type="submit" className="btn btn-primary flex items-center gap-2" disabled={busyAction === 'save-observation'}>
+                                                {busyAction === 'save-observation' ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlusCircle className="h-4 w-4" />}
+                                                {editingObservationId ? 'Guardar observación' : 'Agregar observación'}
+                                            </button>
+                                        )}
                                     </form>
 
                                     <div className="space-y-3">
@@ -1282,14 +1307,16 @@ export const InspectionExecution = () => {
                                                     {getEntitySyncState('observation', observation.id) === 'synced' && 'Guardado'}
                                                 </p>
                                             </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <button type="button" className="rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600" onClick={() => handleEditObservation(observation)}>
-                                                            Editar
-                                                        </button>
-                                                        <button type="button" className="rounded-lg border border-red-300 px-3 py-2 text-sm text-red-600 dark:border-red-800 dark:text-red-300" onClick={() => handleDeleteObservation(observation.id)}>
-                                                            Eliminar
-                                                        </button>
-                                                    </div>
+                                                    {canEditExecutionContent && (
+                                                        <div className="flex items-center gap-2">
+                                                            <button type="button" className="rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600" onClick={() => handleEditObservation(observation)}>
+                                                                Editar
+                                                            </button>
+                                                            <button type="button" className="rounded-lg border border-red-300 px-3 py-2 text-sm text-red-600 dark:border-red-800 dark:text-red-300" onClick={() => handleDeleteObservation(observation.id)}>
+                                                                Eliminar
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 <p className="mt-3 text-sm text-gray-700 dark:text-gray-200">{observation.description}</p>
                                                 {observation.recommendation && (
@@ -1345,10 +1372,12 @@ export const InspectionExecution = () => {
                                             <input className="input" placeholder="Comentario o referencia" value={areaPhotoForm.caption} onChange={(event) => setAreaPhotoForm((current) => ({ ...current, caption: event.target.value }))} />
                                             <input type="file" accept="image/*" className="input px-3 py-2" onChange={(event) => setAreaPhotoForm((current) => ({ ...current, file: event.target.files?.[0] || null }))} />
 
-                                            <button type="submit" className="btn btn-secondary flex items-center gap-2" disabled={busyAction === 'photo-area'}>
-                                                {busyAction === 'photo-area' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
-                                                Agregar foto del área
-                                            </button>
+                                            {canEditExecutionContent && (
+                                                <button type="submit" className="btn btn-secondary flex items-center gap-2" disabled={busyAction === 'photo-area'}>
+                                                    {busyAction === 'photo-area' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                                                    Agregar foto del área
+                                                </button>
+                                            )}
                                         </form>
 
                                         <div className="space-y-3">
@@ -1387,10 +1416,12 @@ export const InspectionExecution = () => {
                                             </select>
                                         </div>
 
-                                        <button type="submit" className="btn btn-primary flex items-center gap-2" disabled={busyAction === 'save-summary'}>
-                                            {busyAction === 'save-summary' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                                            Guardar resumen
-                                        </button>
+                                        {canEditExecutionContent && (
+                                            <button type="submit" className="btn btn-primary flex items-center gap-2" disabled={busyAction === 'save-summary'}>
+                                                {busyAction === 'save-summary' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                                Guardar resumen
+                                            </button>
+                                        )}
                                     </form>
                                 </div>
                             </div>

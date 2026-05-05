@@ -72,9 +72,26 @@ class InspectionReportService {
             throw new AppError('Inspección no encontrada', 404, 'INSPECTION_NOT_FOUND');
         }
 
-        if (!isMasterAdmin && userRole === 'inspector' && inspection.inspectorId !== userId) {
+        if (!isMasterAdmin && ['admin', 'arquitecto'].includes(userRole)) {
+            return this._buildReportPayload(inspection, inspectionId);
+        }
+
+        if (!isMasterAdmin && userRole === 'inspector') {
+            if (inspection.inspectorId !== userId) {
+                throw new AppError('No tienes permisos para generar este informe', 403, 'FORBIDDEN');
+            }
+
+            if (!['lista_revision', 'finalizada'].includes(inspection.status)) {
+                throw new AppError('El inspector solo puede generar informes cuando la inspección está lista para revisión o finalizada', 403, 'FORBIDDEN');
+            }
+        } else if (!isMasterAdmin) {
             throw new AppError('No tienes permisos para generar este informe', 403, 'FORBIDDEN');
         }
+
+        return this._buildReportPayload(inspection, inspectionId);
+    }
+
+    async _buildReportPayload(inspection, inspectionId) {
 
         const [areas, observations, photos, summary] = await Promise.all([
             InspectionArea.findAll({

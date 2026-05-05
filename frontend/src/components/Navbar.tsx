@@ -23,7 +23,7 @@ export const Navbar = ({ onMenuClick }: NavbarProps) => {
         <nav className="fixed inset-x-0 top-0 z-40 border-b border-gray-200 bg-white/95 backdrop-blur dark:border-gray-700 dark:bg-gray-800/95">
             <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
                 {/* Left side */}
-                <div className="flex items-center gap-4">
+                <div className="flex min-w-0 items-center gap-3 sm:gap-4">
                     <button
                         onClick={onMenuClick}
                         className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
@@ -36,7 +36,7 @@ export const Navbar = ({ onMenuClick }: NavbarProps) => {
                 </div>
 
                 {/* Right side */}
-                <div className="flex items-center gap-3">
+                <div className="flex min-w-0 items-center gap-2 sm:gap-3">
                     {/* Dark mode toggle */}
                     <button
                         onClick={toggleTheme}
@@ -51,7 +51,9 @@ export const Navbar = ({ onMenuClick }: NavbarProps) => {
                     </button>
 
                     <NotificationDropdown />
-<ConnectionStatus />
+                    <div className="max-w-[9.5rem] min-w-0 flex-shrink-0 sm:max-w-none">
+                        <ConnectionStatus variant="navbar" />
+                    </div>
 
                     {/* User menu */}
                     <div className="relative">

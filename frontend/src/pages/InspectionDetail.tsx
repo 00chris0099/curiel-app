@@ -18,6 +18,7 @@ import {
     inspectionStatusLabels,
     type StatusActionConfig,
 } from '../utils/inspectionStatus';
+import { canAccessInspectionExecution, canGenerateInspectionReport } from '../utils/inspectionPermissions';
 
 type StatusModalState = {
     reasonCode: string;
@@ -234,6 +235,8 @@ export const InspectionDetail = () => {
     const locationLabel = getInspectionLocationLabel(inspection);
     const inspectorName = getInspectorName(inspection);
     const notes = parseDepartmentInspectionNotes(inspection?.notes);
+    const canExecuteInspection = canAccessInspectionExecution(inspection, user || null);
+    const canDownloadReport = canGenerateInspectionReport(inspection, user || null);
 
     return (
         <div className="space-y-6">
@@ -263,7 +266,7 @@ export const InspectionDetail = () => {
                 </div>
 
                 <div className="flex items-center gap-2">
-                    {(user?.role === 'admin' || user?.role === 'arquitecto') && (
+                    {canExecuteInspection && (
                         <>
                             <button
                                 onClick={() => navigate(`/inspections/${id}/execute`)}
@@ -272,6 +275,11 @@ export const InspectionDetail = () => {
                                 <ClipboardCheck className="w-4 h-4" />
                                 Ejecutar
                             </button>
+                        </>
+                    )}
+
+                    {canDownloadReport && (
+                        <>
                             <button
                                 onClick={handleDownloadReport}
                                 disabled={isDownloadingReport}

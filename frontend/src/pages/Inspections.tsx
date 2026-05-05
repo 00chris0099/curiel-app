@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 import type { Inspection, InspectionStatus } from '../types';
 import { getInspectionLocationLabel, getInspectionServiceLabel, getInspectorName } from '../utils/inspectionMetadata';
 import { inspectionStatusBadgeClasses, inspectionStatusLabels } from '../utils/inspectionStatus';
+import { canCreateInspection } from '../utils/inspectionPermissions';
 import { saveCachedInspections, getCachedInspections } from '../utils/offlineDb';
 
 export const Inspections = () => {
@@ -100,7 +101,7 @@ export const Inspections = () => {
                     </p>
                 </div>
 
-                {(user?.role === 'admin' || user?.role === 'arquitecto') && (
+                {canCreateInspection(user) && (
                     <button
                         onClick={() => navigate('/inspections/create')}
                         className="btn btn-primary flex items-center gap-2"
