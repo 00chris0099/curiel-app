@@ -19,6 +19,7 @@ import {
 import toast from 'react-hot-toast';
 import { getApiErrorMessage } from '../api/axios';
 import { Loader } from '../components/Loader';
+import ConnectionStatus from '../components/ConnectionStatus';
 import { useOfflineSync } from '../hooks/useOfflineSync';
 import inspectionService from '../services/inspection.service';
 import { useAuthStore } from '../store/authStore';
@@ -262,7 +263,13 @@ export const InspectionExecution = () => {
         }
     }, [id]);
 
-    const { isOnline, pendingCount, isSyncing, syncNow, refreshPendingCount } = useOfflineSync(id, async () => {
+    const {
+        isOnline,
+        pendingCount,
+        isSyncing,
+        syncNow,
+        refreshPendingCount,
+    } = useOfflineSync(id, async () => {
         await loadExecution(selectedAreaId);
     });
 
@@ -842,23 +849,11 @@ export const InspectionExecution = () => {
 
     return (
         <div className="space-y-6 pb-10">
-            <div className={`rounded-2xl border px-4 py-3 ${isOnline ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-900/20 dark:text-emerald-200' : 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-900/20 dark:text-amber-200'}`}>
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <p className="font-semibold">{isOnline ? 'Modo online' : 'Modo offline: tus cambios se guardarán localmente'}</p>
-                        <p className="text-sm opacity-80">{pendingCount} cambios pendientes por sincronizar</p>
-                    </div>
-                    <button
-                        type="button"
-                        onClick={() => void syncNow()}
-                        disabled={!isOnline || isSyncing || pendingCount === 0}
-                        className="btn btn-secondary flex items-center justify-center gap-2"
-                    >
-                        {isSyncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                        Sincronizar ahora
-                    </button>
-                </div>
-            </div>
+            <ConnectionStatus
+                pendingCount={pendingCount}
+                onSyncNow={syncNow}
+                isSyncing={isSyncing}
+            />
 
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="flex items-start gap-4">

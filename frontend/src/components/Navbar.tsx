@@ -3,6 +3,7 @@ import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import { useState } from 'react';
 import { NotificationDropdown } from './NotificationDropdown';
+import ConnectionStatus from './ConnectionStatus';
 
 interface NavbarProps {
     onMenuClick: () => void;
@@ -50,6 +51,7 @@ export const Navbar = ({ onMenuClick }: NavbarProps) => {
                     </button>
 
                     <NotificationDropdown />
+<ConnectionStatus />
 
                     {/* User menu */}
                     <div className="relative">

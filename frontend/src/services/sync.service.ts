@@ -109,29 +109,36 @@ const syncQueueItem = async (item: OfflineSyncItem) => {
   await removeSyncQueueItem(item.id)
 }
 
-const syncPendingInspectionChanges = async (inspectionId?: string) => {
-  const queue = await getPendingQueueItems(inspectionId)
-  const order = ['area', 'observation', 'photo', 'summary', 'status']
-  const sortedQueue = [...queue].sort((left, right) => {
-    const typeDiff = order.indexOf(left.entityType) - order.indexOf(right.entityType)
-    if (typeDiff !== 0) return typeDiff
-    return new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime()
-  })
-
-  const results: Array<{ id: string; success: boolean; message?: string }> = []
-
-  for (const item of sortedQueue) {
-    try {
-      await syncQueueItem(item)
-      results.push({ id: item.id, success: true })
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Error al sincronizar'
-      await updateSyncQueueItem(item.id, { syncStatus: 'failed', errorMessage: message })
-      results.push({ id: item.id, success: false, message })
+const syncPendingInspectionChanges = async (
+    inspectionId?: string,
+    forceSync = true
+) => {
+    if (!forceSync) {
+        return []
     }
-  }
 
-  return results
+    const queue = await getPendingQueueItems(inspectionId)
+    const order = ['area', 'observation', 'photo', 'summary', 'status']
+    const sortedQueue = [...queue].sort((left, right) => {
+        const typeDiff = order.indexOf(left.entityType) - order.indexOf(right.entityType)
+        if (typeDiff !== 0) return typeDiff
+        return new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime()
+    })
+
+    const results: Array<{ id: string; success: boolean; message?: string }> = []
+
+    for (const item of sortedQueue) {
+        try {
+            await syncQueueItem(item)
+            results.push({ id: item.id, success: true })
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Error al sincronizar'
+            await updateSyncQueueItem(item.id, { syncStatus: 'failed', errorMessage: message })
+            results.push({ id: item.id, success: false, message })
+        }
+    }
+
+    return results
 }
 
 export default {

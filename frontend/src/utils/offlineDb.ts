@@ -87,7 +87,7 @@ interface OfflineDbSchema extends DBSchema {
 const DB_NAME = 'curiel-offline-db'
 const DB_VERSION = 1
 
-const dbPromise = openDB<OfflineDbSchema>(DB_NAME, DB_VERSION, {
+export const dbPromise = openDB<OfflineDbSchema>(DB_NAME, DB_VERSION, {
   upgrade(db) {
     if (!db.objectStoreNames.contains('executionSnapshots')) {
       db.createObjectStore('executionSnapshots', { keyPath: 'inspectionId' })
