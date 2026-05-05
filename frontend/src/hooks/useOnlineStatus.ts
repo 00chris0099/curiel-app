@@ -1,14 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 
-const STORAGE_KEY = 'curiel-manual-offline-mode';
+const STORAGE_KEY = 'curiel-manual-online-enabled';
 
 export const useOnlineStatus = () => {
     const [isOnline, setIsOnline] = useState(navigator.onLine);
-    const [manualOfflineMode, setManualOfflineMode] = useState(() => {
+    const [manualOnlineEnabled, setManualOnlineEnabled] = useState(() => {
         try {
-            return localStorage.getItem(STORAGE_KEY) === 'true';
+            const stored = localStorage.getItem(STORAGE_KEY);
+            return stored === null ? true : stored === 'true';
         } catch {
-            return false;
+            return true;
         }
     });
 
@@ -25,10 +26,17 @@ export const useOnlineStatus = () => {
         };
     }, []);
 
-    const effectiveOnline = isOnline && !manualOfflineMode;
+    const effectiveOnline = isOnline && manualOnlineEnabled;
 
-    const toggleManualOffline = useCallback(() => {
-        setManualOfflineMode(prev => {
+    const setManualOnline = useCallback((enabled: boolean) => {
+        setManualOnlineEnabled(enabled);
+        try {
+            localStorage.setItem(STORAGE_KEY, String(enabled));
+        } catch {}
+    }, []);
+
+    const toggleManualOnline = useCallback(() => {
+        setManualOnlineEnabled(prev => {
             const next = !prev;
             try {
                 localStorage.setItem(STORAGE_KEY, String(next));
@@ -37,18 +45,11 @@ export const useOnlineStatus = () => {
         });
     }, []);
 
-    const setManualOffline = useCallback((value: boolean) => {
-        setManualOfflineMode(value);
-        try {
-            localStorage.setItem(STORAGE_KEY, String(value));
-        } catch {}
-    }, []);
-
     return {
         isOnline,
-        manualOfflineMode,
+        manualOnlineEnabled,
         effectiveOnline,
-        toggleManualOffline,
-        setManualOffline,
+        toggleManualOnline,
+        setManualOnline,
     };
 };

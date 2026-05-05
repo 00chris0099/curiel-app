@@ -1,4 +1,4 @@
-import { Wifi, WifiOff, AlertTriangle, Loader2, Save } from 'lucide-react';
+import { Wifi, WifiOff, AlertTriangle, Loader2, Save, Database } from 'lucide-react';
 import { useState } from 'react';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 
@@ -10,15 +10,32 @@ interface ConnectionStatusProps {
 }
 
 const ConnectionStatus = ({ pendingCount = 0, onSyncNow, isSyncing = false, showSyncButton = true }: ConnectionStatusProps) => {
-    const { isOnline, manualOfflineMode, effectiveOnline, toggleManualOffline } = useOnlineStatus();
+    const { isOnline, manualOnlineEnabled, effectiveOnline, toggleManualOnline } = useOnlineStatus();
     const [showSynced, setShowSynced] = useState(false);
 
-    const status = manualOfflineMode
-        ? { label: 'Trabajando sin conexión', color: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200', icon: AlertTriangle }
-        : !isOnline
-        ? { label: 'Sin conexión detectada', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200', icon: WifiOff }
-        : { label: 'Online', color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200', icon: Wifi };
+    const getStatusInfo = () => {
+        if (!isOnline) {
+            return {
+                label: 'Sin señal detectada',
+                color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200',
+                icon: WifiOff,
+            };
+        }
+        if (!manualOnlineEnabled) {
+            return {
+                label: 'Trabajando sin conexión',
+                color: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200',
+                icon: AlertTriangle,
+            };
+        }
+        return {
+            label: 'Online activo',
+            color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200',
+            icon: Wifi,
+        };
+    };
 
+    const status = getStatusInfo();
     const Icon = status.icon;
 
     const handleSyncClick = () => {
@@ -43,6 +60,31 @@ const ConnectionStatus = ({ pendingCount = 0, onSyncNow, isSyncing = false, show
                 </div>
 
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    {/* ON/OFF Switch */}
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">ON</span>
+                        <button
+                            type="button"
+                            onClick={toggleManualOnline}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                                manualOnlineEnabled
+                                    ? 'bg-emerald-600 focus:ring-emerald-500'
+                                    : 'bg-gray-300 dark:bg-gray-600 focus:ring-gray-400'
+                            }`}
+                            role="switch"
+                            aria-checked={manualOnlineEnabled}
+                            aria-label="Cambiar modo online/offline"
+                        >
+                            <span
+                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${
+                                    manualOnlineEnabled ? 'translate-x-6' : 'translate-x-1'
+                                }`}
+                            />
+                        </button>
+                        <span className="text-sm font-medium">OFF</span>
+                    </div>
+
+                    {/* Sync Button */}
                     {showSyncButton && onSyncNow && pendingCount > 0 && effectiveOnline && (
                         <button
                             type="button"
@@ -66,16 +108,12 @@ const ConnectionStatus = ({ pendingCount = 0, onSyncNow, isSyncing = false, show
                         </button>
                     )}
 
-                    <button
-                        type="button"
-                        onClick={toggleManualOffline}
-                        className="btn btn-secondary flex items-center justify-center gap-2"
-                    >
-                        {manualOfflineMode ? 'Volver a modo online' : 'Trabajar sin conexión'}
-                    </button>
-
-                    {!manualOfflineMode && !effectiveOnline && isOnline && (
-                        <span className="text-sm opacity-80">Sin conexión detectada</span>
+                    {/* Offline data indicator */}
+                    {!effectiveOnline && isOnline && !manualOnlineEnabled && (
+                        <span className="inline-flex items-center gap-1 text-sm opacity-80">
+                            <Database className="h-4 w-4" />
+                            Usando datos offline
+                        </span>
                     )}
                 </div>
             </div>

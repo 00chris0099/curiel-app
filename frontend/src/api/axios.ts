@@ -31,6 +31,20 @@ export const getApiErrorMessage = (error: unknown, fallback = 'Ocurrio un error 
     return fallback;
 };
 
+export const isNetworkError = (error: unknown): boolean => {
+    if (!axios.isAxiosError(error)) return false;
+
+    const message = error.message || '';
+
+    return !!(
+        error.code === 'ERR_NETWORK'
+        || error.code === 'ECONNABORTED'
+        || message.includes('Network Error')
+        || message.includes('timeout')
+        || (!error.response && !error.request)
+    );
+};
+
 const normalizeApiUrl = (value?: string) => value?.trim().replace(/\/+$/, '');
 
 const API_URL = normalizeApiUrl(window.__APP_CONFIG__?.VITE_API_URL)
@@ -64,14 +78,19 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response?.status === 401) {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            window.location.href = '/login';
+        if (axios.isAxiosError(error) && error.response?.status === 401) {
+            // Only logout on actual 401 from backend, not network errors
+            if (error.response) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = '/login';
+            }
         }
 
-        if (error.code === 'ECONNABORTED' || !error.response) {
-            console.warn('[api] El backend no respondio o esta fuera de linea.');
+        if (isNetworkError(error)) {
+            console.warn('[api] Network error - backend may be offline:', error.message);
+            // Mark the error for easy identification
+            error.isNetworkError = true;
         }
 
         return Promise.reject(error);
