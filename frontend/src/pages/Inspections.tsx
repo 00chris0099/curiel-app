@@ -1,17 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Filter, Eye, Database } from 'lucide-react';
-import { Loader } from '../components/Loader';
+import toast from 'react-hot-toast';
 import { getApiErrorMessage } from '../api/axios';
+import { CustomIcon } from '../components/CustomIcon';
+import { Loader } from '../components/Loader';
+import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import inspectionService from '../services/inspection.service';
 import { useAuthStore } from '../store/authStore';
-import { useOnlineStatus } from '../hooks/useOnlineStatus';
-import toast from 'react-hot-toast';
 import type { Inspection, InspectionStatus } from '../types';
-import { getInspectionLocationLabel, getInspectionServiceLabel, getInspectorName } from '../utils/inspectionMetadata';
-import { inspectionStatusBadgeClasses, inspectionStatusLabels } from '../utils/inspectionStatus';
 import { canCreateInspection } from '../utils/inspectionPermissions';
+import { inspectionStatusIconMap } from '../utils/iconSystem';
+import { getInspectionLocationLabel, getInspectionServiceLabel, getInspectorName } from '../utils/inspectionMetadata';
 import { saveCachedInspections, getCachedInspections } from '../utils/offlineDb';
+import { inspectionStatusBadgeClasses, inspectionStatusLabels } from '../utils/inspectionStatus';
 
 export const Inspections = () => {
     const navigate = useNavigate();
@@ -31,13 +32,11 @@ export const Inspections = () => {
                 const filters = statusFilter ? { status: statusFilter } : {};
                 const response = await inspectionService.getInspections(filters);
                 setInspections(response.data);
-                // Cache inspections for offline use
                 await saveCachedInspections(response.data);
             } catch (error: unknown) {
-                // If API fails, try to load from cache
                 const cached = await getCachedInspections();
                 if (cached && cached.length > 0) {
-                    setInspections(cached.map(c => c.data));
+                    setInspections(cached.map((c) => c.data));
                     setIsOfflineData(true);
                     toast.success('Mostrando datos guardados offline');
                 } else {
@@ -47,14 +46,13 @@ export const Inspections = () => {
                 setIsLoading(false);
             }
         } else {
-            // Offline: load from cache
             try {
                 const cached = await getCachedInspections();
                 if (cached && cached.length > 0) {
-                    setInspections(cached.map(c => c.data));
+                    setInspections(cached.map((c) => c.data));
                     setIsOfflineData(true);
                 }
-            } catch (error) {
+            } catch {
                 toast.error('Error al cargar datos locales');
             } finally {
                 setIsLoading(false);
@@ -66,7 +64,6 @@ export const Inspections = () => {
         loadInspections();
     }, [loadInspections]);
 
-    // Filtro local por búsqueda
     const filteredInspections = inspections.filter((inspection) => {
         const query = searchTerm.toLowerCase();
         const serviceLabel = getInspectionServiceLabel(inspection).toLowerCase();
@@ -83,41 +80,40 @@ export const Inspections = () => {
     }
 
     return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
+        <div className="space-y-6 pb-10">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
-                    <div className="flex items-center gap-3">
-                        <h1 className="text-2xl font-bold">Inspecciones</h1>
+                    <div className="flex flex-wrap items-center gap-3">
+                        <p className="section-eyebrow">Operación</p>
                         {isOfflineData && (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-800">
-                                <Database className="w-3 h-3" />
+                            <span className="badge badge-warning">
+                                <CustomIcon name="database" size="xs" tone="white" />
                                 Datos offline
                             </span>
                         )}
                     </div>
-                    <p className="text-gray-600 dark:text-gray-400 mt-1">
-                        Gestión de inspecciones de departamentos en Lima
-                    </p>
+                    <h1 className="mt-2 font-display text-3xl text-slate-900">Inspecciones</h1>
+                    <p className="mt-2 text-slate-600">Gestiona visitas técnicas de departamentos en Lima con filtros claros y estados unificados.</p>
                 </div>
 
                 {canCreateInspection(user) && (
                     <button
                         onClick={() => navigate('/inspections/create')}
-                        className="btn btn-primary flex items-center gap-2"
+                        className="btn btn-primary flex items-center gap-3"
                     >
-                        <Plus className="w-5 h-5" />
-                        Nueva Inspección
+                        <CustomIcon name="plus" size="xs" tone="white" />
+                        Nueva inspección
                     </button>
                 )}
             </div>
 
-            {/* Show offline warning if no data available */}
             {!isLoading && inspections.length === 0 && !effectiveOnline && (
-                <div className="card text-center py-12">
-                    <Database className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">No hay inspecciones guardadas offline</h3>
-                    <p className="text-gray-600 dark:text-gray-400 mb-4">
+                <div className="card py-12 text-center">
+                    <div className="mb-4 flex justify-center">
+                        <CustomIcon name="database" size="lg" tone="mist" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-slate-900">No hay inspecciones guardadas offline</h3>
+                    <p className="mt-2 text-slate-600">
                         Abre la lista con internet al menos una vez para guardar los datos localmente.
                     </p>
                 </div>
@@ -125,37 +121,34 @@ export const Inspections = () => {
 
             {inspections.length > 0 && (
                 <>
-                    {/* Filtros */}
                     <div className="card">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* Búsqueda */}
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                             <div>
-                                <label className="block text-sm font-medium mb-2">Buscar</label>
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                <label className="mb-2 block text-sm font-medium text-slate-700">Buscar</label>
+                                <div className="field-with-icon">
+                                    <CustomIcon name="search" size="xs" tone="mist" />
                                     <input
                                         type="text"
                                         placeholder="Servicio, cliente o distrito..."
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="input pl-10"
+                                        className="input"
                                     />
                                 </div>
                             </div>
 
-                            {/* Filtro por estado */}
                             <div>
-                                <label className="block text-sm font-medium mb-2">Estado</label>
-                                <div className="relative">
-                                    <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                <label className="mb-2 block text-sm font-medium text-slate-700">Estado</label>
+                                <div className="field-with-icon">
+                                    <CustomIcon name="filter" size="xs" tone="cream" />
                                     <select
                                         value={statusFilter}
                                         onChange={(e) => setStatusFilter(e.target.value as InspectionStatus | '')}
-                                        className="input pl-10"
+                                        className="input"
                                     >
                                         <option value="">Todos los estados</option>
                                         <option value="pendiente">Pendiente</option>
-                                        <option value="en_proceso">En Proceso</option>
+                                        <option value="en_proceso">En proceso</option>
                                         <option value="lista_revision">Lista para revisión</option>
                                         <option value="finalizada">Finalizada</option>
                                         <option value="cancelada">Cancelada</option>
@@ -166,84 +159,64 @@ export const Inspections = () => {
                         </div>
                     </div>
 
-                    {/* Tabla de inspecciones */}
                     <div className="card overflow-hidden p-0">
                         <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead className="bg-gray-50 dark:bg-gray-700/50">
+                            <table className="w-full min-w-[900px]">
+                                <thead className="bg-[#fbfbfa]">
                                     <tr>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                                            Inmueble
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                                            Cliente
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                                            Servicio
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                                            Estado
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                                            Fecha Programada
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                                            Inspector
-                                        </th>
-                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                                            Acciones
-                                        </th>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Inmueble</th>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Cliente</th>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Servicio</th>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Estado</th>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Fecha</th>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Inspector</th>
+                                        <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Acción</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                                <tbody className="divide-y divide-slate-200">
                                     {filteredInspections.length === 0 ? (
                                         <tr>
-                                            <td colSpan={7} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
-                                                No se encontraron inspecciones
+                                            <td colSpan={7} className="px-6 py-14 text-center text-slate-500">
+                                                <div className="mb-4 flex justify-center">
+                                                    <CustomIcon name="folder-open" size="md" tone="mist" />
+                                                </div>
+                                                No se encontraron inspecciones.
                                             </td>
                                         </tr>
                                     ) : (
                                         filteredInspections.map((inspection) => (
                                             <tr
                                                 key={inspection.id}
-                                                className="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
+                                                className="cursor-pointer transition-colors hover:bg-[#fbfbfa]"
                                                 onClick={() => navigate(`/inspections/${inspection.id}/execute`)}
                                             >
-                                                <td className="px-6 py-4 font-medium">
+                                                <td className="px-6 py-5 font-medium text-slate-900">
                                                     <div>
                                                         <p>{inspection.projectName}</p>
-                                                        <p className="mt-1 text-xs font-normal text-gray-500 dark:text-gray-400">
-                                                            {getInspectionLocationLabel(inspection)}
-                                                        </p>
+                                                        <p className="mt-1 text-xs font-medium text-slate-500">{getInspectionLocationLabel(inspection)}</p>
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-4">
-                                                    {inspection.clientName}
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    {getInspectionServiceLabel(inspection)}
-                                                </td>
-                                                <td className="px-6 py-4">
+                                                <td className="px-6 py-5 text-slate-700">{inspection.clientName}</td>
+                                                <td className="px-6 py-5 text-slate-700">{getInspectionServiceLabel(inspection)}</td>
+                                                <td className="px-6 py-5">
                                                     <span className={`badge ${inspectionStatusBadgeClasses[inspection.status]}`}>
+                                                        <CustomIcon name={inspectionStatusIconMap[inspection.status]} size="xs" tone="white" />
                                                         {inspectionStatusLabels[inspection.status]}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-4">
-                                                    {new Date(inspection.scheduledDate).toLocaleDateString('es-ES')}
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    {getInspectorName(inspection)}
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
+                                                <td className="px-6 py-5 text-slate-700">{new Date(inspection.scheduledDate).toLocaleDateString('es-ES')}</td>
+                                                <td className="px-6 py-5 text-slate-700">{getInspectorName(inspection)}</td>
+                                                <td className="px-6 py-5 text-right">
                                                     <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             navigate(`/inspections/${inspection.id}`);
                                                         }}
-                                                        className="text-primary-600 hover:text-primary-700 dark:text-primary-400"
+                                                        className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
                                                         title="Ver detalle"
                                                     >
-                                                        <Eye className="w-5 h-5" />
+                                                        <CustomIcon name="clipboard-check" size="xs" tone="cream" />
+                                                        Ver
                                                     </button>
                                                 </td>
                                             </tr>

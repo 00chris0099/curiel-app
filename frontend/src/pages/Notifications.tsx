@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
-import { Bell } from 'lucide-react';
 import { getApiErrorMessage } from '../api/axios';
+import { CustomIcon } from '../components/CustomIcon';
 import { Loader } from '../components/Loader';
 import notificationService from '../services/notification.service';
 import type { Notification } from '../types';
@@ -46,7 +46,7 @@ export const Notifications = () => {
         try {
             await notificationService.markAllAsRead();
             setNotifications((current) => current.map((item) => ({ ...item, readAt: item.readAt || new Date().toISOString() })));
-            toast.success('Notificaciones marcadas como leídas');
+            toast.success('Notificaciones marcadas como leidas');
         } catch (error: unknown) {
             toast.error(getApiErrorMessage(error, 'No se pudieron marcar las notificaciones'));
         }
@@ -60,34 +60,41 @@ export const Notifications = () => {
         <div className="space-y-6 pb-10">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold">Notificaciones</h1>
-                    <p className="mt-1 text-gray-600 dark:text-gray-400">Revisa asignaciones, cambios de estado y avisos del sistema.</p>
+                    <p className="section-eyebrow">Centro de avisos</p>
+                    <h1 className="mt-2 font-display text-3xl text-slate-900">Notificaciones</h1>
+                    <p className="mt-2 text-slate-600">Revisa asignaciones, cambios de estado y avisos del sistema.</p>
                 </div>
-                <button type="button" className="btn btn-secondary" onClick={handleMarkAll}>
-                    Marcar todo como leído
+                <button type="button" className="btn btn-secondary flex items-center gap-3" onClick={handleMarkAll}>
+                    <CustomIcon name="check-circle" size="xs" tone="sage" />
+                    Marcar todo como leido
                 </button>
             </div>
 
             <div className="card space-y-3">
                 {notifications.length === 0 ? (
-                    <div className="py-10 text-center text-gray-500 dark:text-gray-400">
-                        <Bell className="mx-auto mb-3 h-10 w-10 text-primary-500" />
-                        No tienes notificaciones todavía.
+                    <div className="py-12 text-center text-slate-500">
+                        <div className="mb-4 flex justify-center">
+                            <CustomIcon name="bell" size="lg" tone="cream" />
+                        </div>
+                        No tienes notificaciones todavia.
                     </div>
                 ) : notifications.map((notification) => (
                     <button
                         key={notification.id}
                         type="button"
                         onClick={() => handleMarkAsRead(notification)}
-                        className={`w-full rounded-2xl border px-4 py-4 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/60 ${notification.readAt ? 'border-gray-200 dark:border-gray-700' : 'border-primary-200 bg-primary-50/60 dark:border-primary-900 dark:bg-primary-900/10'}`}
+                        className={`w-full rounded-[24px] border px-5 py-5 text-left transition-colors hover:bg-white ${notification.readAt ? 'border-slate-200 bg-[#fbfbfa]' : 'border-[#eadfc8] bg-[#f5efe1]/70'}`}
                     >
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                            <div>
-                                <p className="font-semibold text-gray-900 dark:text-white">{notification.title}</p>
-                                <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">{notification.message}</p>
-                                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">{new Date(notification.createdAt).toLocaleString('es-PE')}</p>
+                            <div className="flex gap-3">
+                                <CustomIcon name={notification.readAt ? 'clipboard-check' : 'bell'} size="sm" tone={notification.readAt ? 'white' : 'cream'} />
+                                <div>
+                                    <p className="font-semibold text-slate-900">{notification.title}</p>
+                                    <p className="mt-1 text-sm text-slate-600">{notification.message}</p>
+                                    <p className="mt-2 text-xs text-slate-500">{new Date(notification.createdAt).toLocaleString('es-PE')}</p>
+                                </div>
                             </div>
-                            {!notification.readAt && <span className="mt-1 inline-flex h-2.5 w-2.5 rounded-full bg-primary-500" />}
+                            {!notification.readAt && <span className="mt-1 inline-flex h-2.5 w-2.5 rounded-full bg-[#17324a]" />}
                         </div>
                     </button>
                 ))}

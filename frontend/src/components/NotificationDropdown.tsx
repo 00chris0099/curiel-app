@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Bell, CheckCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { getApiErrorMessage } from '../api/axios';
 import notificationService from '../services/notification.service';
 import type { Notification } from '../types';
+import { CustomIcon } from './CustomIcon';
 
 const safeArray = <T,>(value: T[] | undefined | null) => Array.isArray(value) ? value : [];
 
@@ -20,7 +20,7 @@ export const NotificationDropdown = () => {
         try {
             const [listResponse, count] = await Promise.all([
                 notificationService.getNotifications(1, 5),
-                notificationService.getUnreadCount()
+                notificationService.getUnreadCount(),
             ]);
 
             setNotifications(safeArray(listResponse.data));
@@ -75,13 +75,13 @@ export const NotificationDropdown = () => {
     return (
         <div className="relative">
             <button
-                className="relative rounded-lg p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
-                aria-label="Notifications"
+                className="relative rounded-2xl border border-slate-200 bg-white p-2.5 transition-colors hover:bg-slate-50"
+                aria-label="Notificaciones"
                 onClick={handleToggle}
             >
-                <Bell className="w-5 h-5" />
+                <CustomIcon name="bell" size="xs" tone="cream" />
                 {unreadCount > 0 && (
-                    <span className="absolute -right-1 -top-1 min-w-[18px] rounded-full bg-red-500 px-1.5 text-[10px] font-semibold text-white">
+                    <span className="absolute -right-1 -top-1 min-w-[20px] rounded-full bg-[#17324a] px-1.5 py-0.5 text-[10px] font-semibold text-white">
                         {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                 )}
@@ -90,51 +90,62 @@ export const NotificationDropdown = () => {
             {isOpen && (
                 <>
                     <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
-                    <div className="absolute right-0 z-20 mt-2 w-[360px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-800">
-                        <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
-                            <div>
-                                <h3 className="font-semibold">Notificaciones</h3>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">{unreadCount} sin leer</p>
+                    <div className="absolute right-0 z-20 mt-3 w-[380px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_24px_60px_rgba(23,50,74,0.16)]">
+                        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+                            <div className="flex items-center gap-3">
+                                <CustomIcon name="bell" size="sm" tone="cream" />
+                                <div>
+                                    <h3 className="font-semibold text-slate-900">Notificaciones</h3>
+                                    <p className="text-xs text-slate-500">{unreadCount} sin leer</p>
+                                </div>
                             </div>
-                            <button type="button" onClick={handleMarkAll} className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400">
+                            <button type="button" onClick={handleMarkAll} className="text-sm font-semibold text-primary-700 hover:text-primary-800">
                                 Marcar todo
                             </button>
                         </div>
 
-                        <div className="max-h-[420px] overflow-y-auto">
+                        <div className="max-h-[420px] overflow-y-auto bg-[#fbfbfa]">
                             {isLoading ? (
-                                <div className="px-4 py-6 text-sm text-gray-500 dark:text-gray-400">Cargando notificaciones...</div>
+                                <div className="px-5 py-6 text-sm text-slate-500">Cargando notificaciones...</div>
                             ) : latestNotifications.length === 0 ? (
-                                <div className="px-4 py-6 text-sm text-gray-500 dark:text-gray-400">No tienes notificaciones todavía.</div>
+                                <div className="px-5 py-8 text-center text-sm text-slate-500">
+                                    <div className="mb-3 flex justify-center">
+                                        <CustomIcon name="bell" size="md" tone="mist" />
+                                    </div>
+                                    No tienes notificaciones todavía.
+                                </div>
                             ) : latestNotifications.map((notification) => (
                                 <button
                                     key={notification.id}
                                     type="button"
                                     onClick={() => handleMarkAsRead(notification)}
-                                    className={`w-full border-b border-gray-100 px-4 py-3 text-left transition-colors hover:bg-gray-50 dark:border-gray-700/70 dark:hover:bg-gray-700/50 ${notification.readAt ? '' : 'bg-primary-50/50 dark:bg-primary-900/10'}`}
+                                    className={`w-full border-b border-slate-200 px-5 py-4 text-left transition-colors hover:bg-white ${notification.readAt ? 'bg-transparent' : 'bg-[#f5efe1]/70'}`}
                                 >
                                     <div className="flex items-start justify-between gap-3">
-                                        <div>
-                                            <p className="font-medium text-gray-900 dark:text-white">{notification.title}</p>
-                                            <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">{notification.message}</p>
-                                            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">{new Date(notification.createdAt).toLocaleString('es-PE')}</p>
+                                        <div className="flex items-start gap-3">
+                                            <CustomIcon name={notification.readAt ? 'clipboard-check' : 'bell'} size="sm" tone={notification.readAt ? 'white' : 'cream'} />
+                                            <div>
+                                                <p className="font-semibold text-slate-900">{notification.title}</p>
+                                                <p className="mt-1 text-sm text-slate-600">{notification.message}</p>
+                                                <p className="mt-2 text-xs text-slate-500">{new Date(notification.createdAt).toLocaleString('es-PE')}</p>
+                                            </div>
                                         </div>
-                                        {!notification.readAt && <span className="mt-1 h-2.5 w-2.5 rounded-full bg-primary-500" />}
+                                        {!notification.readAt && <span className="mt-2 h-2.5 w-2.5 rounded-full bg-[#17324a]" />}
                                     </div>
                                 </button>
                             ))}
                         </div>
 
-                        <div className="border-t border-gray-200 px-4 py-3 dark:border-gray-700">
+                        <div className="border-t border-slate-200 px-5 py-4">
                             <button
                                 type="button"
                                 onClick={() => {
                                     navigate('/notifications');
                                     setIsOpen(false);
                                 }}
-                                className="flex items-center gap-2 text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400"
+                                className="flex items-center gap-3 text-sm font-semibold text-primary-700 hover:text-primary-800"
                             >
-                                <CheckCheck className="h-4 w-4" />
+                                <CustomIcon name="check-circle" size="xs" tone="sage" />
                                 Ver todas
                             </button>
                         </div>

@@ -1,5 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { CustomIcon } from './CustomIcon';
 
 type ErrorBoundaryProps = {
     children: ReactNode;
@@ -41,18 +41,21 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
         if (this.state.hasError) {
             return (
                 <div className="mx-auto max-w-3xl pb-10 pt-6">
-                    <div className="card space-y-4 text-center">
-                        <AlertTriangle className="mx-auto h-10 w-10 text-red-500" />
+                    <div className="card space-y-5 text-center">
+                        <div className="flex justify-center">
+                            <CustomIcon name="warning-circle" size="lg" tone="rose" />
+                        </div>
                         <div>
-                            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Error al cargar esta pantalla</h1>
-                            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{this.state.errorMessage}</p>
+                            <h1 className="text-xl font-bold text-slate-900">Error al cargar esta pantalla</h1>
+                            <p className="mt-2 text-sm text-slate-600">{this.state.errorMessage}</p>
                         </div>
                         <div className="flex flex-col justify-center gap-3 sm:flex-row">
-                            <button type="button" className="btn btn-secondary" onClick={this.handleBack}>
+                            <button type="button" className="btn btn-secondary flex items-center justify-center gap-2" onClick={this.handleBack}>
+                                <CustomIcon name="arrow-left" size="xs" tone="mist" />
                                 Volver a inspecciones
                             </button>
                             <button type="button" className="btn btn-primary flex items-center justify-center gap-2" onClick={this.handleRetry}>
-                                <RefreshCw className="h-4 w-4" />
+                                <CustomIcon name="sync" size="xs" tone="white" />
                                 Reintentar
                             </button>
                         </div>

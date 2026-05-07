@@ -1,4 +1,4 @@
-import { Loader2 } from 'lucide-react';
+import { CustomIcon } from './CustomIcon';
 
 interface LoaderProps {
     size?: number;
@@ -7,14 +7,13 @@ interface LoaderProps {
 }
 
 export const Loader = ({ size = 40, className = '', fullScreen = false }: LoaderProps) => {
+    const iconSize = size >= 52 ? 'lg' : size >= 40 ? 'md' : 'sm';
+
     if (fullScreen) {
         return (
-            <div className="fixed inset-0 flex items-center justify-center bg-gray-900/50 z-50">
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl">
-                    <Loader2
-                        className={`animate-spin text-primary-600 ${className}`}
-                        style={{ width: size, height: size }}
-                    />
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/70 backdrop-blur-sm">
+                <div className="rounded-[28px] border border-slate-200 bg-white p-8 shadow-[0_24px_60px_rgba(23,50,74,0.12)]">
+                    <CustomIcon name="sync" spin size={iconSize} tone="cream" className={className} />
                 </div>
             </div>
         );
@@ -22,10 +21,7 @@ export const Loader = ({ size = 40, className = '', fullScreen = false }: Loader
 
     return (
         <div className="flex items-center justify-center p-8">
-            <Loader2
-                className={`animate-spin text-primary-600 ${className}`}
-                style={{ width: size, height: size }}
-            />
+            <CustomIcon name="sync" spin size={iconSize} tone="cream" className={className} />
         </div>
     );
 };

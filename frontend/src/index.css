@@ -1,8 +1,26 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --surface-app: #f4f7fa;
+    --surface-panel: rgba(255, 255, 255, 0.9);
+    --surface-soft: #f8f8f6;
+    --surface-cream: #f5efe1;
+    --surface-mist: #eef3f7;
+    --surface-blue: #edf4fb;
+    --stroke-soft: rgba(23, 50, 74, 0.1);
+    --stroke-strong: rgba(23, 50, 74, 0.16);
+    --ink-main: #17324a;
+    --ink-muted: #60748a;
+    --shadow-soft: 0 18px 48px rgba(23, 50, 74, 0.08);
+    --icon-wrapper-size: 56px;
+    --icon-image-size: 26px;
+  }
+
   html {
     scroll-behavior: smooth;
   }
@@ -12,38 +30,70 @@
   }
 
   body {
-    @apply bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors;
-    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    @apply text-gray-900 transition-colors;
+    background:
+      radial-gradient(circle at top left, rgba(255, 255, 255, 0.96), transparent 36%),
+      linear-gradient(180deg, #ffffff 0%, var(--surface-app) 52%, #eef3f7 100%);
+    color: var(--ink-main);
+    font-family: 'Manrope', 'Segoe UI', sans-serif;
+  }
+
+  .dark body {
+    background:
+      radial-gradient(circle at top left, rgba(255, 255, 255, 0.96), transparent 36%),
+      linear-gradient(180deg, #ffffff 0%, var(--surface-app) 52%, #eef3f7 100%);
+    color: var(--ink-main);
+  }
+
+  h1,
+  h2,
+  h3,
+  .font-display {
+    font-family: 'Fraunces', Georgia, serif;
+    letter-spacing: -0.03em;
   }
 }
 
 @layer components {
   .btn {
-    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2;
+    @apply rounded-2xl px-4 py-2.5 font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2;
   }
 
   .btn-primary {
-    @apply bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500;
+    @apply text-white focus:ring-primary-500;
+    background: linear-gradient(135deg, #17324a 0%, #294e6f 100%);
+    box-shadow: 0 12px 28px rgba(23, 50, 74, 0.18);
   }
 
   .btn-secondary {
-    @apply bg-gray-600 text-white hover:bg-gray-700 focus:ring-gray-500;
+    @apply text-slate-700 focus:ring-slate-400;
+    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid var(--stroke-soft);
   }
 
   .btn-danger {
-    @apply bg-red-600 text-white hover:bg-red-700 focus:ring-red-500;
+    @apply text-red-700 focus:ring-red-400;
+    background: #fff4f2;
+    border: 1px solid rgba(185, 28, 28, 0.16);
   }
 
   .input {
-    @apply w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all;
+    @apply w-full rounded-2xl px-4 py-3 text-gray-900 transition-all focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+    background: rgba(255, 255, 255, 0.86);
+    border: 1px solid rgba(23, 50, 74, 0.12);
+    color: var(--ink-main);
   }
 
   .card {
-    @apply bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6;
+    @apply rounded-[28px] p-6;
+    background: var(--surface-panel);
+    border: 1px solid var(--stroke-soft);
+    box-shadow: var(--shadow-soft);
+    backdrop-filter: blur(14px);
   }
 
   .badge {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+    @apply inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold;
   }
 
   .badge-success {
@@ -60,5 +110,81 @@
 
   .badge-info {
     @apply bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200;
+  }
+
+  .custom-icon {
+    @apply inline-flex items-center justify-center;
+  }
+
+  .custom-icon-tile {
+    width: var(--icon-wrapper-size);
+    height: var(--icon-wrapper-size);
+    border-radius: 18px;
+    border: 1px solid rgba(23, 50, 74, 0.08);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  }
+
+  .custom-icon-soft {
+    width: calc(var(--icon-wrapper-size) - 10px);
+    height: calc(var(--icon-wrapper-size) - 10px);
+    border-radius: 16px;
+    border: 1px solid rgba(23, 50, 74, 0.08);
+  }
+
+  .custom-icon-plain {
+    width: var(--icon-image-size);
+    height: var(--icon-image-size);
+  }
+
+  .custom-icon-image {
+    width: var(--icon-image-size);
+    height: var(--icon-image-size);
+    object-fit: contain;
+  }
+
+  .icon-tone-cream {
+    background: #f5efe1;
+  }
+
+  .icon-tone-mist {
+    background: #f8f8f6;
+  }
+
+  .icon-tone-blue {
+    background: #eef3f7;
+  }
+
+  .icon-tone-white {
+    background: #ffffff;
+  }
+
+  .icon-tone-sage {
+    background: #eef5ef;
+  }
+
+  .icon-tone-rose {
+    background: #fff1ef;
+  }
+
+  .icon-tone-amber {
+    background: #faf1df;
+  }
+
+  .section-eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.24em];
+    color: #5e7890;
+  }
+
+  .field-with-icon {
+    @apply relative;
+  }
+
+  .field-with-icon .input,
+  .field-with-icon select {
+    padding-left: 4rem;
+  }
+
+  .field-with-icon .custom-icon {
+    @apply pointer-events-none absolute left-3 top-1/2 -translate-y-1/2;
   }
 }

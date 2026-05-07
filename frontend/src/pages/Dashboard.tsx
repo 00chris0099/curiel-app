@@ -1,19 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useAuthStore } from '../store/authStore';
 import { useNavigate } from 'react-router-dom';
-import {
-    ClipboardList,
-    CheckCircle,
-    Clock,
-    XCircle,
-    Plus,
-    TrendingUp,
-    Users,
-} from 'lucide-react';
-import { Loader } from '../components/Loader';
-import { getApiErrorMessage } from '../api/axios';
-import inspectionService from '../services/inspection.service';
 import toast from 'react-hot-toast';
+import { getApiErrorMessage } from '../api/axios';
+import { CustomIcon, type CustomIconName } from '../components/CustomIcon';
+import { Loader } from '../components/Loader';
+import inspectionService from '../services/inspection.service';
+import { useAuthStore } from '../store/authStore';
 import type { InspectionStats } from '../types';
 import { canCreateInspection, canManageUsers } from '../utils/inspectionPermissions';
 
@@ -42,157 +34,121 @@ export const Dashboard = () => {
         return <Loader fullScreen />;
     }
 
-    const statsCards = [
+    const statsCards: Array<{ title: string; value: number; icon: CustomIconName; tone: 'cream' | 'amber' | 'blue' | 'sage' | 'rose'; accent: string }> = [
+        { title: 'Total inspecciones', value: stats?.total || 0, icon: 'clipboard-check', tone: 'blue', accent: 'text-sky-700' },
+        { title: 'Pendientes', value: stats?.pendiente || 0, icon: 'clock', tone: 'amber', accent: 'text-amber-700' },
+        { title: 'En proceso', value: stats?.en_proceso || 0, icon: 'play', tone: 'cream', accent: 'text-slate-700' },
+        { title: 'Finalizadas', value: stats?.finalizada || 0, icon: 'seal-check', tone: 'sage', accent: 'text-emerald-700' },
+        { title: 'Canceladas', value: stats?.cancelada || 0, icon: 'x-circle', tone: 'rose', accent: 'text-rose-700' },
+    ];
+
+    const quickActions: Array<{ title: string; description: string; href: string; icon: CustomIconName; tone: 'cream' | 'mist' | 'blue' | 'sage' }> = [
         {
-            title: 'Total Inspecciones',
-            value: stats?.total || 0,
-            icon: ClipboardList,
-            color: 'bg-blue-500',
-            textColor: 'text-blue-600',
-            bgColor: 'bg-blue-50 dark:bg-blue-900/20',
+            title: 'Ver inspecciones',
+            description: 'Consulta agenda, estados y avance operativo.',
+            href: '/inspections',
+            icon: 'folder-open',
+            tone: 'cream',
         },
         {
-            title: 'Pendientes',
-            value: stats?.pendiente || 0,
-            icon: Clock,
-            color: 'bg-yellow-500',
-            textColor: 'text-yellow-600',
-            bgColor: 'bg-yellow-50 dark:bg-yellow-900/20',
-        },
-        {
-            title: 'En Proceso',
-            value: stats?.en_proceso || 0,
-            icon: TrendingUp,
-            color: 'bg-purple-500',
-            textColor: 'text-purple-600',
-            bgColor: 'bg-purple-50 dark:bg-purple-900/20',
-        },
-        {
-            title: 'Finalizadas',
-            value: stats?.finalizada || 0,
-            icon: CheckCircle,
-            color: 'bg-green-500',
-            textColor: 'text-green-600',
-            bgColor: 'bg-green-50 dark:bg-green-900/20',
-        },
-        {
-            title: 'Canceladas',
-            value: stats?.cancelada || 0,
-            icon: XCircle,
-            color: 'bg-red-500',
-            textColor: 'text-red-600',
-            bgColor: 'bg-red-50 dark:bg-red-900/20',
+            title: 'Mi perfil',
+            description: 'Revisa datos personales y rol asignado.',
+            href: '/profile',
+            icon: 'user-gear',
+            tone: 'mist',
         },
     ];
 
+    if (canCreateInspection(user)) {
+        quickActions.unshift({
+            title: 'Nueva inspeccion',
+            description: 'Registra un nuevo servicio tecnico en Lima.',
+            href: '/inspections/create',
+            icon: 'plus',
+            tone: 'blue',
+        });
+    }
+
+    if (canManageUsers(user)) {
+        quickActions.push({
+            title: 'Gestionar usuarios',
+            description: 'Administra cuentas, roles y accesos internos.',
+            href: '/users',
+            icon: 'users',
+            tone: 'sage',
+        });
+    }
+
     return (
         <div className="space-y-6 pb-10">
-            {/* Bienvenida */}
-            <div className="card">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                            ¡Bienvenido, {user?.firstName}!
-                        </h1>
-                        <p className="text-gray-600 dark:text-gray-400 mt-1">
-                            Rol: <span className="capitalize font-medium">{user?.role}</span>
+            <section className="card overflow-hidden">
+                <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="max-w-2xl">
+                        <p className="section-eyebrow">Panel de control</p>
+                        <h1 className="mt-3 font-display text-3xl text-slate-900 sm:text-4xl">Bienvenido, {user?.firstName}</h1>
+                        <p className="mt-3 text-slate-600">
+                            Supervisa operaciones, estado de inspecciones y actividad del equipo desde una vista clara y consistente.
                         </p>
+                        <div className="mt-5 inline-flex items-center gap-3 rounded-full bg-[#f5efe1] px-4 py-2 text-sm font-semibold text-slate-700 ring-1 ring-slate-200/80">
+                            <CustomIcon name="dashboard" size="xs" tone="white" />
+                            Rol activo: <span className="capitalize text-slate-900">{user?.role}</span>
+                        </div>
                     </div>
 
                     {canCreateInspection(user) && (
                         <button
                             onClick={() => navigate('/inspections/create')}
-                            className="btn btn-primary flex w-full items-center justify-center gap-2 sm:w-auto"
+                            className="btn btn-primary flex w-full items-center justify-center gap-3 sm:w-auto"
                         >
-                            <Plus className="w-5 h-5" />
-                            Nueva Inspección
+                            <CustomIcon name="plus" size="xs" tone="white" />
+                            Nueva inspeccion
                         </button>
                     )}
                 </div>
-            </div>
+            </section>
 
-            {/* Estadísticas */}
-            <div>
-                <h2 className="text-lg font-semibold mb-4">Resumen de Inspecciones</h2>
+            <section>
+                <div className="mb-4 flex items-center justify-between">
+                    <div>
+                        <p className="section-eyebrow">Metricas</p>
+                        <h2 className="mt-2 text-xl font-bold text-slate-900">Resumen operativo</h2>
+                    </div>
+                </div>
+
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
                     {statsCards.map((stat) => (
-                        <div
-                            key={stat.title}
-                            className={`card hover:shadow-md transition-shadow cursor-pointer ${stat.bgColor}`}
-                        >
-                            <div className="flex items-center justify-between">
+                        <div key={stat.title} className="card">
+                            <div className="flex items-start justify-between gap-4">
                                 <div>
-                                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-                                        {stat.title}
-                                    </p>
-                                    <p className={`text-3xl font-bold ${stat.textColor}`}>
-                                        {stat.value}
-                                    </p>
+                                    <p className="text-sm text-slate-500">{stat.title}</p>
+                                    <p className={`mt-3 text-3xl font-extrabold ${stat.accent}`}>{stat.value}</p>
                                 </div>
-                                <div className={`p-3 rounded-full ${stat.color}`}>
-                                    <stat.icon className="w-6 h-6 text-white" />
-                                </div>
+                                <CustomIcon name={stat.icon} tone={stat.tone} size="md" />
                             </div>
                         </div>
                     ))}
                 </div>
-            </div>
+            </section>
 
-            {/* Accesos rápidos */}
-            <div>
-                <h2 className="text-lg font-semibold mb-4">Accesos Rápidos</h2>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-                    <button
-                        onClick={() => navigate('/inspections')}
-                        className="card hover:shadow-md transition-shadow text-left"
-                    >
-                        <ClipboardList className="w-8 h-8 text-primary-600 mb-3" />
-                        <h3 className="font-semibold text-lg mb-1">Ver Inspecciones</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                            Consulta todas las inspecciones registradas
-                        </p>
-                    </button>
-
-                    {canCreateInspection(user) && (
-                        <button
-                            onClick={() => navigate('/inspections/create')}
-                            className="card hover:shadow-md transition-shadow text-left"
-                        >
-                            <Plus className="w-8 h-8 text-green-600 mb-3" />
-                            <h3 className="font-semibold text-lg mb-1">Nueva Inspección</h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                                Crea una nueva inspección técnica
-                            </p>
-                        </button>
-                    )}
-
-                    {canManageUsers(user) && (
-                        <button
-                            onClick={() => navigate('/users')}
-                            className="card hover:shadow-md transition-shadow text-left"
-                        >
-                            <Users className="w-8 h-8 text-red-600 mb-3" />
-                            <h3 className="font-semibold text-lg mb-1">Gestionar Usuarios</h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                                Administra cuentas, roles y estados del sistema
-                            </p>
-                        </button>
-                    )}
-
-                    <button
-                        onClick={() => navigate('/profile')}
-                        className="card hover:shadow-md transition-shadow text-left"
-                    >
-                        <div className="w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center text-white font-medium mb-3">
-                            {user?.firstName?.[0]}{user?.lastName?.[0]}
-                        </div>
-                        <h3 className="font-semibold text-lg mb-1">Mi Perfil</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                            Ver y editar tu información personal
-                        </p>
-                    </button>
+            <section>
+                <div className="mb-4">
+                    <p className="section-eyebrow">Acciones</p>
+                    <h2 className="mt-2 text-xl font-bold text-slate-900">Atajos del equipo</h2>
                 </div>
-            </div>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                    {quickActions.map((action) => (
+                        <button
+                            key={action.title}
+                            onClick={() => navigate(action.href)}
+                            className="card text-left transition-transform hover:-translate-y-0.5"
+                        >
+                            <CustomIcon name={action.icon} tone={action.tone} size="md" />
+                            <h3 className="mt-5 text-lg font-semibold text-slate-900">{action.title}</h3>
+                            <p className="mt-2 text-sm text-slate-600">{action.description}</p>
+                        </button>
+                    ))}
+                </div>
+            </section>
         </div>
     );
 };

@@ -1,7 +1,7 @@
-import { Menu, Moon, Sun, User, LogOut } from 'lucide-react';
+import { useState } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
-import { useState } from 'react';
+import { CustomIcon } from './CustomIcon';
 import { NotificationDropdown } from './NotificationDropdown';
 import ConnectionStatus from './ConnectionStatus';
 
@@ -20,81 +20,73 @@ export const Navbar = ({ onMenuClick }: NavbarProps) => {
     };
 
     return (
-        <nav className="fixed inset-x-0 top-0 z-40 border-b border-gray-200 bg-white/95 backdrop-blur dark:border-gray-700 dark:bg-gray-800/95">
-            <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
-                {/* Left side */}
+        <nav className="fixed inset-x-0 top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
+            <div className="flex h-20 items-center justify-between px-4 sm:px-6 lg:px-8">
                 <div className="flex min-w-0 items-center gap-3 sm:gap-4">
                     <button
                         onClick={onMenuClick}
-                        className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                        aria-label="Toggle menu"
+                        className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 lg:hidden"
+                        aria-label="Abrir menu lateral"
                     >
-                        <Menu className="w-6 h-6" />
+                        <CustomIcon name="dashboard" size="xs" tone="blue" />
+                        Menu
                     </button>
 
-                    <h1 className="text-xl font-bold text-primary-600">CURIEL</h1>
+                    <div>
+                        <p className="section-eyebrow">Sistema tecnico</p>
+                        <h1 className="font-display text-2xl text-slate-900">CURIEL</h1>
+                    </div>
                 </div>
 
-                {/* Right side */}
                 <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-                    {/* Dark mode toggle */}
                     <button
                         onClick={toggleTheme}
-                        className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                        aria-label="Toggle theme"
+                        className="hidden items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 sm:inline-flex"
+                        aria-label="Cambiar tema"
                     >
-                        {isDark ? (
-                            <Sun className="w-5 h-5 text-yellow-500" />
-                        ) : (
-                            <Moon className="w-5 h-5 text-gray-600" />
-                        )}
+                        <CustomIcon name="settings" size="xs" tone={isDark ? 'blue' : 'cream'} />
+                        {isDark ? 'Modo claro' : 'Modo suave'}
                     </button>
 
                     <NotificationDropdown />
-                    <div className="max-w-[9.5rem] min-w-0 flex-shrink-0 sm:max-w-none">
+
+                    <div className="max-w-[10rem] min-w-0 flex-shrink-0 sm:max-w-none">
                         <ConnectionStatus variant="navbar" />
                     </div>
 
-                    {/* User menu */}
                     <div className="relative">
                         <button
                             onClick={() => setShowUserMenu(!showUserMenu)}
-                            className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                            className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-2.5 py-2 transition-colors hover:bg-slate-50"
                         >
-                            <div className="w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center text-white font-medium">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#17324a] text-sm font-semibold text-white">
                                 {user?.firstName?.[0]}{user?.lastName?.[0]}
                             </div>
-                            <div className="hidden md:block text-left">
-                                <p className="text-sm font-medium">{user?.firstName} {user?.lastName}</p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{user?.role}</p>
+                            <div className="hidden text-left md:block">
+                                <p className="text-sm font-semibold text-slate-900">{user?.firstName} {user?.lastName}</p>
+                                <p className="text-xs capitalize text-slate-500">{user?.role}</p>
                             </div>
+                            <CustomIcon name="dots-three" size="xs" tone="mist" />
                         </button>
 
-                        {/* Dropdown menu */}
                         {showUserMenu && (
                             <>
-                                {/* Backdrop */}
-                                <div
-                                    className="fixed inset-0 z-10"
-                                    onClick={() => setShowUserMenu(false)}
-                                />
-
-                                {/* Menu */}
-                                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-20">
+                                <div className="fixed inset-0 z-10" onClick={() => setShowUserMenu(false)} />
+                                <div className="absolute right-0 z-20 mt-3 w-56 rounded-[24px] border border-slate-200 bg-white p-2 shadow-[0_24px_60px_rgba(23,50,74,0.16)]">
                                     <a
                                         href="/profile"
-                                        className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                                        className="flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
                                         onClick={() => setShowUserMenu(false)}
                                     >
-                                        <User className="w-4 h-4" />
-                                        Mi Perfil
+                                        <CustomIcon name="user-gear" size="xs" tone="cream" />
+                                        Mi perfil
                                     </a>
                                     <button
                                         onClick={handleLogout}
-                                        className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 w-full text-left text-red-600"
+                                        className="flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-3 text-left text-sm font-medium text-red-700 transition-colors hover:bg-red-50"
                                     >
-                                        <LogOut className="w-4 h-4" />
-                                        Cerrar Sesión
+                                        <span>Cerrar sesion</span>
+                                        <CustomIcon name="arrow-right" size="xs" tone="rose" />
                                     </button>
                                 </div>
                             </>

@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Crown, Pencil, Search, Shield, Trash2, UserCheck, UserPlus, UserX, Users as UsersIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Loader } from '../components/Loader';
+import { CustomIcon } from '../components/CustomIcon';
 import { getApiErrorMessage } from '../api/axios';
 import { useAuthStore } from '../store/authStore';
 import userService from '../services/user.service';
 import type { CreateUserDto, UpdateUserDto, User, UserRole, UserStats } from '../types';
+import { roleIconMap } from '../utils/iconSystem';
 
 type UserFormState = {
     firstName: string;
@@ -281,7 +282,7 @@ export const Users = () => {
                     className={`btn flex w-full items-center justify-center gap-2 sm:w-auto sm:self-start ${isFormVisible ? 'btn-secondary' : 'btn-primary'}`}
                     type="button"
                 >
-                    <UserPlus className="h-5 w-5" />
+                    <CustomIcon name={isFormVisible ? 'dots-three' : 'plus'} size="xs" tone={isFormVisible ? 'mist' : 'white'} />
                     {isFormVisible ? 'Cerrar formulario' : 'Nuevo Usuario'}
                 </button>
             </div>
@@ -293,7 +294,7 @@ export const Users = () => {
                             <p className="text-sm text-gray-600 dark:text-gray-400">Total</p>
                             <p className="text-3xl font-bold">{stats?.total ?? 0}</p>
                         </div>
-                        <UsersIcon className="h-8 w-8 text-primary-600" />
+                        <CustomIcon name="users" size="md" tone="blue" />
                     </div>
                 </div>
 
@@ -303,7 +304,7 @@ export const Users = () => {
                             <p className="text-sm text-gray-600 dark:text-gray-400">Activos</p>
                             <p className="text-3xl font-bold text-green-600">{stats?.active ?? 0}</p>
                         </div>
-                        <UserCheck className="h-8 w-8 text-green-600" />
+                        <CustomIcon name="check-circle" size="md" tone="sage" />
                     </div>
                 </div>
 
@@ -313,7 +314,7 @@ export const Users = () => {
                             <p className="text-sm text-gray-600 dark:text-gray-400">Admins</p>
                             <p className="text-3xl font-bold text-red-600">{roleCounts.admin}</p>
                         </div>
-                        <Shield className="h-8 w-8 text-red-600" />
+                        <CustomIcon name="settings" size="md" tone="rose" />
                     </div>
                 </div>
 
@@ -323,7 +324,7 @@ export const Users = () => {
                             <p className="text-sm text-gray-600 dark:text-gray-400">Arquitectos</p>
                             <p className="text-3xl font-bold text-blue-600">{roleCounts.arquitecto}</p>
                         </div>
-                        <UsersIcon className="h-8 w-8 text-blue-600" />
+                        <CustomIcon name="buildings" size="md" tone="mist" />
                     </div>
                 </div>
 
@@ -333,7 +334,7 @@ export const Users = () => {
                             <p className="text-sm text-gray-600 dark:text-gray-400">Inspectores</p>
                             <p className="text-3xl font-bold text-emerald-600">{roleCounts.inspector}</p>
                         </div>
-                        <UsersIcon className="h-8 w-8 text-emerald-600" />
+                        <CustomIcon name="clipboard-check" size="md" tone="cream" />
                     </div>
                 </div>
             </div>
@@ -345,11 +346,13 @@ export const Users = () => {
                             <div>
                                 <label className="mb-2 block text-sm font-medium">Buscar</label>
                                 <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+                                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2">
+                                        <CustomIcon name="search" size="xs" tone="mist" />
+                                    </span>
                                     <input
                                         value={search}
                                         onChange={(event) => setSearch(event.target.value)}
-                                        className="input pl-10"
+                                        className="input pl-16"
                                         placeholder="Nombre o email"
                                     />
                                 </div>
@@ -421,8 +424,8 @@ export const Users = () => {
                                                             <div className="flex flex-wrap items-center gap-2">
                                                                 <p className="font-medium">{listedUser.firstName} {listedUser.lastName}</p>
                                                                 {listedUser.isMasterAdmin && (
-                                                                    <span className="badge badge-warning flex items-center gap-1">
-                                                                        <Crown className="h-3 w-3" />
+                                                                    <span className="badge badge-warning flex items-center gap-2">
+                                                                        <CustomIcon name="seal-check" size="xs" tone="white" />
                                                                         Master
                                                                     </span>
                                                                 )}
@@ -433,11 +436,13 @@ export const Users = () => {
                                                 </td>
                                                 <td className="px-6 py-4 align-top">
                                                     <span className={`badge ${roleBadgeColors[listedUser.role]}`}>
+                                                        <CustomIcon name={roleIconMap[listedUser.role] ?? 'users'} size="xs" tone="white" />
                                                         {roleLabels[listedUser.role]}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 align-top">
                                                     <span className={`badge ${listedUser.isActive ? 'badge-success' : 'badge-danger'}`}>
+                                                        <CustomIcon name={listedUser.isActive ? 'check-circle' : 'x-circle'} size="xs" tone="white" />
                                                         {listedUser.isActive ? 'Activo' : 'Inactivo'}
                                                     </span>
                                                 </td>
@@ -462,7 +467,7 @@ export const Users = () => {
                                                             className="rounded-lg border border-gray-300 p-2 text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
                                                             aria-label={`Editar ${listedUser.firstName} ${listedUser.lastName}`}
                                                         >
-                                                            <Pencil className="h-4 w-4" />
+                                                            <CustomIcon name="pencil" size="xs" tone="mist" />
                                                         </button>
 
                                                         <button
@@ -472,7 +477,7 @@ export const Users = () => {
                                                             className="rounded-lg border border-gray-300 p-2 text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
                                                             aria-label={listedUser.isActive ? `Desactivar ${listedUser.firstName} ${listedUser.lastName}` : `Activar ${listedUser.firstName} ${listedUser.lastName}`}
                                                         >
-                                                            {listedUser.isActive ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
+                                                            <CustomIcon name={listedUser.isActive ? 'x-circle' : 'check-circle'} size="xs" tone={listedUser.isActive ? 'rose' : 'sage'} />
                                                         </button>
 
                                                         <button
@@ -482,7 +487,7 @@ export const Users = () => {
                                                             className="rounded-lg border border-red-300 p-2 text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-900/20"
                                                             aria-label={`Eliminar ${listedUser.firstName} ${listedUser.lastName}`}
                                                         >
-                                                            <Trash2 className="h-4 w-4" />
+                                                            <CustomIcon name="trash" size="xs" tone="rose" />
                                                         </button>
                                                     </div>
                                                 </td>

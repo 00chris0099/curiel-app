@@ -1,24 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import {
-    AlertTriangle,
-    ArrowLeft,
-    ArrowRight,
-    Camera,
-    CheckCircle2,
-    ClipboardCheck,
-    FileText,
-    Home,
-    ImagePlus,
-    Loader2,
-    MapPinned,
-    PlusCircle,
-    Ruler,
-    Save,
-    Trash2,
-} from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getApiErrorMessage } from '../api/axios';
+import { CustomIcon, type CustomIconName } from '../components/CustomIcon';
 import { Loader } from '../components/Loader';
 import ConnectionStatus from '../components/ConnectionStatus';
 import { useOfflineSync } from '../hooks/useOfflineSync';
@@ -61,6 +45,14 @@ import {
     saveExecutionSnapshot,
     type OfflineSyncItem,
 } from '../utils/offlineDb';
+import {
+    areaStatusIconMap,
+    getAreaCategoryIcon,
+    inspectionStatusIconMap,
+    observationSeverityIconMap,
+    photoTypeIconMap,
+    reportStatusIconMap,
+} from '../utils/iconSystem';
 
 const areaStatusOptions: ExecutionAreaStatus[] = ['pendiente', 'en_revision', 'observado', 'aprobado'];
 const observationSeverityOptions: ObservationSeverity[] = ['leve', 'media', 'alta', 'critica'];
@@ -170,13 +162,6 @@ const areaStatusBadges: Record<ExecutionAreaStatus, string> = {
     en_revision: 'badge-info',
     observado: 'badge-danger',
     aprobado: 'badge-success',
-};
-
-const areaStatusDots: Record<ExecutionAreaStatus, string> = {
-    pendiente: 'bg-amber-500',
-    en_revision: 'bg-sky-500',
-    observado: 'bg-rose-500',
-    aprobado: 'bg-emerald-500',
 };
 
 const severityBadges: Record<ObservationSeverity, string> = {
@@ -847,7 +832,7 @@ export const InspectionExecution = () => {
         return (
             <div className="mx-auto max-w-3xl pb-10 pt-6">
                 <div className="card space-y-4 text-center">
-                    <AlertTriangle className="mx-auto h-10 w-10 text-red-500" />
+                    <div className="flex justify-center"><CustomIcon name="warning-circle" size="lg" tone="rose" /></div>
                     <div>
                         <h1 className="text-xl font-bold">No se pudo cargar la ejecución</h1>
                         <p className="mt-2 text-gray-600 dark:text-gray-400">{errorMessage}</p>
@@ -869,7 +854,7 @@ export const InspectionExecution = () => {
         return (
             <div className="mx-auto max-w-3xl pb-10 pt-6">
                 <div className="card space-y-4 text-center">
-                    <Home className="mx-auto h-10 w-10 text-primary-600" />
+                    <div className="flex justify-center"><CustomIcon name="house" size="lg" tone="cream" /></div>
                     <div>
                         <h1 className="text-xl font-bold">Inspección no disponible</h1>
                         <p className="mt-2 text-gray-600 dark:text-gray-400">
@@ -899,7 +884,7 @@ export const InspectionExecution = () => {
                         onClick={() => navigate(`/inspections/${inspection.id}`)}
                         className="rounded-xl border border-gray-200 p-2 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
                     >
-                        <ArrowLeft className="h-6 w-6" />
+                        <CustomIcon name="arrow-left" size="sm" tone="mist" />
                     </button>
 
                     <div className="max-w-3xl">
@@ -912,14 +897,15 @@ export const InspectionExecution = () => {
                         </p>
                         <div className="mt-4 flex flex-wrap gap-3 text-sm text-gray-600 dark:text-gray-300">
                             <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 shadow-sm ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700">
-                                <MapPinned className="h-4 w-4 text-primary-600" />
+                                <CustomIcon name="map-pin" size="xs" tone="blue" />
                                 {locationLabel}
                             </span>
                             <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 shadow-sm ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700">
-                                <ClipboardCheck className="h-4 w-4 text-primary-600" />
+                                <CustomIcon name="calendar" size="xs" tone="cream" />
                                 {new Date(inspection.scheduledDate).toLocaleString('es-PE')}
                             </span>
                             <span className="badge badge-info">
+                                <CustomIcon name={inspectionStatusIconMap[inspection.status] ?? 'clipboard-check'} size="xs" tone="white" />
                                 Estado de visita: {inspectionStatusLabels[inspection.status] || inspection.status}
                             </span>
                         </div>
@@ -933,7 +919,7 @@ export const InspectionExecution = () => {
                         disabled={isDownloadingReport}
                         className="btn btn-secondary flex w-full items-center justify-center gap-2 sm:w-auto"
                     >
-                        <FileText className="h-5 w-5" />
+                        <CustomIcon name={isDownloadingReport ? 'sync' : 'file-pdf'} size="xs" tone="cream" spin={isDownloadingReport} />
                         {isDownloadingReport ? 'Generando informe...' : 'Generar informe'}
                     </button>
                 )}
@@ -945,19 +931,19 @@ export const InspectionExecution = () => {
                         disabled={busyAction === 'complete-inspection'}
                         className="btn btn-primary flex w-full items-center justify-center gap-2 sm:w-auto"
                     >
-                        {busyAction === 'complete-inspection' ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle2 className="h-5 w-5" />}
+                        {busyAction === 'complete-inspection' ? <CustomIcon name="sync" size="xs" tone="white" spin /> : <CustomIcon name="seal-check" size="xs" tone="white" />}
                         Enviar a revisión
                     </button>
                 )}
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-                <StatCard icon={Ruler} label="Área total" value={`${stats.totalAreaM2.toFixed(2)} m²`} accent="text-blue-600" />
-                <StatCard icon={Home} label="Áreas registradas" value={stats.areasRegistered.toString()} accent="text-emerald-600" />
-                <StatCard icon={AlertTriangle} label="Observaciones" value={stats.totalObservations.toString()} accent="text-amber-600" />
-                <StatCard icon={AlertTriangle} label="Críticas" value={stats.criticalObservations.toString()} accent="text-red-600" />
-                <StatCard icon={Camera} label="Fotos subidas" value={stats.photosCount.toString()} accent="text-violet-600" />
-                <StatCard icon={FileText} label="Informe" value={reportStatusLabels[stats.reportStatus] || 'Borrador'} accent="text-primary-600" />
+                <StatCard icon="ruler" label="Área total" value={`${stats.totalAreaM2.toFixed(2)} m²`} accent="text-blue-600" tone="blue" />
+                <StatCard icon="rooms" label="Áreas registradas" value={stats.areasRegistered.toString()} accent="text-emerald-600" tone="sage" />
+                <StatCard icon="warning" label="Observaciones" value={stats.totalObservations.toString()} accent="text-amber-600" tone="amber" />
+                <StatCard icon="warning-circle" label="Críticas" value={stats.criticalObservations.toString()} accent="text-red-600" tone="rose" />
+                <StatCard icon="camera" label="Fotos subidas" value={stats.photosCount.toString()} accent="text-violet-600" tone="mist" />
+                <StatCard icon={reportStatusIconMap[stats.reportStatus] ?? 'file-pdf'} label="Informe" value={reportStatusLabels[stats.reportStatus] || 'Borrador'} accent="text-primary-600" tone="cream" />
             </div>
 
             <div className="card space-y-4 lg:hidden">
@@ -976,7 +962,7 @@ export const InspectionExecution = () => {
                             onClick={handleCreateDefaultAreas}
                             disabled={busyAction === 'default-areas'}
                         >
-                            {busyAction === 'default-areas' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Home className="h-4 w-4" />}
+                            {busyAction === 'default-areas' ? <CustomIcon name="sync" size="xs" tone="white" spin /> : <CustomIcon name="rooms" size="xs" tone="cream" />}
                             Crear áreas por defecto
                         </button>
                     )}
@@ -1002,7 +988,7 @@ export const InspectionExecution = () => {
                                                 }`}
                                         >
                                             <div className="flex items-center gap-2">
-                                                <span className={`h-2.5 w-2.5 rounded-full ${areaStatusDots[area.status]}`} />
+                                                <CustomIcon name={getAreaCategoryIcon(area.category, area.name)} size="xs" tone="mist" />
                                                 <span className="text-sm font-semibold text-gray-900 dark:text-white">{area.name}</span>
                                             </div>
                                             <div className="mt-2 flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
@@ -1019,12 +1005,15 @@ export const InspectionExecution = () => {
                             <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/60">
                                 <div className="flex items-start justify-between gap-3">
                                     <div>
-                                        <p className="font-semibold text-gray-900 dark:text-white">{selectedArea.name}</p>
+                                        <div className="flex items-center gap-2">
+                                            <CustomIcon name={getAreaCategoryIcon(selectedArea.category, selectedArea.name)} size="xs" tone="mist" />
+                                            <p className="font-semibold text-gray-900 dark:text-white">{selectedArea.name}</p>
+                                        </div>
                                         <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
                                             {selectedArea.category} · {(selectedArea.calculatedAreaM2 || 0).toFixed(2)} m²
                                         </p>
                                     </div>
-                                    <span className={`badge ${areaStatusBadges[selectedArea.status]}`}>{areaStatusLabels[selectedArea.status]}</span>
+                                    <span className={`badge ${areaStatusBadges[selectedArea.status]}`}><CustomIcon name={areaStatusIconMap[selectedArea.status] ?? 'rooms'} size="xs" tone="white" />{areaStatusLabels[selectedArea.status]}</span>
                                 </div>
 
                                 <div className="mt-3 flex items-center justify-between gap-3 text-xs text-gray-500 dark:text-gray-400">
@@ -1042,7 +1031,7 @@ export const InspectionExecution = () => {
                                     onClick={() => handleOpenAreaDetail(selectedArea.id)}
                                 >
                                     Abrir detalle del área
-                                    <ArrowRight className="h-4 w-4" />
+                                    <CustomIcon name="arrow-right" size="xs" tone="white" />
                                 </button>
                             </div>
                         )}
@@ -1084,7 +1073,7 @@ export const InspectionExecution = () => {
                     />
                     {canEditExecutionContent && (
                         <button type="submit" className="btn btn-secondary flex items-center justify-center gap-2" disabled={busyAction === 'photo-general'}>
-                            {busyAction === 'photo-general' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+                            {busyAction === 'photo-general' ? <CustomIcon name="sync" size="xs" tone="cream" spin /> : <CustomIcon name={photoTypeIconMap[generalPhotoForm.type] ?? 'image'} size="xs" tone="cream" />}
                             Agregar foto
                         </button>
                     )}
@@ -1112,11 +1101,11 @@ export const InspectionExecution = () => {
                             {canEditExecutionContent && (
                                 <div className="flex flex-col gap-2">
                                     <button type="button" className="btn btn-secondary flex items-center justify-center gap-2" onClick={handleCreateDefaultAreas} disabled={busyAction === 'default-areas'}>
-                                        {busyAction === 'default-areas' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Home className="h-4 w-4" />}
+                                        {busyAction === 'default-areas' ? <CustomIcon name="sync" size="xs" tone="cream" spin /> : <CustomIcon name="rooms" size="xs" tone="cream" />}
                                         Crear áreas por defecto
                                     </button>
                                     <button type="button" className="btn btn-primary flex items-center justify-center gap-2" onClick={() => setShowAreaCreator((current) => !current)}>
-                                        <PlusCircle className="h-4 w-4" />
+                                        <CustomIcon name="plus" size="xs" tone="white" />
                                         {showAreaCreator ? 'Cerrar formulario' : 'Agregar área'}
                                     </button>
                                 </div>
@@ -1151,10 +1140,13 @@ export const InspectionExecution = () => {
                                     >
                                         <div className="flex items-start justify-between gap-3">
                                             <div>
-                                                <p className="font-semibold text-gray-900 dark:text-white">{area.name}</p>
+                                                <div className="flex items-center gap-2">
+                                                    <CustomIcon name={getAreaCategoryIcon(area.category, area.name)} size="xs" tone="mist" />
+                                                    <p className="font-semibold text-gray-900 dark:text-white">{area.name}</p>
+                                                </div>
                                                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{area.category}</p>
                                             </div>
-                                            <span className={`badge ${areaStatusBadges[area.status]}`}>{areaStatusLabels[area.status]}</span>
+                                            <span className={`badge ${areaStatusBadges[area.status]}`}><CustomIcon name={areaStatusIconMap[area.status] ?? 'rooms'} size="xs" tone="white" />{areaStatusLabels[area.status]}</span>
                                         </div>
                                         <div className="mt-3 flex items-center justify-between text-sm text-gray-600 dark:text-gray-300">
                                             <span>{(area.calculatedAreaM2 || 0).toFixed(2)} m²</span>
@@ -1184,7 +1176,7 @@ export const InspectionExecution = () => {
                                     </div>
                                     {canEditExecutionContent && (
                                         <button type="button" className="btn btn-danger flex items-center justify-center gap-2 sm:w-auto" onClick={() => handleDeleteArea(selectedArea)} disabled={busyAction === `delete-area-${selectedArea.id}`}>
-                                            <Trash2 className="h-4 w-4" />
+                                            <CustomIcon name="trash" size="xs" tone="rose" />
                                             Eliminar área
                                         </button>
                                     )}
@@ -1216,7 +1208,7 @@ export const InspectionExecution = () => {
 
                                     {canEditExecutionContent && (
                                         <button type="submit" className="btn btn-primary flex items-center gap-2" disabled={busyAction === 'save-area'}>
-                                            {busyAction === 'save-area' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                            {busyAction === 'save-area' ? <CustomIcon name="sync" size="xs" tone="white" spin /> : <CustomIcon name="save" size="xs" tone="white" />}
                                             Guardar área
                                         </button>
                                     )}
@@ -1281,7 +1273,7 @@ export const InspectionExecution = () => {
 
                                         {canEditExecutionContent && (
                                             <button type="submit" className="btn btn-primary flex items-center gap-2" disabled={busyAction === 'save-observation'}>
-                                                {busyAction === 'save-observation' ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlusCircle className="h-4 w-4" />}
+                                                {busyAction === 'save-observation' ? <CustomIcon name="sync" size="xs" tone="white" spin /> : <CustomIcon name="plus" size="xs" tone="white" />}
                                                 {editingObservationId ? 'Guardar observación' : 'Agregar observación'}
                                             </button>
                                         )}
@@ -1296,7 +1288,7 @@ export const InspectionExecution = () => {
                                                     <div>
                                                         <div className="flex flex-wrap items-center gap-2">
                                                             <h3 className="font-semibold text-gray-900 dark:text-white">{observation.title}</h3>
-                                                            <span className={`badge ${severityBadges[observation.severity]}`}>{observation.severity}</span>
+                                                            <span className={`badge ${severityBadges[observation.severity]}`}><CustomIcon name={observationSeverityIconMap[observation.severity] ?? 'warning'} size="xs" tone="white" />{observation.severity}</span>
                                                         </div>
                                                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                                                     {observation.type} · {observation.status}
@@ -1374,7 +1366,7 @@ export const InspectionExecution = () => {
 
                                             {canEditExecutionContent && (
                                                 <button type="submit" className="btn btn-secondary flex items-center gap-2" disabled={busyAction === 'photo-area'}>
-                                                    {busyAction === 'photo-area' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                                                    {busyAction === 'photo-area' ? <CustomIcon name="sync" size="xs" tone="cream" spin /> : <CustomIcon name={photoTypeIconMap[areaPhotoForm.type] ?? 'camera'} size="xs" tone="cream" />}
                                                     Agregar foto del área
                                                 </button>
                                             )}
@@ -1418,7 +1410,7 @@ export const InspectionExecution = () => {
 
                                         {canEditExecutionContent && (
                                             <button type="submit" className="btn btn-primary flex items-center gap-2" disabled={busyAction === 'save-summary'}>
-                                                {busyAction === 'save-summary' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                                {busyAction === 'save-summary' ? <CustomIcon name="sync" size="xs" tone="white" spin /> : <CustomIcon name="save" size="xs" tone="white" />}
                                                 Guardar resumen
                                             </button>
                                         )}
@@ -1440,16 +1432,14 @@ export const InspectionExecution = () => {
     );
 };
 
-const StatCard = ({ icon: Icon, label, value, accent }: { icon: typeof Ruler; label: string; value: string; accent: string }) => (
+const StatCard = ({ icon, label, value, accent, tone }: { icon: CustomIconName; label: string; value: string; accent: string; tone: 'cream' | 'mist' | 'blue' | 'sage' | 'rose' | 'amber' }) => (
     <div className="card">
         <div className="flex items-center justify-between gap-4">
             <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">{label}</p>
                 <p className={`mt-2 text-2xl font-bold ${accent}`}>{value}</p>
             </div>
-            <div className="rounded-2xl bg-gray-100 p-3 dark:bg-gray-700/60">
-                <Icon className={`h-6 w-6 ${accent}`} />
-            </div>
+            <CustomIcon name={icon} size="md" tone={tone} />
         </div>
     </div>
 );
@@ -1459,7 +1449,7 @@ const PhotoCard = ({ photo, syncStatus }: { photo: InspectionExecutionData['phot
         <img src={photo.url} alt={photo.caption || photoTypeLabels[photo.type]} className="h-44 w-full object-cover" />
         <div className="space-y-2 p-4">
             <div className="flex items-center justify-between gap-3">
-                <span className="badge badge-info">{photoTypeLabels[photo.type]}</span>
+                <span className="badge badge-info"><CustomIcon name={photoTypeIconMap[photo.type] ?? 'camera'} size="xs" tone="white" />{photoTypeLabels[photo.type]}</span>
                 <span className="text-xs text-gray-500 dark:text-gray-400">{new Date(photo.createdAt).toLocaleDateString('es-PE')}</span>
             </div>
             <p className="text-sm text-gray-700 dark:text-gray-200">{photo.caption || 'Sin descripción adicional'}</p>
@@ -1474,6 +1464,7 @@ const PhotoCard = ({ photo, syncStatus }: { photo: InspectionExecutionData['phot
 
 const EmptyPanel = ({ message, compact = false }: { message: string; compact?: boolean }) => (
     <div className={`rounded-2xl border border-dashed border-gray-300 bg-gray-50 text-center text-gray-500 dark:border-gray-600 dark:bg-gray-900/40 dark:text-gray-400 ${compact ? 'p-5' : 'p-8'}`}>
+        <div className="mb-3 flex justify-center"><CustomIcon name="image" size={compact ? 'sm' : 'md'} tone="mist" /></div>
         {message}
     </div>
 );

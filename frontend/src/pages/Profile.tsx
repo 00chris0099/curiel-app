@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useAuthStore } from '../store/authStore';
-import { User, Mail, Phone, Calendar, Shield } from 'lucide-react';
-import { Loader } from '../components/Loader';
-import { getApiErrorMessage } from '../api/axios';
 import toast from 'react-hot-toast';
+import { getApiErrorMessage } from '../api/axios';
+import { CustomIcon } from '../components/CustomIcon';
+import { Loader } from '../components/Loader';
+import { useAuthStore } from '../store/authStore';
+import { roleIconMap } from '../utils/iconSystem';
 
 export const Profile = () => {
     const { user, refreshProfile } = useAuthStore();
@@ -40,107 +41,93 @@ export const Profile = () => {
         inspector: 'badge-success',
     };
 
+    const profileRows = [
+        {
+            title: 'Nombre completo',
+            value: `${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim(),
+            icon: 'user-gear' as const,
+            tone: 'cream' as const,
+        },
+        {
+            title: 'Correo electrónico',
+            value: user?.email || 'No disponible',
+            icon: 'bell' as const,
+            tone: 'mist' as const,
+        },
+        user?.phone ? {
+            title: 'Teléfono',
+            value: user.phone,
+            icon: 'users' as const,
+            tone: 'blue' as const,
+        } : null,
+        {
+            title: 'Rol en el sistema',
+            value: user?.role ? roleLabels[user.role] : '',
+            icon: roleIconMap[user?.role || 'inspector'] ?? 'clipboard-check',
+            tone: 'sage' as const,
+        },
+        {
+            title: 'Miembro desde',
+            value: user?.createdAt ? new Date(user.createdAt).toLocaleDateString('es-ES', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+            }) : '',
+            icon: 'calendar' as const,
+            tone: 'cream' as const,
+        },
+    ].filter(Boolean) as Array<{ title: string; value: string; icon: 'user-gear' | 'bell' | 'users' | 'clipboard-check' | 'calendar' | 'settings' | 'buildings'; tone: 'cream' | 'mist' | 'blue' | 'sage' }>;
+
     return (
-        <div className="max-w-4xl mx-auto space-y-6">
-            {/* Header */}
-            <div className="card">
-                <div className="flex items-center gap-6">
-                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white text-3xl font-bold">
+        <div className="mx-auto max-w-5xl space-y-6">
+            <section className="card overflow-hidden">
+                <div className="flex flex-col gap-6 md:flex-row md:items-center">
+                    <div className="flex h-28 w-28 items-center justify-center rounded-[32px] bg-[#17324a] text-3xl font-bold text-white shadow-[0_20px_44px_rgba(23,50,74,0.2)]">
                         {user?.firstName?.[0]}{user?.lastName?.[0]}
                     </div>
-                    <div>
-                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                            {user?.firstName} {user?.lastName}
-                        </h1>
-                        <p className="text-gray-600 dark:text-gray-400 mt-1">
-                            {user?.email}
-                        </p>
-                        <div className="mt-2">
+                    <div className="flex-1">
+                        <p className="section-eyebrow">Perfil profesional</p>
+                        <h1 className="mt-2 font-display text-3xl text-slate-900">{user?.firstName} {user?.lastName}</h1>
+                        <p className="mt-2 text-slate-600">{user?.email}</p>
+                        <div className="mt-4 flex flex-wrap items-center gap-3">
                             <span className={`badge ${user?.role ? roleColors[user.role] : ''}`}>
+                                <CustomIcon name={roleIconMap[user?.role || 'inspector'] ?? 'clipboard-check'} size="xs" tone="white" />
                                 {user?.role ? roleLabels[user.role] : ''}
+                            </span>
+                            <span className="badge badge-success">
+                                <CustomIcon name="check-circle" size="xs" tone="white" />
+                                Cuenta activa
                             </span>
                         </div>
                     </div>
                 </div>
-            </div>
+            </section>
 
-            {/* Información Personal */}
-            <div className="card">
-                <h2 className="text-xl font-bold mb-4">Información Personal</h2>
-                <div className="space-y-4">
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                        <User className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                        <div>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Nombre Completo</p>
-                            <p className="font-medium">{user?.firstName} {user?.lastName}</p>
-                        </div>
-                    </div>
+            <section className="card">
+                <div className="mb-5">
+                    <p className="section-eyebrow">Ficha personal</p>
+                    <h2 className="mt-2 text-xl font-bold text-slate-900">Información de la cuenta</h2>
+                </div>
 
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                        <Mail className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                        <div>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Correo Electrónico</p>
-                            <p className="font-medium">{user?.email}</p>
-                        </div>
-                    </div>
-
-                    {user?.phone && (
-                        <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                            <Phone className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                            <div>
-                                <p className="text-sm text-gray-600 dark:text-gray-400">Teléfono</p>
-                                <p className="font-medium">{user.phone}</p>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    {profileRows.map((row) => (
+                        <div key={row.title} className="rounded-[24px] border border-slate-200 bg-[#fbfbfa] p-4">
+                            <div className="flex items-start gap-4">
+                                <CustomIcon name={row.icon} size="sm" tone={row.tone} />
+                                <div>
+                                    <p className="text-sm text-slate-500">{row.title}</p>
+                                    <p className="mt-1 font-semibold text-slate-900">{row.value}</p>
+                                </div>
                             </div>
                         </div>
-                    )}
-
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                        <Shield className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                        <div>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Rol en el Sistema</p>
-                            <p className="font-medium capitalize">{user?.role ? roleLabels[user.role] : ''}</p>
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                        <Calendar className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                        <div>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Miembro desde</p>
-                            <p className="font-medium">
-                                {user?.createdAt ? new Date(user.createdAt).toLocaleDateString('es-ES', {
-                                    year: 'numeric',
-                                    month: 'long',
-                                    day: 'numeric',
-                                }) : ''}
-                            </p>
-                        </div>
-                    </div>
+                    ))}
                 </div>
-            </div>
+            </section>
 
-            {/* Estado de la Cuenta */}
-            <div className="card">
-                <h2 className="text-xl font-bold mb-4">Estado de la Cuenta</h2>
-                <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                    <div>
-                        <p className="font-medium text-green-900 dark:text-green-100">Cuenta Activa</p>
-                        <p className="text-sm text-green-700 dark:text-green-300 mt-1">
-                            Tu cuenta está completamente operativa
-                        </p>
-                    </div>
-                    <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                </div>
-            </div>
-
-            {/* Información del Sistema */}
-            <div className="card bg-gray-50 dark:bg-gray-700/50">
-                <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
-                    ID de Usuario
-                </h3>
-                <p className="text-xs font-mono text-gray-500 dark:text-gray-500 break-all">
-                    {user?.id}
-                </p>
-            </div>
+            <section className="card bg-[#fbfbfa]">
+                <p className="text-sm font-semibold text-slate-500">ID de usuario</p>
+                <p className="mt-2 break-all font-mono text-xs text-slate-500">{user?.id}</p>
+            </section>
         </div>
     );
 };

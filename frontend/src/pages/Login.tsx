@@ -1,6 +1,6 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { LogIn, Mail, Lock, Loader2 } from 'lucide-react';
+import { CustomIcon } from '../components/CustomIcon';
 import { useAuthStore } from '../store/authStore';
 
 export const Login = () => {
@@ -12,7 +12,6 @@ export const Login = () => {
         password: '',
     });
 
-    // Si ya está autenticado, redirigir al dashboard
     if (isAuthenticated) {
         return <Navigate to="/dashboard" replace />;
     }
@@ -26,7 +25,7 @@ export const Login = () => {
         }
     };
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
         setFormData({
             ...formData,
             [e.target.name]: e.target.value,
@@ -34,31 +33,52 @@ export const Login = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100 dark:from-gray-900 dark:to-gray-800 px-4">
-            <div className="w-full max-w-md">
-                {/* Logo y título */}
-                <div className="text-center mb-8">
-                    <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-600 rounded-2xl mb-4">
-                        <LogIn className="w-8 h-8 text-white" />
-                    </div>
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">CURIEL</h1>
-                    <p className="text-gray-600 dark:text-gray-400 mt-2">
-                        Sistema de Inspecciones Técnicas
-                    </p>
-                </div>
+        <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.95),_transparent_35%),linear-gradient(180deg,_#ffffff_0%,_#f5efe1_45%,_#eef3f7_100%)] px-4">
+            <div className="mx-auto flex min-h-screen max-w-6xl items-center justify-center py-10">
+                <div className="grid w-full grid-cols-1 gap-8 lg:grid-cols-[1.1fr_minmax(0,460px)] lg:items-center">
+                    <section className="hidden rounded-[36px] border border-white/70 bg-white/80 p-10 shadow-[0_30px_80px_rgba(23,50,74,0.12)] backdrop-blur-xl lg:block">
+                        <div className="flex items-center gap-4">
+                            <CustomIcon name="dashboard" size="lg" tone="cream" />
+                            <div>
+                                <p className="section-eyebrow">CURIEL</p>
+                                <h1 className="mt-2 font-display text-4xl text-slate-900">Inspección técnica, ordenada y visual.</h1>
+                            </div>
+                        </div>
+                        <p className="mt-6 max-w-xl text-lg leading-8 text-slate-600">
+                            Coordina visitas, evidencia fotográfica, estados y reportes con una interfaz clara para operaciones de campo y administración.
+                        </p>
 
-                {/* Card del formulario */}
-                <div className="card">
-                    <h2 className="text-2xl font-bold text-center mb-6">Iniciar Sesión</h2>
+                        <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-3">
+                            <div className="rounded-[24px] bg-[#fbfbfa] p-4 ring-1 ring-slate-200/80">
+                                <CustomIcon name="calendar" size="sm" tone="cream" />
+                                <p className="mt-4 font-semibold text-slate-900">Agenda técnica</p>
+                            </div>
+                            <div className="rounded-[24px] bg-[#fbfbfa] p-4 ring-1 ring-slate-200/80">
+                                <CustomIcon name="camera" size="sm" tone="mist" />
+                                <p className="mt-4 font-semibold text-slate-900">Evidencia centralizada</p>
+                            </div>
+                            <div className="rounded-[24px] bg-[#fbfbfa] p-4 ring-1 ring-slate-200/80">
+                                <CustomIcon name="file-pdf" size="sm" tone="blue" />
+                                <p className="mt-4 font-semibold text-slate-900">Reportes listos</p>
+                            </div>
+                        </div>
+                    </section>
 
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        {/* Email */}
-                        <div>
-                            <label htmlFor="email" className="block text-sm font-medium mb-2">
-                                Correo Electrónico
-                            </label>
-                            <div className="relative">
-                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <section className="card mx-auto w-full max-w-md lg:max-w-none">
+                        <div className="mb-8 text-center">
+                            <div className="mb-4 flex justify-center lg:hidden">
+                                <CustomIcon name="dashboard" size="lg" tone="cream" />
+                            </div>
+                            <p className="section-eyebrow">Acceso seguro</p>
+                            <h2 className="mt-2 font-display text-3xl text-slate-900">Iniciar sesión</h2>
+                            <p className="mt-2 text-slate-600">Ingresa con tu cuenta para acceder al panel operativo.</p>
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <label htmlFor="email" className="mb-2 block text-sm font-medium text-slate-700">
+                                    Correo electrónico
+                                </label>
                                 <input
                                     id="email"
                                     name="email"
@@ -67,19 +87,15 @@ export const Login = () => {
                                     autoComplete="email"
                                     value={formData.email}
                                     onChange={handleChange}
-                                    className="input pl-10"
+                                    className="input"
                                     placeholder="correo@ejemplo.com"
                                 />
                             </div>
-                        </div>
 
-                        {/* Password */}
-                        <div>
-                            <label htmlFor="password" className="block text-sm font-medium mb-2">
-                                Contraseña
-                            </label>
-                            <div className="relative">
-                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                            <div>
+                                <label htmlFor="password" className="mb-2 block text-sm font-medium text-slate-700">
+                                    Contraseña
+                                </label>
                                 <input
                                     id="password"
                                     name="password"
@@ -88,39 +104,33 @@ export const Login = () => {
                                     autoComplete="current-password"
                                     value={formData.password}
                                     onChange={handleChange}
-                                    className="input pl-10"
+                                    className="input"
                                     placeholder="••••••••"
                                 />
                             </div>
-                        </div>
 
-                        {/* Submit button */}
-                        <button
-                            type="submit"
-                            disabled={isLoading}
-                            className="btn btn-primary w-full flex items-center justify-center gap-2"
-                        >
-                            {isLoading ? (
-                                <>
-                                    <Loader2 className="w-5 h-5 animate-spin" />
-                                    Iniciando sesión...
-                                </>
-                            ) : (
-                                <>
-                                    <LogIn className="w-5 h-5" />
-                                    Iniciar Sesión
-                                </>
-                            )}
-                        </button>
-                    </form>
+                            <button
+                                type="submit"
+                                disabled={isLoading}
+                                className="btn btn-primary flex w-full items-center justify-center gap-3"
+                            >
+                                {isLoading ? (
+                                    <>
+                                        <CustomIcon name="sync" size="xs" tone="white" spin />
+                                        Iniciando sesión...
+                                    </>
+                                ) : (
+                                    <>
+                                        <CustomIcon name="arrow-right" size="xs" tone="white" />
+                                        Iniciar sesión
+                                    </>
+                                )}
+                            </button>
+                        </form>
 
-
+                        <p className="mt-6 text-center text-sm text-slate-500">© 2026 CURIEL. Todos los derechos reservados.</p>
+                    </section>
                 </div>
-
-                {/* Footer */}
-                <p className="text-center text-sm text-gray-600 dark:text-gray-400 mt-6">
-                    © 2026 CURIEL. Todos los derechos reservados.
-                </p>
             </div>
         </div>
     );

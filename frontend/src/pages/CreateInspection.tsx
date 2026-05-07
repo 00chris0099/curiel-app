@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, type ChangeEvent, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getApiErrorMessage } from '../api/axios';
+import { CustomIcon } from '../components/CustomIcon';
 import inspectionService from '../services/inspection.service';
 import userService from '../services/user.service';
 import type {
@@ -25,6 +25,7 @@ import {
     DEPARTMENT_SERVICE_OPTIONS,
     SERVICE_TYPE_TO_BACKEND_TYPE,
 } from '../utils/inspectionMetadata';
+import { getReviewPointIcon } from '../utils/iconSystem';
 
 const contactChannelOptions: ContactChannel[] = ['WhatsApp', 'Llamada', 'Facebook', 'Referido', 'Otro'];
 const districtOptions: LimaDistrict[] = [
@@ -247,7 +248,7 @@ export const CreateInspection = () => {
                         onClick={() => navigate('/inspections')}
                         className="rounded-xl border border-gray-200 p-2 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
                     >
-                        <ArrowLeft className="h-6 w-6" />
+                        <CustomIcon name="arrow-left" size="sm" tone="mist" />
                     </button>
                     <div className="max-w-2xl">
                         <p className="text-sm font-medium uppercase tracking-[0.18em] text-primary-600 dark:text-primary-400">
@@ -266,7 +267,10 @@ export const CreateInspection = () => {
                     <div className="space-y-6">
                         <section className="card space-y-5">
                             <div>
-                                <h2 className="text-lg font-bold">1. Información del servicio</h2>
+                                <div className="flex items-center gap-3">
+                                    <CustomIcon name="clipboard-check" size="sm" tone="cream" />
+                                    <h2 className="text-lg font-bold">1. Información del servicio</h2>
+                                </div>
                                 <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
                                     Define el tipo de visita y el horario programado para el departamento.
                                 </p>
@@ -326,7 +330,10 @@ export const CreateInspection = () => {
 
                         <section className="card space-y-5">
                             <div>
-                                <h2 className="text-lg font-bold">2. Datos del cliente</h2>
+                                <div className="flex items-center gap-3">
+                                    <CustomIcon name="users" size="sm" tone="mist" />
+                                    <h2 className="text-lg font-bold">2. Datos del cliente</h2>
+                                </div>
                                 <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
                                     Completa la información de contacto con foco en atención rápida por canales digitales.
                                 </p>
@@ -403,7 +410,10 @@ export const CreateInspection = () => {
 
                         <section className="card space-y-5">
                             <div>
-                                <h2 className="text-lg font-bold">3. Ubicación en Lima</h2>
+                                <div className="flex items-center gap-3">
+                                    <CustomIcon name="map-pin" size="sm" tone="blue" />
+                                    <h2 className="text-lg font-bold">3. Ubicación en Lima</h2>
+                                </div>
                                 <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
                                     Registra la ubicación exacta del departamento y referencias de llegada para el inspector.
                                 </p>
@@ -481,7 +491,10 @@ export const CreateInspection = () => {
 
                         <section className="card space-y-5">
                             <div>
-                                <h2 className="text-lg font-bold">4. Datos del departamento</h2>
+                                <div className="flex items-center gap-3">
+                                    <CustomIcon name="house" size="sm" tone="cream" />
+                                    <h2 className="text-lg font-bold">4. Datos del departamento</h2>
+                                </div>
                                 <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
                                     Resume la tipología del inmueble y sus características para planificar mejor la visita.
                                 </p>
@@ -611,7 +624,10 @@ export const CreateInspection = () => {
 
                         <section className="card space-y-5">
                             <div>
-                                <h2 className="text-lg font-bold">5. Estado del inmueble</h2>
+                                <div className="flex items-center gap-3">
+                                    <CustomIcon name="warning" size="sm" tone="amber" />
+                                    <h2 className="text-lg font-bold">5. Estado del inmueble</h2>
+                                </div>
                                 <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
                                     Indica la condición actual del departamento y los focos críticos de revisión.
                                 </p>
@@ -656,7 +672,10 @@ export const CreateInspection = () => {
                                                         onChange={() => handleReviewPointChange(option)}
                                                         className="mt-1 h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                                                     />
-                                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-200">{option}</span>
+                                                    <span className="inline-flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
+                                                        <CustomIcon name={getReviewPointIcon(option)} size="xs" tone={isChecked ? 'white' : 'mist'} />
+                                                        {option}
+                                                    </span>
                                                 </label>
                                             );
                                         })}
@@ -686,7 +705,10 @@ export const CreateInspection = () => {
                     <div className="space-y-6 xl:sticky xl:top-24">
                         <section className="card space-y-5">
                             <div>
-                                <h2 className="text-lg font-bold">6. Asignación</h2>
+                                <div className="flex items-center gap-3">
+                                    <CustomIcon name="user-gear" size="sm" tone="mist" />
+                                    <h2 className="text-lg font-bold">6. Asignación</h2>
+                                </div>
                                 <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
                                     Selecciona quién realizará la inspección y el nivel de urgencia del servicio.
                                 </p>
@@ -737,7 +759,10 @@ export const CreateInspection = () => {
 
                         <section className="card space-y-5">
                             <div>
-                                <h2 className="text-lg font-bold">7. Notas adicionales</h2>
+                                <div className="flex items-center gap-3">
+                                    <CustomIcon name="note-pencil" size="sm" tone="blue" />
+                                    <h2 className="text-lg font-bold">7. Notas adicionales</h2>
+                                </div>
                                 <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
                                     Agrega detalles del cliente, restricciones de acceso y solicitudes especiales para el informe.
                                 </p>
@@ -770,7 +795,10 @@ export const CreateInspection = () => {
 
                         <section className="card space-y-4">
                             <div>
-                                <h2 className="text-lg font-bold">Resumen del envío</h2>
+                                <div className="flex items-center gap-3">
+                                    <CustomIcon name="buildings" size="sm" tone="cream" />
+                                    <h2 className="text-lg font-bold">Resumen del envío</h2>
+                                </div>
                                 <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
                                     El backend recibirá un payload compatible con la API actual y los datos ampliados viajarán dentro de las notas estructuradas.
                                 </p>
@@ -778,17 +806,17 @@ export const CreateInspection = () => {
 
                             <div className="space-y-3 text-sm text-gray-600 dark:text-gray-300">
                                 <div className="flex items-center justify-between gap-4 rounded-xl bg-gray-50 px-4 py-3 dark:bg-gray-800/80">
-                                    <span>Servicio</span>
+                                    <span className="inline-flex items-center gap-2"><CustomIcon name="clipboard-check" size="xs" tone="white" />Servicio</span>
                                     <span className="font-medium text-gray-900 dark:text-white">{formData.serviceType}</span>
                                 </div>
                                 <div className="flex items-center justify-between gap-4 rounded-xl bg-gray-50 px-4 py-3 dark:bg-gray-800/80">
-                                    <span>Ubicación</span>
+                                    <span className="inline-flex items-center gap-2"><CustomIcon name="map-pin" size="xs" tone="white" />Ubicación</span>
                                     <span className="font-medium text-right text-gray-900 dark:text-white">
                                         {formData.district || 'Distrito pendiente'}
                                     </span>
                                 </div>
                                 <div className="flex items-center justify-between gap-4 rounded-xl bg-gray-50 px-4 py-3 dark:bg-gray-800/80">
-                                    <span>Inmueble</span>
+                                    <span className="inline-flex items-center gap-2"><CustomIcon name="house" size="xs" tone="white" />Inmueble</span>
                                     <span className="font-medium text-right text-gray-900 dark:text-white">
                                         {formData.propertyType} {formData.apartmentNumber || '--'}
                                     </span>
@@ -811,12 +839,12 @@ export const CreateInspection = () => {
                                 >
                                     {isLoading ? (
                                         <>
-                                            <Loader2 className="h-5 w-5 animate-spin" />
+                                            <CustomIcon name="sync" size="xs" tone="white" spin />
                                             Creando...
                                         </>
                                     ) : (
                                         <>
-                                            <Save className="h-5 w-5" />
+                                            <CustomIcon name="save" size="xs" tone="white" />
                                             Crear inspección
                                         </>
                                     )}

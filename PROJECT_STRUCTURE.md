@@ -4,85 +4,146 @@
 CURIEL/
 │
 ├── 📄 README.md                    # Documentación principal
-├── 📄 QUICKSTART.md                # Guía de inicio rápido (10 min)
-├── 📄 INSTALL.md                   # Instalación completa paso a paso
-├── 📄 .gitignore                   # Archivos ignorados por Git
+├── 📄 QUICKSTART.md                # Guía de inicio rápido
+├── 📄 INSTALL.md                   # Instalación paso a paso
+├── 📄 AGENTS.md                    # Reglas para agentes IA
+├── 📄 .gitignore                   # Archivos ignorados
+├── 📄 docker-compose.yml           # Docker services
+├── 📄 Dockerfile                   # Contenedor backend
 │
-├── 📁 backend/                     # API REST (Node.js + Express)
+├── 📁 frontend/                    # Web app (React + Vite + TypeScript)
+│   ├── 📄 package.json
+│   ├── 📄 vite.config.ts
+│   ├── 📄 tailwind.config.js
+│   ├── 📄 tsconfig.json
+│   │
+│   └── 📁 src/
+│       ├── 📄 main.tsx             # Entry point
+│       ├── 📄 App.tsx              # Router principal
+│       ├── 📄 index.css
+│       ├── 📄 App.css
+│       │
+│       ├── 📁 api/
+│       │   └── axios.ts            # Axios + interceptores auth
+│       │
+│       ├── 📁 auth/
+│       │   └── PrivateRoute.tsx    # Protección de rutas
+│       │
+│       ├── 📁 components/
+│       │   ├── ConnectionStatus.tsx    # Estado de conexión
+│       │   ├── ErrorBoundary.tsx       # Manejo de errores
+│       │   ├── Loader.tsx               # Loading spinner
+│       │   ├── Navbar.tsx               # Barra de navegación
+│       │   ├── NotificationDropdown.tsx # Notificaciones dropdown
+│       │   └── Sidebar.tsx              # Menú lateral
+│       │
+│       ├── 📁 hooks/                # Custom hooks
+│       │
+│       ├── 📁 pages/
+│       │   ├── Login.tsx            ✅ Login
+│       │   ├── Dashboard.tsx       ✅ Dashboard principal
+│       │   ├── Inspections.tsx     ✅ Lista de inspecciones
+│       │   ├── CreateInspection.tsx ✅ Crear inspección
+│       │   ├── InspectionDetail.tsx ✅ Detalle de inspección
+│       │   ├── InspectionExecution.tsx ✅ Ejecutar inspección
+│       │   ├── InspectionAreaDetail.tsx ✅ Detalle por área
+│       │   ├── Users.tsx           ✅ Gestión de usuarios
+│       │   ├── Notifications.tsx   ✅ Lista de notificaciones
+│       │   └── Profile.tsx         ✅ Perfil de usuario
+│       │
+│       ├── 📁 services/             # Servicios API
+│       │
+│       ├── 📁 store/                # Zustand stores
+│       │
+│       ├── 📁 types/
+│       │   └── index.ts             # Tipos TypeScript
+│       │
+│       └── 📁 utils/
+│           ├── inspectionPermissions.ts
+│           ├── inspectionStatus.ts
+│           ├── inspectionMetadata.ts
+│           └── offlineDb.ts         # Base de datos offline
+│
+├── 📁 backend_legacy/               # API REST (Node.js + Express)
 │   ├── 📄 package.json
 │   ├── 📄 .env.example
 │   │
 │   └── 📁 src/
 │       ├── 📄 server.js            # Servidor principal
 │       │
-│       ├── 📁 config/              # Configuración
-│       │   ├── index.js
-│       │   └── database.js
+│       ├── 📁 config/
+│       │   └── index.js            # Configuración
 │       │
-│       ├── 📁 models/              # Modelos de DB (8 modelos)
-│       │   ├── User.js
-│       │   ├── Inspection.js
-│       │   ├── ChecklistTemplate.js
-│       │   ├── ChecklistItem.js
-│       │   ├── InspectionResponse.js
-│       │   ├── Photo.js
-│       │   ├── Signature.js
-│       │   ├── AuditLog.js
-│       │   └── index.js            # Relaciones
+│       ├── 📁 models/              # Modelos Sequelize
 │       │
-│       ├── 📁 controllers/         # Lógica de negocio
-│       │   ├── authController.js   ✅ Completo
-│       │   └── inspectionController.js ✅ Completo
-│       │   # 🚧 PENDIENTES:
-│       │   # - checklistController.js
-│       │   # - photoController.js
-│       │   # - signatureController.js
-│       │   # - dashboardController.js
-│       │   # - reportController.js
+│       ├── 📁 controllers/
+│       │   ├── authController.js   ✅ Autenticación
+│       │   ├── userController.js   ✅ Gestión usuarios
+│       │   ├── checklistController.js ✅ Plantillas checklist
+│       │   ├── inspectionController.js ✅ CRUD inspecciones
+│       │   ├── inspectionExecutionController.js ✅ Ejecución
+│       │   ├── inspectionReportController.js ✅ Reportes/PDF
+│       │   ├── photoController.js  ✅ Upload fotos
+│       │   └── notificationController.js ✅ Notificaciones
 │       │
-│       ├── 📁 routes/              # Endpoints de API
-│       │   ├── index.js
-│       │   ├── authRoutes.js       ✅ Completo
-│       │   └── inspectionRoutes.js ✅ Completo
-│       │   # 🚧 PENDIENTES:
-│       │   # - checklistRoutes.js
-│       │   # - photoRoutes.js
-│       │   # - signatureRoutes.js
-│       │   # - dashboardRoutes.js
-│       │   # - reportRoutes.js
+│       ├── 📁 routes/
+│       │   ├── index.js            # Router principal
+│       │   ├── authRoutes.js       ✅ Autenticación
+│       │   ├── usersRoutes.js      ✅ Usuarios
+│       │   ├── checklistRoutes.js  ✅ Checklists
+│       │   ├── inspectionRoutes.js ✅ Inspecciones
+│       │   ├── inspectionExecutionRoutes.js ✅ Ejecución
+│       │   ├── photoRoutes.js      ✅ Fotos
+│       │   └── notificationRoutes.js ✅ Notificaciones
 │       │
-│       ├── 📁 middlewares/         # Middlewares
+│       ├── 📁 middlewares/
 │       │   ├── auth.js             ✅ JWT + Roles
 │       │   ├── auditLog.js         ✅ Trazabilidad
 │       │   ├── validateRequest.js  ✅ Validación
-│       │   └── errorHandler.js     ✅ Manejo de errores
+│       │   └── errorHandler.js     ✅ Errores
 │       │
-│       ├── 📁 services/            # Servicios externos
-│       │   └── n8n.js              ✅ Webhooks
-│       │   # 🚧 PENDIENTES:
-│       │   # - pdfService.js
-│       │   # - emailService.js
-│       │   # - cloudinaryService.js
+│       ├── 📁 services/
+│       │   ├── userService.js      ✅ Usuarios
+│       │   ├── checklistService.js ✅ Checklists
+│       │   ├── inspectionService.js ✅ Inspecciones
+│       │   ├── inspectionExecutionService.js ✅ Ejecución
+│       │   ├── inspectionReportService.js ✅ PDFs
+│       │   └── notificationService.js ✅ Notificaciones
 │       │
-│       ├── 📁 utils/               # Utilidades
-│       │   └── n8n.js
+│       ├── 📁 validators/          # Validación Joi
+│       │   ├── userValidator.js
+│       │   ├── checklistValidator.js
+│       │   ├── inspectionValidator.js
+│       │   └── inspectionExecutionValidator.js
 │       │
-│       └── 📁 database/            # Scripts de DB
-│           ├── migrate.js          ✅ Crear tablas
-│           └── seed.js             ✅ Datos de prueba
+│       ├── 📁 utils/
+│       │   └── notificationInfra.js
+│       │
+│       ├── 📁 pdf/
+│       │   └── (generación PDF)
+│       │
+│       ├── 📁 database/
+│       │   └── migrate.js, seed.js
+│       │
+│       ├── 📁 uploads/             # Fotos temporal
+│       │   └── .gitkeep
+│       │
+│       └── 📁 storage/
+│           └── reports/            # PDFs generados
+│               └── .gitkeep
 │
 ├── 📁 mobile/                      # App móvil (React Native + Expo)
 │   ├── 📄 package.json
 │   ├── 📄 app.json
-│   ├── 📄 App.js                   ✅ Navegación principal
+│   ├── 📄 App.js                   ✅ Navegación
 │   │
 │   └── 📁 src/
 │       ├── 📁 config/
-│       │   └── index.js            ✅ Configuración
+│       │   └── index.js            ✅ Configuración API
 │       │
-│       ├── 📁 screens/             # Pantallas
-│       │   ├── LoginScreen.js      ✅ Completo
-│       │   └── HomeScreen.js       ✅ Dashboard
+│       ├── 📁 screens/
+│       │   ├── LoginScreen.js      ✅
+│       │   └── HomeScreen.js       ✅
 │       │   # 🚧 PENDIENTES:
 │       │   # - InspectionDetailScreen.js
 │       │   # - PerformInspectionScreen.js
@@ -91,7 +152,7 @@ CURIEL/
 │       │   # - ProfileScreen.js
 │       │   # - CreateInspectionScreen.js
 │       │
-│       ├── 📁 components/          # Componentes reutilizables
+│       ├── 📁 components/
 │       │   # 🚧 PENDIENTES:
 │       │   # - ChecklistItem.js
 │       │   # - PhotoGallery.js
@@ -99,46 +160,61 @@ CURIEL/
 │       │   # - Button.js
 │       │   # - Card.js
 │       │
-│       ├── 📁 services/            # API Client
+│       ├── 📁 services/
 │       │   └── api.js              ✅ Axios + interceptores
 │       │
-│       ├── 📁 context/             # State Management
+│       ├── 📁 context/
 │       │   └── AuthContext.js      ✅ Autenticación
 │       │
-│       └── 📁 utils/               # Utilidades
+│       └── 📁 utils/
 │           # 🚧 PENDIENTES:
 │           # - helpers.js
 │           # - validators.js
 │
 ├── 📁 n8n-workflows/               # Automatización
-│   # 🚧 PENDIENTES:
-│   # - inspection-completed.json
-│   # - user-notifications.json
 │   └── README.md
 │
-└── 📁 docs/                        # Documentación
-    ├── 📄 ARCHITECTURE.md          ✅ Arquitectura técnica
-    ├── 📄 IMPLEMENTATION_PLAN.md   ✅ Plan de desarrollo
-    # 🚧 PENDIENTES:
-    # - API.md (Documentación de endpoints)
-    # - DEPLOYMENT.md (Guía de deploy)
-    # - USER_GUIDE.md (Manual de usuario)
+├── 📁 docs/                       # Documentación
+│   ├── ARCHITECTURE.md            ✅ Arquitectura técnica
+│   └── IMPLEMENTATION_PLAN.md     ✅ Plan de desarrollo
+│
+└── 📁 image/                      # Assets e iconos
+    ├── 📁 inspector/              # Iconos inspector
+    └── 📁 base de navegación/     # Iconos navegación
 ```
 
 ---
 
 ## 📊 PROGRESO ACTUAL
 
-### ✅ COMPLETADO (60% del MVP)
+### ✅ COMPLETADO (~80% del MVP)
+
+**Frontend (Web):**
+- ✅ React 19 + TypeScript + Vite + Tailwind
+- ✅ Sistema de autenticación JWT
+- ✅ Dashboard con estadísticas
+- ✅ Lista de inspecciones con filtros
+- ✅ Crear nuevas inspecciones
+- ✅ Ver detalle de inspección
+- ✅ Ejecutar inspección (checklist interactivo)
+- ✅ Gestión de usuarios (Admin)
+- ✅ Sistema de notificaciones
+- ✅ Perfil de usuario
+- ✅ Estado de conexión (online/offline)
+- ✅ Manejo de errores con ErrorBoundary
 
 **Backend:**
 - ✅ 8 modelos de base de datos con relaciones
-- ✅ Sistema de autenticación completo (JWT)
+- ✅ Autenticación JWT completa
 - ✅ Autorización por roles (Admin, Arquitecto, Inspector)
-- ✅ CRUD de inspecciones
+- ✅ CRUD completo de inspecciones
+- ✅ Sistema de ejecución de inspecciones (checklist)
+- ✅ Generación de PDFs con PDFKit
+- ✅ Upload de fotos
+- ✅ Sistema de notificaciones
 - ✅ Sistema de auditoría
 - ✅ Integración con n8n
-- ✅ Manejo de errores robusto
+- ✅ Validación con Joi
 - ✅ Seguridad (Helmet, CORS, Rate Limiting)
 - ✅ Scripts de migración y seed
 
@@ -147,7 +223,6 @@ CURIEL/
 - ✅ Autenticación completa
 - ✅ Dashboard funcional
 - ✅ Cliente de API con interceptores
-- ✅ Navegación básica
 
 **Documentación:**
 - ✅ README completo
@@ -155,65 +230,64 @@ CURIEL/
 - ✅ Arquitectura técnica
 - ✅ Plan de implementación
 - ✅ Quick Start
+- ✅ AGENTS.md para agentes IA
 
 ---
 
-## 🚧 PENDIENTE (40% del MVP)
+## 🚧 PENDIENTE (~20% del MVP)
 
-### Funcionalidades Críticas
+### Frontend (Web)
+1. Mejorar UI de Profile (editar información)
+2. Mejoras en Users (más funcionalidades)
+3. Testing y validación de Flows
 
-**Backend:**
-1. Upload de fotos a Cloudinary
-2. Generación de PDFs con PDFKit
-3. Gestión de checklists configurables
-4. Envío de emails
-5. Dashboard con estadísticas
+### Backend
+1. Servicio de email (emailService.js)
+2. Controller de firmas (signatureController.js)
+3. Routes para firmas
+4. Integración con Cloudinary para fotos
 
-**Mobile:**
+### Mobile
 1. Pantalla de detalle de inspección
 2. Realizar inspección (checklist)
 3. Cámara con geolocalización
 4. Captura de firmas digitales
 5. Ver reportes generados
+6. Componentes reutilizables
+
+### Integración
+1. Webhooks de n8n para eventos
+2. Notificaciones push
+3. Modo offline completo
 
 ---
 
-## 🎯 SIGUIENTE PASO INMEDIATO
+## 🎯 PRIORIDADES SIGUIENTES
 
-**Para tener un MVP funcional, el siguiente paso es:**
-
-### 1. Upload de Fotos (Backend)
-
-```powershell
-# Crear cuenta gratuita en Cloudinary.com
-# Copiar credenciales a backend/.env
-
-# Crear archivos:
-backend/src/services/cloudinaryService.js
-backend/src/controllers/photoController.js
-backend/src/routes/photoRoutes.js
-
-# Agregar a backend/src/routes/index.js
+### 1. Backend: Firmas y Emails
+```
+backend_legacy/src/services/emailService.js       (nuevo)
+backend_legacy/src/controllers/signatureController.js (nuevo)
+backend_legacy/src/routes/signatureRoutes.js      (nuevo)
 ```
 
-### 2. Cámara (Mobile)
+### 2. Frontend: Mejoras menores
+- Profile editable
+- Más acciones en Users
 
-```powershell
-# Crear archivos:
+### 3. Mobile: Desarrollar screens
+```
+mobile/src/screens/InspectionDetailScreen.js
+mobile/src/screens/PerformInspectionScreen.js
 mobile/src/screens/CameraScreen.js
-mobile/src/components/PhotoGallery.js
-
-# Integrar con photoService
+mobile/src/screens/SignatureScreen.js
+mobile/src/screens/ProfileScreen.js
 ```
 
-### 3. Generación de PDF (Backend)
-
-```powershell
-# Crear archivo:
-backend/src/services/pdfService.js
-backend/src/controllers/reportController.js
-
-# Generar PDF al completar inspección
+### 4. Integración: n8n
+```
+n8n-workflows/inspection-completed.json
+n8n-workflows/user-notifications.json
 ```
 
 ---
@@ -222,100 +296,24 @@ backend/src/controllers/reportController.js
 
 | Semana | Tarea | Resultado |
 |--------|-------|-----------|
-| 1-2 | Completar backend faltante | Backend 100% funcional |
-| 3-4 | Completar pantallas móviles | Mobile 100% funcional |
-| 5 | Testing y debugging | MVP estable |
-| 6 | Mejoras (offline, notif.) | MVP mejorado |
-| 7 | Deploy a producción | App en stores |
+| 1 | Completar backend (firmas, email) | Backend 100% |
+| 2-3 | Completar frontend (profile, users) | Frontend 100% |
+| 4-5 | Completar mobile screens | Mobile funcional |
+| 6 | Testing e integración n8n | MVP completo |
+| 7 | Deploy a producción | App en producción |
 
 **Total: 7 semanas para MVP completo**
 
 ---
 
-## 💡 RECOMENDACIONES
+## 💡 NOTAS IMPORTANTES
 
-### Para Desarrollo
-1. **Empieza por el backend**: Completa todos los endpoints primero
-2. **Prueba con Postman**: Antes de integrar con mobile
-3. **Documenta mientras codeas**: Actualiza docs/API.md
-4. **Commits frecuentes**: Usa Git desde el inicio
-
-### Para Testing
-1. **Usuarios de prueba**: Usa los del seed
-2. **Datos reales**: Crea inspecciones de prueba
-3. **Testing en dispositivo**: No solo en emulador
-4. **Cloudinary gratuito**: Tier free es suficiente para desarrollo
-
-### Para Deploy
-1.  **Railway**: Más simple para backend
-2. **PostgreSQL**: Incluido en Railway
-3. **EAS Build**: Para compilar apps móviles
-4. **Versión web**: Considera crear un admin panel web después
+1. **El folder correcto es `backend_legacy/`, NO `backend/`**
+2. **Frontend está más avanzado que el documento original**
+3. **El folder `mobile/` usa JavaScript, no TypeScript**
+4. **El proyecto usa Zustand para state management (frontend)**
+5. **La base de datos es PostgreSQL con Sequelize**
 
 ---
 
-## 🔗 RECURSOS ÚTILES
-
-### Documentación
-- [Express.js](https://expressjs.com/)
-- [Sequelize](https://sequelize.org/)
-- [React Native](https://reactnative.dev/)
-- [Expo](https://docs.expo.dev/)
-
-### Servicios
-- [Cloudinary](https://cloudinary.com/)
-- [Railway](https://railway.app/)
-- [n8n](https://n8n.io/)
-
-### Tutoriales
-- [JWT con Node.js](https://jwt.io/introduction)
-- [React Navigation](https://reactnavigation.org/)
-- [Expo Camera](https://docs.expo.dev/versions/latest/sdk/camera/)
-
----
-
-## 🎓 ARQUITECTURA DE DECISIONES
-
-### ¿Por qué Node.js?
-- JavaScript en todo el stack
-- Ecosistema rico (npm)
-- Fácil de aprender
-
-### ¿Por qué React Native?
-- Una sola codebase para iOS y Android
-- Comunidad grande
-- Updates over-the-air (OTA)
-
-### ¿Por qué PostgreSQL?
-- Relacional y robusto
-- JSONB para flexibilidad
-- Gratis en Railway
-
-### ¿Por qué Expo?
-- Setup instantáneo
-- No necesitas macOS para desarrollar iOS
-- Simplifica permisos nativos
-
----
-
-## ✨ CARACTERÍSTICAS DESTACADAS
-
-### Ya Implementadas
-- 🔐 Autenticación JWT segura
-- 👥 Sistema de roles granular
-- 📝 Audit logs completos
-- 🔄 Integración con n8n
-- 📱 App móvil nativa
-- 🎨 UI profesional
-
-### Por Implementar
-- 📸 Evidencia fotográfica con GPS
-- ✍️ Firmas digitales
-- 📄 Reportes PDF automáticos
-- 📊 Dashboard de estadísticas
-- 📧 Notificaciones por email
-- 📴 Modo offline
-
----
-
-**Este proyecto está listo para ser desarrollado. Tienes una base sólida y profesional. ¡Adelante! 🚀**
+**Proyecto activo y en desarrollo continuo.** 🚀

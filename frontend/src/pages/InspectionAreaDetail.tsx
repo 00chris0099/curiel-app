@@ -1,15 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import {
-    ArrowLeft,
-    Loader2,
-    Save,
-    Trash2,
-    Plus,
-    Camera,
-} from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getApiErrorMessage } from '../api/axios';
+import { CustomIcon } from '../components/CustomIcon';
 import { Loader } from '../components/Loader';
 import ConnectionStatus from '../components/ConnectionStatus';
 import { useOfflineSync } from '../hooks/useOfflineSync';
@@ -33,6 +26,7 @@ import {
     mergeExecutionWithQueue,
     saveExecutionSnapshot,
 } from '../utils/offlineDb';
+import { getAreaCategoryIcon, observationSeverityIconMap, photoTypeIconMap } from '../utils/iconSystem';
 import { canManageExecutionContent } from '../utils/inspectionPermissions';
 
 const areaStatusOptions: ExecutionAreaStatus[] = ['pendiente', 'en_revision', 'observado', 'aprobado'];
@@ -388,9 +382,9 @@ export const InspectionAreaDetail = () => {
                     <p className="text-red-600">{errorMessage || 'Área no encontrada'}</p>
                     <button
                         onClick={() => navigate(`/inspections/${id}/execute`, { state: { selectedAreaId: areaId } })}
-                        className="btn btn-primary mt-4"
+                        className="btn btn-primary mt-4 flex items-center gap-2"
                     >
-                        <ArrowLeft className="w-4 h-4 mr-2" />
+                        <CustomIcon name="arrow-left" size="xs" tone="white" />
                         Volver a áreas
                     </button>
                 </div>
@@ -406,10 +400,13 @@ export const InspectionAreaDetail = () => {
                     onClick={handleBack}
                     className="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-700"
                 >
-                    <ArrowLeft className="w-5 h-5" />
+                    <CustomIcon name="arrow-left" size="sm" tone="mist" />
                 </button>
                 <div>
-                    <h1 className="text-2xl font-bold">{selectedArea.name}</h1>
+                    <div className="flex items-center gap-3">
+                        <CustomIcon name={getAreaCategoryIcon(selectedArea.category, selectedArea.name)} size="sm" tone="cream" />
+                        <h1 className="text-2xl font-bold">{selectedArea.name}</h1>
+                    </div>
                     <p className="text-gray-600 dark:text-gray-400">{selectedArea.category}</p>
                 </div>
             </div>
@@ -515,7 +512,7 @@ export const InspectionAreaDetail = () => {
                             disabled={isSaving}
                             className="btn btn-primary flex items-center gap-2"
                         >
-                            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                            {isSaving ? <CustomIcon name="sync" size="xs" tone="white" spin /> : <CustomIcon name="save" size="xs" tone="white" />}
                             Guardar cambios
                         </button>
                     </div>
@@ -534,7 +531,7 @@ export const InspectionAreaDetail = () => {
                             }}
                             className="btn btn-secondary flex items-center gap-2"
                         >
-                            <Plus className="w-4 h-4" />
+                            <CustomIcon name="plus" size="xs" tone="white" />
                             Agregar observación
                         </button>
                     )}
@@ -603,7 +600,8 @@ export const InspectionAreaDetail = () => {
                                 <div>
                                     <h4 className="font-medium">{obs.title}</h4>
                                     <p className="text-sm text-gray-600 dark:text-gray-400">{obs.description}</p>
-                                    <p className="text-xs text-gray-500 mt-1">
+                                    <p className="mt-1 inline-flex items-center gap-2 text-xs text-gray-500">
+                                        <CustomIcon name={observationSeverityIconMap[obs.severity] ?? 'warning'} size="xs" tone="mist" />
                                         {obs.severity} · {obs.type}
                                     </p>
                                 </div>
@@ -613,13 +611,13 @@ export const InspectionAreaDetail = () => {
                                             onClick={() => handleEditObservation(obs)}
                                             className="text-primary-600 hover:text-primary-700"
                                         >
-                                            Editar
+                                            <span className="inline-flex items-center gap-2"><CustomIcon name="pencil" size="xs" tone="mist" />Editar</span>
                                         </button>
                                         <button
                                             onClick={() => handleDeleteObservation(obs.id)}
                                             className="text-red-600 hover:text-red-700"
                                         >
-                                            <Trash2 className="w-4 h-4" />
+                                            <CustomIcon name="trash" size="xs" tone="rose" />
                                         </button>
                                     </div>
                                 )}
@@ -644,11 +642,11 @@ export const InspectionAreaDetail = () => {
                                 onChange={(e) => setAreaPhotoForm(prev => ({ ...prev, type: e.target.value as ExecutionPhotoType }))}
                                 className="input"
                             >
-                                {areaPhotoTypeOptions.map(opt => (
-                                    <option key={opt} value={opt}>{opt}</option>
-                                ))}
-                            </select>
-                        </div>
+                                                        {areaPhotoTypeOptions.map(opt => (
+                                                            <option key={opt} value={opt}>{opt}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
                         <div>
                             <label className="block text-sm font-medium mb-2">Foto</label>
                             <input
@@ -671,7 +669,7 @@ export const InspectionAreaDetail = () => {
                     </div>
                     {canEditExecutionContent && (
                         <button type="submit" className="btn btn-secondary mt-3 flex items-center gap-2">
-                            <Camera className="w-4 h-4" />
+                            <CustomIcon name={photoTypeIconMap[areaPhotoForm.type] ?? 'camera'} size="xs" tone="cream" />
                             Subir foto
                         </button>
                     )}
@@ -699,7 +697,7 @@ export const InspectionAreaDetail = () => {
                     onClick={handleBack}
                     className="btn btn-secondary flex items-center gap-2"
                 >
-                    <ArrowLeft className="w-4 h-4" />
+                    <CustomIcon name="arrow-left" size="xs" tone="mist" />
                     Volver a áreas
                 </button>
             </div>
