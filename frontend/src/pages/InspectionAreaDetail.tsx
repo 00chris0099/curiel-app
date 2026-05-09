@@ -393,21 +393,21 @@ export const InspectionAreaDetail = () => {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-5 sm:space-y-6">
             {/* Header with back button */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-start gap-3 sm:items-center sm:gap-4">
                 <button
                     onClick={handleBack}
-                    className="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    className="min-h-11 shrink-0 rounded-lg border border-gray-200 bg-white p-2 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:border-gray-700 dark:hover:bg-gray-700"
                 >
                     <CustomIcon name="arrow-left" size="sm" tone="mist" />
                 </button>
-                <div>
-                    <div className="flex items-center gap-3">
+                <div className="min-w-0">
+                    <div className="flex items-start gap-3 sm:items-center">
                         <CustomIcon name={getAreaCategoryIcon(selectedArea.category, selectedArea.name)} size="sm" tone="cream" />
-                        <h1 className="text-2xl font-bold">{selectedArea.name}</h1>
+                        <h1 className="text-2xl font-bold leading-tight">{selectedArea.name}</h1>
                     </div>
-                    <p className="text-gray-600 dark:text-gray-400">{selectedArea.category}</p>
+                    <p className="mt-1 text-sm text-gray-600 dark:text-gray-400 sm:text-base">{selectedArea.category}</p>
                 </div>
             </div>
 
@@ -506,7 +506,7 @@ export const InspectionAreaDetail = () => {
                     />
                 </div>
                 {canEditExecutionContent && (
-                    <div className="mt-4 flex gap-3">
+                    <div className="mt-4 flex flex-col gap-3 sm:flex-row">
                         <button
                             type="submit"
                             disabled={isSaving}
@@ -521,7 +521,7 @@ export const InspectionAreaDetail = () => {
 
             {/* Observations */}
             <div className="card">
-                <div className="flex items-center justify-between mb-4">
+                <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <h2 className="text-lg font-semibold">Observaciones técnicas</h2>
                     {canEditExecutionContent && (
                         <button
@@ -529,7 +529,7 @@ export const InspectionAreaDetail = () => {
                                 setEditingObservationId(null);
                                 setObservationForm(emptyObservationForm);
                             }}
-                            className="btn btn-secondary flex items-center gap-2"
+                            className="btn btn-secondary w-full gap-2 sm:w-auto"
                         >
                             <CustomIcon name="plus" size="xs" tone="white" />
                             Agregar observación
@@ -574,7 +574,7 @@ export const InspectionAreaDetail = () => {
                             </div>
                         </div>
                         {canEditExecutionContent && (
-                            <div className="mt-3 flex gap-2">
+                            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                                 <button type="submit" className="btn btn-primary">
                                     {editingObservationId ? 'Actualizar' : 'Guardar'} observación
                                 </button>
@@ -596,7 +596,7 @@ export const InspectionAreaDetail = () => {
                 <div className="space-y-3">
                     {areaObservations.map((obs: any) => (
                         <div key={obs.id} className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
-                            <div className="flex items-start justify-between">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                 <div>
                                     <h4 className="font-medium">{obs.title}</h4>
                                     <p className="text-sm text-gray-600 dark:text-gray-400">{obs.description}</p>
@@ -606,7 +606,7 @@ export const InspectionAreaDetail = () => {
                                     </p>
                                 </div>
                                 {canEditExecutionContent && (
-                                    <div className="flex gap-2">
+                                    <div className="flex flex-wrap gap-2">
                                         <button
                                             onClick={() => handleEditObservation(obs)}
                                             className="text-primary-600 hover:text-primary-700"
@@ -675,13 +675,13 @@ export const InspectionAreaDetail = () => {
                     )}
                 </form>
 
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-3">
                     {areaPhotos.map((photo: any) => (
                         <div key={photo.id} className="relative">
                             <img
                                 src={photo.url || photo.previewUrl}
                                 alt={photo.caption || 'Foto'}
-                                className="w-full h-32 object-cover rounded-lg"
+                                className="h-36 w-full rounded-lg object-cover sm:h-32"
                             />
                             {photo.caption && (
                                 <p className="text-xs mt-1 text-gray-600 dark:text-gray-400">{photo.caption}</p>
@@ -695,7 +695,7 @@ export const InspectionAreaDetail = () => {
             <div className="flex justify-start">
                 <button
                     onClick={handleBack}
-                    className="btn btn-secondary flex items-center gap-2"
+                    className="btn btn-secondary w-full gap-2 sm:w-auto"
                 >
                     <CustomIcon name="arrow-left" size="xs" tone="mist" />
                     Volver a áreas

@@ -241,33 +241,33 @@ export const CreateInspection = () => {
     };
 
     return (
-        <div className="mx-auto max-w-6xl space-y-6 pb-10">
+        <div className="mx-auto max-w-6xl space-y-5 pb-10 sm:space-y-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div className="flex items-start gap-4">
+                <div className="flex items-start gap-3 sm:gap-4">
                     <button
                         onClick={() => navigate('/inspections')}
-                        className="rounded-xl border border-gray-200 p-2 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
+                        className="min-h-11 shrink-0 rounded-xl border border-gray-200 bg-white p-2 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:border-gray-700 dark:hover:bg-gray-800"
                     >
                         <CustomIcon name="arrow-left" size="sm" tone="mist" />
                     </button>
-                    <div className="max-w-2xl">
-                        <p className="text-sm font-medium uppercase tracking-[0.18em] text-primary-600 dark:text-primary-400">
+                    <div className="min-w-0 max-w-2xl">
+                        <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary-600 dark:text-primary-400 sm:text-sm">
                             Lima · departamentos
                         </p>
-                        <h1 className="mt-2 text-2xl font-bold sm:text-3xl">Nueva inspección</h1>
-                        <p className="mt-2 text-gray-600 dark:text-gray-400">
+                        <h1 className="mt-2 text-2xl font-bold leading-tight sm:text-3xl">Nueva inspección</h1>
+                        <p className="mt-2 text-sm leading-6 text-gray-600 dark:text-gray-400 sm:text-base">
                             Registra una visita enfocada en departamentos en Lima con todos los datos operativos del cliente e inmueble.
                         </p>
                     </div>
                 </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(320px,0.95fr)]">
-                    <div className="space-y-6">
-                        <section className="card space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
+                <div className="grid grid-cols-1 gap-5 sm:gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(320px,0.95fr)]">
+                    <div className="space-y-5 sm:space-y-6">
+                        <section className="card space-y-4 sm:space-y-5">
                             <div>
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-start gap-3 sm:items-center">
                                     <CustomIcon name="clipboard-check" size="sm" tone="cream" />
                                     <h2 className="text-lg font-bold">1. Información del servicio</h2>
                                 </div>
@@ -328,9 +328,9 @@ export const CreateInspection = () => {
                             </div>
                         </section>
 
-                        <section className="card space-y-5">
+                        <section className="card space-y-4 sm:space-y-5">
                             <div>
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-start gap-3 sm:items-center">
                                     <CustomIcon name="users" size="sm" tone="mist" />
                                     <h2 className="text-lg font-bold">2. Datos del cliente</h2>
                                 </div>
@@ -408,9 +408,9 @@ export const CreateInspection = () => {
                             </div>
                         </section>
 
-                        <section className="card space-y-5">
+                        <section className="card space-y-4 sm:space-y-5">
                             <div>
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-start gap-3 sm:items-center">
                                     <CustomIcon name="map-pin" size="sm" tone="blue" />
                                     <h2 className="text-lg font-bold">3. Ubicación en Lima</h2>
                                 </div>
@@ -489,9 +489,9 @@ export const CreateInspection = () => {
                             </div>
                         </section>
 
-                        <section className="card space-y-5">
+                        <section className="card space-y-4 sm:space-y-5">
                             <div>
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-start gap-3 sm:items-center">
                                     <CustomIcon name="house" size="sm" tone="cream" />
                                     <h2 className="text-lg font-bold">4. Datos del departamento</h2>
                                 </div>
@@ -622,9 +622,9 @@ export const CreateInspection = () => {
                             </div>
                         </section>
 
-                        <section className="card space-y-5">
+                        <section className="card space-y-4 sm:space-y-5">
                             <div>
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-start gap-3 sm:items-center">
                                     <CustomIcon name="warning" size="sm" tone="amber" />
                                     <h2 className="text-lg font-bold">5. Estado del inmueble</h2>
                                 </div>
@@ -702,10 +702,10 @@ export const CreateInspection = () => {
                         </section>
                     </div>
 
-                    <div className="space-y-6 xl:sticky xl:top-24">
-                        <section className="card space-y-5">
+                    <div className="space-y-5 sm:space-y-6 xl:sticky xl:top-24">
+                        <section className="card space-y-4 sm:space-y-5">
                             <div>
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-start gap-3 sm:items-center">
                                     <CustomIcon name="user-gear" size="sm" tone="mist" />
                                     <h2 className="text-lg font-bold">6. Asignación</h2>
                                 </div>
@@ -757,9 +757,9 @@ export const CreateInspection = () => {
                             </div>
                         </section>
 
-                        <section className="card space-y-5">
+                        <section className="card space-y-4 sm:space-y-5">
                             <div>
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-start gap-3 sm:items-center">
                                     <CustomIcon name="note-pencil" size="sm" tone="blue" />
                                     <h2 className="text-lg font-bold">7. Notas adicionales</h2>
                                 </div>
@@ -793,9 +793,9 @@ export const CreateInspection = () => {
                             </div>
                         </section>
 
-                        <section className="card space-y-4">
+                        <section className="card space-y-4 sm:space-y-5">
                             <div>
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-start gap-3 sm:items-center">
                                     <CustomIcon name="buildings" size="sm" tone="cream" />
                                     <h2 className="text-lg font-bold">Resumen del envío</h2>
                                 </div>

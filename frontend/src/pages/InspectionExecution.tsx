@@ -870,7 +870,7 @@ export const InspectionExecution = () => {
     }
 
     return (
-        <div className="space-y-6 pb-10">
+        <div className="space-y-5 pb-10 sm:space-y-6">
             <ConnectionStatus
                 pendingCount={pendingCount}
                 onSyncNow={syncNow}
@@ -878,21 +878,21 @@ export const InspectionExecution = () => {
             />
 
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div className="flex items-start gap-4">
+                <div className="flex items-start gap-3 sm:gap-4">
                     <button
                         type="button"
                         onClick={() => navigate(`/inspections/${inspection.id}`)}
-                        className="rounded-xl border border-gray-200 p-2 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
+                        className="min-h-11 shrink-0 rounded-xl border border-gray-200 bg-white p-2 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:border-gray-700 dark:hover:bg-gray-800"
                     >
                         <CustomIcon name="arrow-left" size="sm" tone="mist" />
                     </button>
 
-                    <div className="max-w-3xl">
-                        <p className="text-sm font-medium uppercase tracking-[0.18em] text-primary-600 dark:text-primary-400">
+                    <div className="min-w-0 max-w-3xl">
+                        <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary-600 dark:text-primary-400 sm:text-sm">
                             Módulo del inspector
                         </p>
-                        <h1 className="mt-2 text-2xl font-bold sm:text-3xl">{inspection.projectName}</h1>
-                        <p className="mt-2 text-gray-600 dark:text-gray-400">
+                        <h1 className="mt-2 text-2xl font-bold leading-tight sm:text-3xl">{inspection.projectName}</h1>
+                        <p className="mt-2 text-sm leading-6 text-gray-600 dark:text-gray-400 sm:text-base">
                             {serviceLabel} · {inspection.clientName} · {districtLabel}
                         </p>
                         <div className="mt-4 flex flex-wrap gap-3 text-sm text-gray-600 dark:text-gray-300">
@@ -937,7 +937,7 @@ export const InspectionExecution = () => {
                 )}
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-3 2xl:grid-cols-6">
                 <StatCard icon="ruler" label="Área total" value={`${stats.totalAreaM2.toFixed(2)} m²`} accent="text-blue-600" tone="blue" />
                 <StatCard icon="rooms" label="Áreas registradas" value={stats.areasRegistered.toString()} accent="text-emerald-600" tone="sage" />
                 <StatCard icon="warning" label="Observaciones" value={stats.totalObservations.toString()} accent="text-amber-600" tone="amber" />
@@ -972,8 +972,8 @@ export const InspectionExecution = () => {
                     <EmptyPanel message="Crea áreas por defecto para comenzar la ejecución técnica del departamento." compact />
                 ) : (
                     <>
-                        <div className="-mx-1 overflow-x-auto pb-2">
-                            <div className="flex min-w-max gap-3 px-1">
+                        <div className="-mx-1 overflow-x-auto pb-2 [scrollbar-width:none]">
+                            <div className="flex min-w-max snap-x gap-3 px-1">
                                 {areas.map((area) => {
                                     const isSelected = area.id === selectedAreaId;
 
@@ -982,7 +982,7 @@ export const InspectionExecution = () => {
                                             key={area.id}
                                             type="button"
                                             onClick={() => handleOpenAreaDetail(area.id)}
-                                            className={`shrink-0 rounded-2xl border px-4 py-3 text-left transition-colors ${isSelected
+                                            className={`min-h-20 w-44 shrink-0 snap-start rounded-2xl border px-4 py-3 text-left transition-colors ${isSelected
                                                 ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-500/10'
                                                 : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900'
                                                 }`}
@@ -1434,19 +1434,19 @@ export const InspectionExecution = () => {
 
 const StatCard = ({ icon, label, value, accent, tone }: { icon: CustomIconName; label: string; value: string; accent: string; tone: 'cream' | 'mist' | 'blue' | 'sage' | 'rose' | 'amber' }) => (
     <div className="card">
-        <div className="flex items-center justify-between gap-4">
-            <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">{label}</p>
-                <p className={`mt-2 text-2xl font-bold ${accent}`}>{value}</p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+            <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-600 dark:text-gray-400 sm:text-sm sm:normal-case sm:tracking-normal">{label}</p>
+                <p className={`mt-2 break-words text-xl font-bold leading-tight sm:text-2xl ${accent}`}>{value}</p>
             </div>
-            <CustomIcon name={icon} size="md" tone={tone} />
+            <CustomIcon name={icon} size="sm" tone={tone} />
         </div>
     </div>
 );
 
 const PhotoCard = ({ photo, syncStatus }: { photo: InspectionExecutionData['photos'][number]; syncStatus?: 'pending' | 'failed' | 'synced' }) => (
     <article className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800/80">
-        <img src={photo.url} alt={photo.caption || photoTypeLabels[photo.type]} className="h-44 w-full object-cover" />
+        <img src={photo.url} alt={photo.caption || photoTypeLabels[photo.type]} className="h-36 w-full object-cover sm:h-44" />
         <div className="space-y-2 p-4">
             <div className="flex items-center justify-between gap-3">
                 <span className="badge badge-info"><CustomIcon name={photoTypeIconMap[photo.type] ?? 'camera'} size="xs" tone="white" />{photoTypeLabels[photo.type]}</span>

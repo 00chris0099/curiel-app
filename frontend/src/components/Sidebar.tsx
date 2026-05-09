@@ -22,14 +22,14 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         <>
             {isOpen && (
                 <div
-                    className="fixed inset-0 z-40 bg-[#17324a]/20 backdrop-blur-[2px] lg:hidden"
+                    className="fixed inset-0 z-40 bg-[#17324a]/28 backdrop-blur-[3px] lg:hidden"
                     onClick={onClose}
                 />
             )}
 
             <aside
                 className={`
-                    fixed bottom-0 left-0 top-0 z-50 flex w-72 max-w-[calc(100vw-1rem)] flex-col overflow-hidden border-r border-slate-200 bg-[#fcfcfa] shadow-[0_24px_60px_rgba(23,50,74,0.14)] transition-transform duration-300
+                    fixed bottom-0 left-0 top-0 z-50 flex w-[min(20rem,88vw)] flex-col overflow-hidden border-r border-slate-200 bg-[#fcfcfa] shadow-[0_24px_60px_rgba(23,50,74,0.14)] transition-transform duration-300
                     lg:top-20 lg:w-64 lg:max-w-none lg:translate-x-0 lg:rounded-r-[32px] lg:shadow-none
                     ${isOpen ? 'translate-x-0' : '-translate-x-full'}
                 `}
@@ -41,7 +41,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                     </div>
                     <button
                         onClick={onClose}
-                        className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600"
+                        className="min-h-11 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
                     >
                         Cerrar
                     </button>

@@ -23,6 +23,8 @@
 
   html {
     scroll-behavior: smooth;
+    overflow-x: hidden;
+    text-size-adjust: 100%;
   }
 
   #root {
@@ -31,6 +33,8 @@
 
   body {
     @apply text-gray-900 transition-colors;
+    width: 100%;
+    overflow-x: hidden;
     background:
       radial-gradient(circle at top left, rgba(255, 255, 255, 0.96), transparent 36%),
       linear-gradient(180deg, #ffffff 0%, var(--surface-app) 52%, #eef3f7 100%);
@@ -51,12 +55,19 @@
   .font-display {
     font-family: 'Fraunces', Georgia, serif;
     letter-spacing: -0.03em;
+    text-wrap: balance;
+  }
+
+  p,
+  li,
+  label {
+    text-wrap: pretty;
   }
 }
 
 @layer components {
   .btn {
-    @apply rounded-2xl px-4 py-2.5 font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2;
+    @apply inline-flex min-h-11 items-center justify-center rounded-2xl px-4 py-2.5 font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 active:translate-y-px active:scale-[0.99];
   }
 
   .btn-primary {
@@ -78,14 +89,19 @@
   }
 
   .input {
-    @apply w-full rounded-2xl px-4 py-3 text-gray-900 transition-all focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+    @apply w-full min-h-11 rounded-2xl px-4 py-2.5 text-base text-gray-900 transition-all focus:ring-2 focus:ring-primary-500 focus:border-transparent sm:py-3;
     background: rgba(255, 255, 255, 0.86);
     border: 1px solid rgba(23, 50, 74, 0.12);
     color: var(--ink-main);
   }
 
+  textarea.input {
+    min-height: 7rem;
+    line-height: 1.55;
+  }
+
   .card {
-    @apply rounded-[28px] p-6;
+    @apply rounded-[24px] p-4 sm:rounded-[28px] sm:p-6;
     background: var(--surface-panel);
     border: 1px solid var(--stroke-soft);
     box-shadow: var(--shadow-soft);
@@ -159,10 +175,21 @@
 
   .field-with-icon .input,
   .field-with-icon select {
-    padding-left: 4rem;
+    padding-left: 3.75rem;
   }
 
   .field-with-icon .custom-icon {
     @apply pointer-events-none absolute left-3 top-1/2 -translate-y-1/2;
+  }
+
+  @media (max-width: 480px) {
+    .section-eyebrow {
+      letter-spacing: 0.18em;
+    }
+
+    .field-with-icon .input,
+    .field-with-icon select {
+      padding-left: 3.5rem;
+    }
   }
 }

@@ -99,7 +99,7 @@ export const Inspections = () => {
                 {canCreateInspection(user) && (
                     <button
                         onClick={() => navigate('/inspections/create')}
-                        className="btn btn-primary flex items-center gap-3"
+                        className="btn btn-primary w-full gap-3 sm:w-auto"
                     >
                         <CustomIcon name="plus" size="xs" tone="white" />
                         Nueva inspección
@@ -159,7 +159,71 @@ export const Inspections = () => {
                         </div>
                     </div>
 
-                    <div className="card overflow-hidden p-0">
+                    <div className="space-y-3 lg:hidden">
+                        {filteredInspections.length === 0 ? (
+                            <div className="card py-10 text-center text-slate-600">
+                                <div className="mb-4 flex justify-center">
+                                    <CustomIcon name="folder-open" size="md" tone="mist" />
+                                </div>
+                                No se encontraron inspecciones.
+                            </div>
+                        ) : (
+                            filteredInspections.map((inspection) => (
+                                <article key={inspection.id} className="card space-y-4">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="min-w-0">
+                                            <p className="text-base font-semibold leading-snug text-slate-900">{inspection.projectName}</p>
+                                            <p className="mt-1 text-sm font-medium text-slate-600">{getInspectionLocationLabel(inspection)}</p>
+                                        </div>
+                                        <span className={`badge shrink-0 ${inspectionStatusBadgeClasses[inspection.status]}`}>
+                                            <CustomIcon name={inspectionStatusIconMap[inspection.status]} size="xs" tone="white" />
+                                            {inspectionStatusLabels[inspection.status]}
+                                        </span>
+                                    </div>
+
+                                    <dl className="grid grid-cols-1 gap-3 text-sm text-slate-700 min-[420px]:grid-cols-2">
+                                        <div>
+                                            <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Cliente</dt>
+                                            <dd className="mt-1 font-medium text-slate-900">{inspection.clientName}</dd>
+                                        </div>
+                                        <div>
+                                            <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Servicio</dt>
+                                            <dd className="mt-1 font-medium text-slate-900">{getInspectionServiceLabel(inspection)}</dd>
+                                        </div>
+                                        <div>
+                                            <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Fecha</dt>
+                                            <dd className="mt-1 font-medium text-slate-900">{new Date(inspection.scheduledDate).toLocaleDateString('es-ES')}</dd>
+                                        </div>
+                                        <div>
+                                            <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Inspector</dt>
+                                            <dd className="mt-1 font-medium text-slate-900">{getInspectorName(inspection)}</dd>
+                                        </div>
+                                    </dl>
+
+                                    <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => navigate(`/inspections/${inspection.id}/execute`)}
+                                            className="btn btn-primary gap-2"
+                                        >
+                                            <CustomIcon name="play" size="xs" tone="white" />
+                                            Ejecutar
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => navigate(`/inspections/${inspection.id}`)}
+                                            className="btn btn-secondary gap-2"
+                                        >
+                                            <CustomIcon name="clipboard-check" size="xs" tone="cream" />
+                                            Ver detalle
+                                        </button>
+                                    </div>
+                                </article>
+                            ))
+                        )}
+                    </div>
+
+                    <div className="card hidden overflow-hidden p-0 lg:block">
                         <div className="overflow-x-auto">
                             <table className="w-full min-w-[900px]">
                                 <thead className="bg-[#fbfbfa]">

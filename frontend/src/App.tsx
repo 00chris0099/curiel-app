@@ -27,7 +27,7 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
       <Navbar onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
-      <main className="min-h-screen px-4 pb-10 pt-20 sm:px-6 lg:ml-64 lg:px-8 lg:pt-24">
+      <main className="min-h-screen px-3 pb-10 pt-[4.5rem] sm:px-6 sm:pt-20 lg:ml-64 lg:px-8 lg:pt-24">
         <div className="mx-auto w-full max-w-7xl">
           {children}
         </div>
