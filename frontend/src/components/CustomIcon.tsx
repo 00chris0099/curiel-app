@@ -131,10 +131,17 @@ const toneClassMap: Record<IconTone, string> = {
 };
 
 const sizeStyleMap: Record<IconSize, CSSProperties> = {
-    xs: { '--icon-wrapper-size': '36px', '--icon-image-size': '16px' } as CSSProperties,
-    sm: { '--icon-wrapper-size': '44px', '--icon-image-size': '20px' } as CSSProperties,
-    md: { '--icon-wrapper-size': '56px', '--icon-image-size': '26px' } as CSSProperties,
-    lg: { '--icon-wrapper-size': '68px', '--icon-image-size': '32px' } as CSSProperties,
+    xs: { '--icon-wrapper-size': '48px', '--icon-image-size': '30px' } as CSSProperties,
+    sm: { '--icon-wrapper-size': '58px', '--icon-image-size': '36px' } as CSSProperties,
+    md: { '--icon-wrapper-size': '72px', '--icon-image-size': '44px' } as CSSProperties,
+    lg: { '--icon-wrapper-size': '88px', '--icon-image-size': '54px' } as CSSProperties,
+};
+
+const plainIconSizeMap: Record<IconSize, CSSProperties> = {
+    xs: { '--icon-image-size': '30px' } as CSSProperties,
+    sm: { '--icon-image-size': '36px' } as CSSProperties,
+    md: { '--icon-image-size': '44px' } as CSSProperties,
+    lg: { '--icon-image-size': '54px' } as CSSProperties,
 };
 
 export const CustomIcon = ({
@@ -155,7 +162,11 @@ export const CustomIcon = ({
     ].filter(Boolean).join(' ');
 
     return (
-        <span className={wrapperClassName} style={sizeStyleMap[size]} aria-hidden={alt ? undefined : true}>
+        <span
+            className={wrapperClassName}
+            style={variant === 'plain' ? plainIconSizeMap[size] : sizeStyleMap[size]}
+            aria-hidden={alt ? undefined : true}
+        >
             <img
                 src={src}
                 alt={alt ?? ''}

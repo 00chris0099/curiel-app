@@ -126,7 +126,7 @@ export const Inspections = () => {
                             <div>
                                 <label className="mb-2 block text-sm font-medium text-slate-700">Buscar</label>
                                 <div className="field-with-icon">
-                                    <CustomIcon name="search" size="xs" tone="mist" />
+                                    <CustomIcon name="search" size="sm" tone="mist" />
                                     <input
                                         type="text"
                                         placeholder="Servicio, cliente o distrito..."
@@ -140,7 +140,7 @@ export const Inspections = () => {
                             <div>
                                 <label className="mb-2 block text-sm font-medium text-slate-700">Estado</label>
                                 <div className="field-with-icon">
-                                    <CustomIcon name="filter" size="xs" tone="cream" />
+                                    <CustomIcon name="filter" size="sm" tone="cream" />
                                     <select
                                         value={statusFilter}
                                         onChange={(e) => setStatusFilter(e.target.value as InspectionStatus | '')}

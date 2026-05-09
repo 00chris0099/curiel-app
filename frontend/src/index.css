@@ -113,61 +113,39 @@
   }
 
   .custom-icon {
-    @apply inline-flex items-center justify-center;
+    @apply inline-flex items-center justify-center shrink-0 bg-transparent p-0 align-middle;
+    line-height: 0;
   }
 
-  .custom-icon-tile {
-    width: var(--icon-wrapper-size);
-    height: var(--icon-wrapper-size);
-    border-radius: 18px;
-    border: 1px solid rgba(23, 50, 74, 0.08);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
-  }
-
-  .custom-icon-soft {
-    width: calc(var(--icon-wrapper-size) - 10px);
-    height: calc(var(--icon-wrapper-size) - 10px);
-    border-radius: 16px;
-    border: 1px solid rgba(23, 50, 74, 0.08);
+  .custom-icon-tile,
+  .custom-icon-soft,
+  .custom-icon-plain {
+    width: fit-content;
+    height: fit-content;
+    border: 0;
+    box-shadow: none;
+    background: transparent;
   }
 
   .custom-icon-plain {
-    width: var(--icon-image-size);
-    height: var(--icon-image-size);
+    display: inline-flex;
   }
 
   .custom-icon-image {
     width: var(--icon-image-size);
     height: var(--icon-image-size);
     object-fit: contain;
+    display: block;
   }
 
-  .icon-tone-cream {
-    background: #f5efe1;
-  }
-
-  .icon-tone-mist {
-    background: #f8f8f6;
-  }
-
-  .icon-tone-blue {
-    background: #eef3f7;
-  }
-
-  .icon-tone-white {
-    background: #ffffff;
-  }
-
-  .icon-tone-sage {
-    background: #eef5ef;
-  }
-
-  .icon-tone-rose {
-    background: #fff1ef;
-  }
-
+  .icon-tone-cream,
+  .icon-tone-mist,
+  .icon-tone-blue,
+  .icon-tone-white,
+  .icon-tone-sage,
+  .icon-tone-rose,
   .icon-tone-amber {
-    background: #faf1df;
+    background: transparent;
   }
 
   .section-eyebrow {
