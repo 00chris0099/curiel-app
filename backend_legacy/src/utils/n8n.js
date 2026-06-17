@@ -34,7 +34,10 @@ const triggerN8nWebhook = async (webhookType, data) => {
             timestamp: new Date().toISOString(),
             source: 'CURIEL-Backend'
         }, {
-            timeout: 5000
+            timeout: 5000,
+            headers: config.n8n.secretToken
+                ? { 'X-CURIEL-SECRET': config.n8n.secretToken }
+                : {}
         });
 
         console.log(`✅ Webhook ${webhookType} disparado exitosamente`);
