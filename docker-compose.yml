@@ -1,3 +1,10 @@
+# =============================================
+# CURIEL - Docker Compose (DESARROLLO LOCAL)
+# =============================================
+# IMPORTANTE: Los valores por defecto son SOLO para desarrollo local.
+# En produccion, configura las variables de entorno en tu proveedor de deploy.
+# NUNCA uses los defaults de abajo en produccion.
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -5,7 +12,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-curiel_db}
       POSTGRES_USER: ${POSTGRES_USER:-curiel}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-curiel_password}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-CHANGE_ME_SECURE_DB_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
@@ -30,16 +37,16 @@ services:
       NODE_ENV: ${NODE_ENV:-production}
       PORT: ${PORT:-4000}
       API_VERSION: ${API_VERSION:-v1}
-      DATABASE_URL: ${DATABASE_URL:-postgresql://curiel:curiel_password@postgres:5432/curiel_db}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://curiel:CHANGE_ME_SECURE_DB_PASSWORD@postgres:5432/curiel_db}
       DATABASE_SSL: ${DATABASE_SSL:-false}
-      JWT_SECRET: ${JWT_SECRET:-change-this-jwt-secret}
+      JWT_SECRET: ${JWT_SECRET:-CHANGE_ME_GENERATE_64_BYTE_HEX_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
       JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-30d}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       BACKEND_URL: ${BACKEND_URL:-http://localhost:4000}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@curiel.com}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-CHANGE_ME_SECURE_ADMIN_PASSWORD}
     ports:
       - "4000:4000"
     networks:

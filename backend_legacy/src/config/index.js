@@ -57,7 +57,16 @@ module.exports = {
 
   // JWT
   jwt: {
-    secret: process.env.JWT_SECRET || 'cambiar_en_produccion_secret_key',
+    secret: (() => {
+      if (!process.env.JWT_SECRET) {
+        if (process.env.NODE_ENV === 'production') {
+          throw new Error('JWT_SECRET is required in production. Set it in your environment variables.');
+        }
+        console.warn('⚠️ JWT_SECRET not set. Using insecure default for development only.');
+        return 'dev-only-insecure-secret-do-not-use-in-production';
+      }
+      return process.env.JWT_SECRET;
+    })(),
     expiresIn: process.env.JWT_EXPIRES_IN || '7d',
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d'
   },
@@ -88,7 +97,8 @@ module.exports = {
   n8n: {
     inspectionCompleted: process.env.N8N_WEBHOOK_INSPECTION_COMPLETED,
     userNotification: process.env.N8N_WEBHOOK_USER_NOTIFICATION,
-    auditLog: process.env.N8N_WEBHOOK_AUDIT_LOG
+    auditLog: process.env.N8N_WEBHOOK_AUDIT_LOG,
+    secretToken: process.env.N8N_SECRET_TOKEN
   },
 
   // Upload
