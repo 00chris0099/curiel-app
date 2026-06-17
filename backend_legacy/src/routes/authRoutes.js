@@ -39,8 +39,8 @@ router.post(
         body('firstName').notEmpty().withMessage('Nombre requerido'),
         body('lastName').notEmpty().withMessage('Apellido requerido'),
         body('role')
-            .isIn(['admin', 'arquitecto', 'inspector'])
-            .withMessage('Rol inválido'),
+            .isIn(['admin', 'arquitecto', 'inspector', 'supervisor'])
+            .withMessage('Rol invalido'),
         validateRequest
     ],
     auditLog('register', 'User'),
@@ -73,21 +73,46 @@ router.put(
 
 /**
  * @route   PUT /api/auth/change-password
- * @desc    Cambiar contraseña
+ * @desc    Cambiar contrasena
  * @access  Private
  */
 router.put(
     '/change-password',
     authenticate,
     [
-        body('currentPassword').notEmpty().withMessage('Contraseña actual requerida'),
+        body('currentPassword').notEmpty().withMessage('Contrasena actual requerida'),
         body('newPassword')
             .isLength({ min: 6 })
-            .withMessage('La nueva contraseña debe tener al menos 6 caracteres'),
+            .withMessage('La nueva contrasena debe tener al menos 6 caracteres'),
         validateRequest
     ],
     auditLog('change_password', 'User'),
     authController.changePassword
+);
+
+/**
+ * @route   POST /api/auth/refresh
+ * @desc    Renovar access token usando refresh token
+ * @access  Public (solo necesita refresh token)
+ */
+router.post(
+    '/refresh',
+    [
+        body('refreshToken').notEmpty().withMessage('Refresh token requerido'),
+        validateRequest
+    ],
+    authController.refreshToken
+);
+
+/**
+ * @route   POST /api/auth/logout
+ * @desc    Cerrar sesion (revocar refresh token)
+ * @access  Private
+ */
+router.post(
+    '/logout',
+    authenticate,
+    authController.logout
 );
 
 module.exports = router;

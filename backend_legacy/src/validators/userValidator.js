@@ -22,8 +22,8 @@ const createUserSchema = Joi.object({
     lastName: Joi.string().min(2).optional().messages({
         'string.min': 'El apellido debe tener al menos 2 caracteres'
     }),
-    role: Joi.string().valid('admin', 'arquitecto', 'inspector').default('inspector').messages({
-        'any.only': 'El rol debe ser admin, arquitecto o inspector'
+    role: Joi.string().valid('admin', 'arquitecto', 'inspector', 'supervisor').default('inspector').messages({
+        'any.only': 'El rol debe ser admin, arquitecto, inspector o supervisor'
     }),
     phone: Joi.string().optional().allow('', null)
 }).or('fullName', 'firstName');
@@ -36,8 +36,8 @@ const updateUserSchema = Joi.object({
         'string.min': 'El apellido debe tener al menos 2 caracteres'
     }),
     phone: Joi.string().optional().allow('', null),
-    role: Joi.string().valid('admin', 'arquitecto', 'inspector').optional().messages({
-        'any.only': 'El rol debe ser admin, arquitecto o inspector'
+    role: Joi.string().valid('admin', 'arquitecto', 'inspector', 'supervisor').optional().messages({
+        'any.only': 'El rol debe ser admin, arquitecto, inspector o supervisor'
     })
 });
 

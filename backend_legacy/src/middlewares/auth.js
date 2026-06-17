@@ -13,7 +13,10 @@ const authenticate = async (req, res, next) => {
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
             return res.status(401).json({
                 success: false,
-                message: 'No se proporcionó token de autenticación'
+                error: {
+                    code: 'MISSING_TOKEN',
+                    message: 'No se proporciono token de autenticacion'
+                }
             });
         }
 
@@ -30,7 +33,10 @@ const authenticate = async (req, res, next) => {
         if (!user || !user.isActive) {
             return res.status(401).json({
                 success: false,
-                message: 'Usuario no encontrado o inactivo'
+                error: {
+                    code: 'USER_NOT_FOUND',
+                    message: 'Usuario no encontrado o inactivo'
+                }
             });
         }
 
@@ -48,21 +54,30 @@ const authenticate = async (req, res, next) => {
         if (error.name === 'JsonWebTokenError') {
             return res.status(401).json({
                 success: false,
-                message: 'Token inválido'
+                error: {
+                    code: 'INVALID_TOKEN',
+                    message: 'Token invalido'
+                }
             });
         }
 
         if (error.name === 'TokenExpiredError') {
             return res.status(401).json({
                 success: false,
-                message: 'Token expirado'
+                error: {
+                    code: 'TOKEN_EXPIRED',
+                    message: 'Token expirado'
+                }
             });
         }
 
         return res.status(500).json({
             success: false,
-            message: 'Error de autenticación',
-            error: error.message
+            error: {
+                code: 'AUTH_ERROR',
+                message: 'Error de autenticacion',
+                ...(process.env.NODE_ENV === 'development' && { details: error.message })
+            }
         });
     }
 };

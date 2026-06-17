@@ -13,6 +13,7 @@ export default {
     // AsyncStorage keys
     STORAGE_KEYS: {
         AUTH_TOKEN: '@curiel:auth_token',
+        REFRESH_TOKEN: '@curiel:refresh_token',
         USER_DATA: '@curiel:user_data',
         OFFLINE_QUEUE: '@curiel:offline_queue',
         CACHED_INSPECTIONS: '@curiel:cached_inspections'

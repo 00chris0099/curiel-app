@@ -1,9 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const { authenticate, authorize } = require('../middlewares/auth');
+const validateJoi = require('../middlewares/validateJoi');
+const {
+    createTemplateSchema,
+    updateTemplateSchema,
+    createItemSchema,
+    updateItemSchema
+} = require('../validators/checklistValidator');
 const checklistController = require('../controllers/checklistController');
 
-// Todas las rutas requieren autenticación
+// Todas las rutas requieren autenticacion
 router.use(authenticate);
 
 // ============================================
@@ -20,6 +27,7 @@ router.get('/templates/:id', checklistController.getTemplateById);
 router.post(
     '/templates',
     authorize('admin', 'arquitecto'),
+    validateJoi(createTemplateSchema),
     checklistController.createTemplate
 );
 
@@ -27,6 +35,7 @@ router.post(
 router.put(
     '/templates/:id',
     authorize('admin', 'arquitecto'),
+    validateJoi(updateTemplateSchema),
     checklistController.updateTemplate
 );
 
@@ -45,6 +54,7 @@ router.delete(
 router.post(
     '/templates/:id/items',
     authorize('admin', 'arquitecto'),
+    validateJoi(createItemSchema),
     checklistController.addItemToTemplate
 );
 
@@ -52,6 +62,7 @@ router.post(
 router.put(
     '/items/:itemId',
     authorize('admin', 'arquitecto'),
+    validateJoi(updateItemSchema),
     checklistController.updateTemplateItem
 );
 

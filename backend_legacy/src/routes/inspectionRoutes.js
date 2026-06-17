@@ -1,6 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const { authenticate, authorize } = require('../middlewares/auth');
+const validateJoi = require('../middlewares/validateJoi');
+const {
+    createInspectionSchema,
+    updateInspectionSchema,
+    updateStatusSchema
+} = require('../validators/inspectionValidator');
 const {
     requireInspectionAccess,
     requireInspectionEditAccess,
@@ -11,19 +17,20 @@ const inspectionController = require('../controllers/inspectionController');
 const inspectionExecutionRoutes = require('./inspectionExecutionRoutes');
 const inspectionReportController = require('../controllers/inspectionReportController');
 
-// Todas las rutas requieren autenticación
+// Todas las rutas requieren autenticacion
 router.use(authenticate);
 
-// GET /api/v1/inspections/stats - Estadísticas
+// GET /api/v1/inspections/stats - Estadisticas
 router.get('/stats', inspectionController.getInspectionStats);
 
 // GET /api/v1/inspections - Listar inspecciones
 router.get('/', inspectionController.getAllInspections);
 
-// POST /api/v1/inspections - Crear inspección (admin/arquitecto)
+// POST /api/v1/inspections - Crear inspeccion (admin/arquitecto)
 router.post(
     '/',
     authorize('admin', 'arquitecto'),
+    validateJoi(createInspectionSchema),
     inspectionController.createInspection
 );
 
@@ -35,7 +42,7 @@ router.get(
     inspectionReportController.downloadInspectionReport
 );
 
-// GET /api/v1/inspections/:id - Obtener inspección por ID
+// GET /api/v1/inspections/:id - Obtener inspeccion por ID
 router.get(
     '/:id',
     authorize('admin', 'arquitecto', 'inspector'),
@@ -43,14 +50,15 @@ router.get(
     inspectionController.getInspectionById
 );
 
-// /api/v1/inspections/:id/execution - Módulo de ejecución técnica
+// /api/v1/inspections/:id/execution - Modulo de ejecucion tecnica
 router.use('/:id/execution', inspectionExecutionRoutes);
 
-// PUT /api/v1/inspections/:id - Actualizar inspección
+// PUT /api/v1/inspections/:id - Actualizar inspeccion
 router.put(
     '/:id',
     authorize('admin', 'arquitecto'),
     requireInspectionEditAccess,
+    validateJoi(updateInspectionSchema),
     inspectionController.updateInspection
 );
 
@@ -59,10 +67,11 @@ router.patch(
     '/:id/status',
     authorize('admin', 'arquitecto', 'inspector'),
     requireInspectionStatusAccess,
+    validateJoi(updateStatusSchema),
     inspectionController.updateInspectionStatus
 );
 
-// DELETE /api/v1/inspections/:id - Eliminar inspección (solo admin)
+// DELETE /api/v1/inspections/:id - Eliminar inspeccion (solo admin)
 router.delete(
     '/:id',
     authorize('admin'),

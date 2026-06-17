@@ -38,11 +38,12 @@ export const AuthProvider = ({ children }) => {
             const response = await authService.login(email, password);
 
             if (response.success) {
-                const { user: userData, token } = response.data;
+                const { user: userData, token, refreshToken } = response.data;
 
-                // Guardar en AsyncStorage
+                // Guardar tokens y datos de usuario
                 await AsyncStorage.multiSet([
                     [config.STORAGE_KEYS.AUTH_TOKEN, token],
+                    [config.STORAGE_KEYS.REFRESH_TOKEN, refreshToken],
                     [config.STORAGE_KEYS.USER_DATA, JSON.stringify(userData)]
                 ]);
 
@@ -52,15 +53,22 @@ export const AuthProvider = ({ children }) => {
                 return { success: true };
             }
         } catch (error) {
-            const message = error.response?.data?.message || 'Error al iniciar sesión';
+            const message = error.response?.data?.message || 'Error al iniciar sesion';
             return { success: false, error: message };
         }
     };
 
     const logout = async () => {
         try {
+            // Attempt to revoke refresh token on backend (best effort)
+            const refreshToken = await AsyncStorage.getItem(config.STORAGE_KEYS.REFRESH_TOKEN);
+            if (refreshToken) {
+                await authService.logout(refreshToken);
+            }
+
             await AsyncStorage.multiRemove([
                 config.STORAGE_KEYS.AUTH_TOKEN,
+                config.STORAGE_KEYS.REFRESH_TOKEN,
                 config.STORAGE_KEYS.USER_DATA,
                 config.STORAGE_KEYS.CACHED_INSPECTIONS
             ]);
@@ -68,7 +76,7 @@ export const AuthProvider = ({ children }) => {
             setUser(null);
             setIsAuthenticated(false);
         } catch (error) {
-            console.error('Error al cerrar sesión:', error);
+            console.error('Error al cerrar sesion:', error);
         }
     };
 

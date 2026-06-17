@@ -84,6 +84,7 @@ export interface LoginResponse {
     data: {
         user: User;
         token: string;
+        refreshToken: string;
     };
 }
 
