@@ -11,12 +11,28 @@ const api = axios.create({
     }
 });
 
-// Interceptor para agregar token automáticamente
+// Track if we're currently refreshing
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+    failedQueue.forEach(({ resolve, reject }) => {
+        if (error) {
+            reject(error);
+        } else {
+            resolve(token);
+        }
+    });
+    failedQueue = [];
+};
+
+// Interceptor para agregar token automaticamente
 api.interceptors.request.use(
     async (requestConfig) => {
         try {
             const token = await AsyncStorage.getItem(config.STORAGE_KEYS.AUTH_TOKEN);
-            if (token) {
+            const requestUrl = requestConfig.url || '';
+            if (token && !requestUrl.includes('/auth/login') && !requestUrl.includes('/auth/register') && !requestUrl.includes('/auth/refresh')) {
                 requestConfig.headers.Authorization = `Bearer ${token}`;
             }
         } catch (error) {
@@ -29,17 +45,93 @@ api.interceptors.request.use(
     }
 );
 
-// Interceptor para manejar respuestas y errores
+// Interceptor para manejar respuestas y errores con auto-refresh
 api.interceptors.response.use(
     (response) => response,
     async (error) => {
-        if (error.response?.status === 401) {
-            // Token expirado o inválido - limpiar storage y redirigir a login
+        const originalRequest = error.config;
+
+        const isAuthEndpoint = originalRequest?.url?.includes('/auth/login')
+            || originalRequest?.url?.includes('/auth/register')
+            || originalRequest?.url?.includes('/auth/refresh');
+
+        if (
+            error.response?.status === 401
+            && !isAuthEndpoint
+            && !originalRequest._retry
+        ) {
+            const errorData = error.response?.data?.error;
+            const isTokenExpired = errorData?.code === 'TOKEN_EXPIRED';
+
+            if (isTokenExpired) {
+                const refreshToken = await AsyncStorage.getItem(config.STORAGE_KEYS.REFRESH_TOKEN);
+
+                if (!refreshToken) {
+                    await AsyncStorage.multiRemove([
+                        config.STORAGE_KEYS.AUTH_TOKEN,
+                        config.STORAGE_KEYS.REFRESH_TOKEN,
+                        config.STORAGE_KEYS.USER_DATA
+                    ]);
+                    return Promise.reject(error);
+                }
+
+                if (isRefreshing) {
+                    return new Promise((resolve, reject) => {
+                        failedQueue.push({ resolve, reject });
+                    }).then((token) => {
+                        originalRequest.headers.Authorization = `Bearer ${token}`;
+                        return api(originalRequest);
+                    });
+                }
+
+                originalRequest._retry = true;
+                isRefreshing = true;
+
+                try {
+                    const response = await axios.post(
+                        `${config.API_URL}/auth/refresh`,
+                        { refreshToken },
+                        { headers: { 'Content-Type': 'application/json' } }
+                    );
+
+                    if (response.data.success) {
+                        const { token: newToken, refreshToken: newRefreshToken } = response.data.data;
+                        await AsyncStorage.multiSet([
+                            [config.STORAGE_KEYS.AUTH_TOKEN, newToken],
+                            [config.STORAGE_KEYS.REFRESH_TOKEN, newRefreshToken]
+                        ]);
+
+                        processQueue(null, newToken);
+                        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+                        return api(originalRequest);
+                    }
+
+                    processQueue(error, null);
+                    await AsyncStorage.multiRemove([
+                        config.STORAGE_KEYS.AUTH_TOKEN,
+                        config.STORAGE_KEYS.REFRESH_TOKEN,
+                        config.STORAGE_KEYS.USER_DATA
+                    ]);
+                    return Promise.reject(error);
+                } catch (refreshError) {
+                    processQueue(refreshError, null);
+                    await AsyncStorage.multiRemove([
+                        config.STORAGE_KEYS.AUTH_TOKEN,
+                        config.STORAGE_KEYS.REFRESH_TOKEN,
+                        config.STORAGE_KEYS.USER_DATA
+                    ]);
+                    return Promise.reject(refreshError);
+                } finally {
+                    isRefreshing = false;
+                }
+            }
+
+            // Non-expired 401
             await AsyncStorage.multiRemove([
                 config.STORAGE_KEYS.AUTH_TOKEN,
+                config.STORAGE_KEYS.REFRESH_TOKEN,
                 config.STORAGE_KEYS.USER_DATA
             ]);
-            // Aquí podrías disparar un evento para navegar a login
         }
         return Promise.reject(error);
     }
@@ -53,6 +145,19 @@ export const authService = {
     login: async (email, password) => {
         const response = await api.post('/auth/login', { email, password });
         return response.data;
+    },
+
+    refresh: async (refreshToken) => {
+        const response = await api.post('/auth/refresh', { refreshToken });
+        return response.data;
+    },
+
+    logout: async (refreshToken) => {
+        try {
+            await api.post('/auth/logout', { refreshToken });
+        } catch {
+            // Best effort - continue with local cleanup
+        }
     },
 
     getProfile: async () => {

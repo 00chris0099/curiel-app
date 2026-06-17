@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import type { User, LoginCredentials } from '../types';
 
 // ============================================
-// Inicializar estado de autenticación
+// Inicializar estado de autenticacion
 // ============================================
 const initialUser = authService.getCurrentUser();
 const initialAuth = authService.isAuthenticated();
@@ -51,7 +51,7 @@ export const useAuthStore = create<AuthState>((set) => ({
             user: null,
             isAuthenticated: false,
         });
-        toast.success('Sesión cerrada correctamente');
+        toast.success('Sesion cerrada correctamente');
     },
 
     loadUser: () => {

@@ -10,6 +10,6 @@ export default defineConfig({
     host: true,
   },
   build: {
-    sourcemap: true,
+    sourcemap: process.env.NODE_ENV !== 'production',
   },
 })
