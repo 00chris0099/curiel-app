@@ -29,8 +29,8 @@ beforeAll(async () => {
     require('../models');
     app = require('../app');
 
-    // Sync clients table
-    await sequelize.sync({ alter: true });
+    // Sync clients table only
+    await Client.sync({ alter: true });
 
     // Clean stale test clients from prior runs
     await Client.destroy({ where: {}, force: true });

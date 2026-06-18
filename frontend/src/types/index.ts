@@ -5,7 +5,7 @@
 // AUTH & USER TYPES
 // ============================================
 
-export type UserRole = 'admin' | 'arquitecto' | 'inspector';
+export type UserRole = 'admin' | 'supervisor' | 'arquitecto' | 'inspector';
 
 export interface User {
     id: string;
@@ -471,4 +471,130 @@ export interface InspectionFilters {
     search?: string;
     startDate?: string;
     endDate?: string;
+}
+
+// ============================================
+// SUPERVISOR TYPES (Fase 4)
+// ============================================
+
+export type GravityLevel = 1 | 2 | 3;
+export type AlertStatus = 'abierta' | 'en_revision' | 'resuelta';
+export type SuspensionReason = 'abandono' | 'rendimiento' | 'conducta' | 'otro';
+export type SuspensionStatus = 'activa' | 'levantada';
+export type EvaluationStatus = 'borrador' | 'confirmada' | 'enviada';
+
+export interface Alert {
+    id: string;
+    inspectionId?: string | null;
+    suspensionId?: string | null;
+    supervisorId: string;
+    gravityLevel: GravityLevel;
+    title: string;
+    description: string;
+    status: AlertStatus;
+    notifiedUsers: string[];
+    supervisor?: User;
+    inspection?: Inspection;
+    suspension?: Suspension;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface CreateAlertDto {
+    inspectionId?: string;
+    suspensionId?: string;
+    gravityLevel: GravityLevel;
+    title: string;
+    description: string;
+}
+
+export interface Suspension {
+    id: string;
+    inspectorId: string;
+    supervisorId: string;
+    reason: SuspensionReason;
+    description: string;
+    gravityLevel: GravityLevel;
+    status: SuspensionStatus;
+    evidence?: string[];
+    inspector?: User;
+    supervisor?: User;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface CreateSuspensionDto {
+    inspectorId: string;
+    reason: SuspensionReason;
+    description: string;
+    gravityLevel: GravityLevel;
+    evidence?: string[];
+}
+
+export interface Evaluation {
+    id: string;
+    evaluatedUserId: string;
+    supervisorId: string;
+    weekStart: string;
+    weekEnd: string;
+    inspectionsCompleted: number;
+    avgTimePerInspection: number;
+    punctualityRate: number;
+    avgPhotosPerInspection: number;
+    criticalObservations: number;
+    rejectionRate: number;
+    completionRate: number;
+    compositeScore: number;
+    notes?: string;
+    actions?: string;
+    status: EvaluationStatus;
+    evaluatedUser?: User;
+    supervisor?: User;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface CreateEvaluationDto {
+    evaluatedUserId: string;
+    weekStart: string;
+    weekEnd: string;
+    notes?: string;
+    actions?: string;
+}
+
+export interface SupervisorDashboardData {
+    kpis: {
+        totalActiveInspections: number;
+        overdueInspections: number;
+        avgTimeGeneral: number;
+        cancellationRate: number;
+        dailyProductivity: Array<{ date: string; count: number }>;
+    };
+    inspectorRanking: Array<{
+        userId: string;
+        fullName: string;
+        score: number;
+        inspectionsCompleted: number;
+        punctualityRate: number;
+    }>;
+    architectRanking: Array<{
+        userId: string;
+        fullName: string;
+        score: number;
+        inspectionsCreated: number;
+        approvalRate: number;
+    }>;
+    recentAlerts: Alert[];
+    activeSuspensions: Suspension[];
+}
+
+export interface KpiData {
+    inspectionsCompleted: number;
+    avgTimePerInspection: number;
+    punctualityRate: number;
+    avgPhotosPerInspection: number;
+    criticalObservations: number;
+    rejectionRate: number;
+    completionRate: number;
+    compositeScore: number;
 }

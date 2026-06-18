@@ -19,6 +19,9 @@ import { Users } from './pages/Users';
 import { Notifications } from './pages/Notifications';
 import { Clients } from './pages/Clients';
 import { ClientDetail } from './pages/ClientDetail';
+import { SupervisorDashboard } from './pages/SupervisorDashboard';
+import { Alerts } from './pages/Alerts';
+import { Evaluations } from './pages/Evaluations';
 
 // Layout con Navbar y Sidebar
 const DashboardLayout = ({ children }: { children: ReactNode }) => {
@@ -193,9 +196,42 @@ function App() {
         <Route
           path="/inspections/create"
           element={
-            <PrivateRoute allowedRoles={['admin', 'arquitecto']}>
+            <PrivateRoute allowedRoles={['admin', 'arquitecto', 'supervisor']}>
               <DashboardLayout>
                 <CreateInspection />
+              </DashboardLayout>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/supervisor"
+          element={
+            <PrivateRoute allowedRoles={['supervisor', 'admin']}>
+              <DashboardLayout>
+                <SupervisorDashboard />
+              </DashboardLayout>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/alerts"
+          element={
+            <PrivateRoute allowedRoles={['supervisor', 'admin']}>
+              <DashboardLayout>
+                <Alerts />
+              </DashboardLayout>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/evaluations"
+          element={
+            <PrivateRoute allowedRoles={['supervisor', 'admin']}>
+              <DashboardLayout>
+                <Evaluations />
               </DashboardLayout>
             </PrivateRoute>
           }

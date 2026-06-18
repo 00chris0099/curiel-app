@@ -26,10 +26,10 @@ router.get('/stats', inspectionController.getInspectionStats);
 // GET /api/v1/inspections - Listar inspecciones
 router.get('/', inspectionController.getAllInspections);
 
-// POST /api/v1/inspections - Crear inspeccion (admin/arquitecto)
+// POST /api/v1/inspections - Crear inspeccion (admin/arquitecto/supervisor)
 router.post(
     '/',
-    authorize('admin', 'arquitecto'),
+    authorize('admin', 'arquitecto', 'supervisor'),
     validateJoi(createInspectionSchema),
     inspectionController.createInspection
 );
@@ -37,7 +37,7 @@ router.post(
 // GET /api/v1/inspections/:id/report - Generar informe PDF profesional
 router.get(
     '/:id/report',
-    authorize('admin', 'arquitecto', 'inspector'),
+    authorize('admin', 'arquitecto', 'supervisor', 'inspector'),
     requireInspectionReportAccess,
     inspectionReportController.downloadInspectionReport
 );
@@ -45,7 +45,7 @@ router.get(
 // GET /api/v1/inspections/:id - Obtener inspeccion por ID
 router.get(
     '/:id',
-    authorize('admin', 'arquitecto', 'inspector'),
+    authorize('admin', 'arquitecto', 'supervisor', 'inspector'),
     requireInspectionAccess,
     inspectionController.getInspectionById
 );
@@ -56,7 +56,7 @@ router.use('/:id/execution', inspectionExecutionRoutes);
 // PUT /api/v1/inspections/:id - Actualizar inspeccion
 router.put(
     '/:id',
-    authorize('admin', 'arquitecto'),
+    authorize('admin', 'arquitecto', 'supervisor'),
     requireInspectionEditAccess,
     validateJoi(updateInspectionSchema),
     inspectionController.updateInspection
@@ -65,7 +65,7 @@ router.put(
 // PATCH /api/v1/inspections/:id/status - Cambiar estado
 router.patch(
     '/:id/status',
-    authorize('admin', 'arquitecto', 'inspector'),
+    authorize('admin', 'arquitecto', 'supervisor', 'inspector'),
     requireInspectionStatusAccess,
     validateJoi(updateStatusSchema),
     inspectionController.updateInspectionStatus
