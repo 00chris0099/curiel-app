@@ -2,7 +2,6 @@ import apiClient from '../api/axios';
 import type {
     Evaluation,
     CreateEvaluationDto,
-    KpiData,
     ApiResponse,
     PaginatedResponse,
 } from '../types';

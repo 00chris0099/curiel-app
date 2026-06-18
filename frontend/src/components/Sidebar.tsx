@@ -13,7 +13,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     const navigation: Array<{ name: string; href: string; icon: CustomIconName; roles: string[] }> = [
         { name: 'Dashboard', href: '/dashboard', icon: 'dashboard', roles: ['admin', 'arquitecto', 'inspector', 'supervisor'] },
         { name: 'Panel Supervisor', href: '/supervisor', icon: 'clipboard-check', roles: ['supervisor', 'admin'] },
-        { name: 'Alertas', href: '/alerts', icon: 'alert-triangle', roles: ['supervisor', 'admin'] },
+        { name: 'Alertas', href: '/alerts', icon: 'warning-circle', roles: ['supervisor', 'admin'] },
         { name: 'Evaluaciones', href: '/evaluations', icon: 'clipboard-check', roles: ['supervisor', 'admin'] },
         { name: 'Inspecciones', href: '/inspections', icon: 'clipboard-check', roles: ['admin', 'arquitecto', 'inspector', 'supervisor'] },
         { name: 'Clientes', href: '/clients', icon: 'users', roles: ['admin'] },

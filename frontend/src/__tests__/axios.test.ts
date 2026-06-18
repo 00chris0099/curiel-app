@@ -3,17 +3,6 @@ import { getApiErrorMessage, isNetworkError } from '../api/axios';
 
 describe('getApiErrorMessage', () => {
     it('extrae message de error de Axios', () => {
-        const error = {
-            isAxiosError: true,
-            response: {
-                data: {
-                    error: {
-                        message: 'Credenciales invalidas'
-                    }
-                }
-            },
-            message: 'Request failed'
-        };
         expect(typeof getApiErrorMessage).toBe('function');
     });
 

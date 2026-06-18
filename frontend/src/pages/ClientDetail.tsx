@@ -65,7 +65,7 @@ export const ClientDetail = () => {
     if (isLoading) {
         return (
             <div className="flex h-64 items-center justify-center">
-                <Loader size="lg" />
+                <Loader />
             </div>
         );
     }

@@ -28,12 +28,14 @@ const emptyForm: UserFormState = {
 
 const roleLabels: Record<UserRole, string> = {
     admin: 'Administrador',
+    supervisor: 'Supervisor',
     arquitecto: 'Arquitecto',
     inspector: 'Inspector',
 };
 
 const roleBadgeColors: Record<UserRole, string> = {
     admin: 'badge-danger',
+    supervisor: 'badge-warning',
     arquitecto: 'badge-info',
     inspector: 'badge-success',
 };
@@ -249,6 +251,7 @@ export const Users = () => {
     const roleCounts = useMemo(() => {
         const counts: Record<UserRole, number> = {
             admin: 0,
+            supervisor: 0,
             arquitecto: 0,
             inspector: 0,
         };

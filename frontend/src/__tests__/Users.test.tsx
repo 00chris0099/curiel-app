@@ -23,7 +23,7 @@ vi.mock('../services/user.service', () => ({
 }));
 
 vi.mock('../api/axios', () => ({
-    getApiErrorMessage: vi.fn((error: any, fallback: string) => fallback)
+    getApiErrorMessage: vi.fn((_error: any, fallback: string) => fallback)
 }));
 
 import { Users } from '../pages/Users';
@@ -72,7 +72,7 @@ const mockStats = {
 describe('Users Component', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        (useAuthStore as ReturnType<typeof vi.fn>).mockReturnValue({
+        (useAuthStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
             user: mockUsers[0],
             refreshProfile: vi.fn()
         });
