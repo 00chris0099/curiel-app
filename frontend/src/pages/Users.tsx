@@ -370,6 +370,7 @@ export const Users = () => {
                                 >
                                     <option value="">Todos</option>
                                     <option value="admin">Administrador</option>
+                                    <option value="supervisor">Supervisor</option>
                                     <option value="arquitecto">Arquitecto</option>
                                     <option value="inspector">Inspector</option>
                                 </select>
@@ -595,6 +596,7 @@ export const Users = () => {
                                     onChange={(event) => setForm((current) => ({ ...current, role: event.target.value as UserRole }))}
                                 >
                                     <option value="admin">Administrador</option>
+                                    <option value="supervisor">Supervisor</option>
                                     <option value="arquitecto">Arquitecto</option>
                                     <option value="inspector">Inspector</option>
                                 </select>

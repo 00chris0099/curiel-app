@@ -233,7 +233,7 @@ export const getAllowedStatusActions = (inspection: Inspection, user: User | nul
         return [];
     }
 
-    if (user.isMasterAdmin || user.role === 'admin' || user.role === 'arquitecto') {
+    if (user.isMasterAdmin || user.role === 'admin' || user.role === 'arquitecto' || user.role === 'supervisor') {
         return reviewerActionsByStatus[inspection.status] || [];
     }
 

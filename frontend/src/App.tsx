@@ -22,6 +22,8 @@ import { ClientDetail } from './pages/ClientDetail';
 import { SupervisorDashboard } from './pages/SupervisorDashboard';
 import { Alerts } from './pages/Alerts';
 import { Evaluations } from './pages/Evaluations';
+import { Suspensions } from './pages/Suspensions';
+import { SupervisorActions } from './pages/SupervisorActions';
 
 // Layout con Navbar y Sidebar
 const DashboardLayout = ({ children }: { children: ReactNode }) => {
@@ -170,7 +172,7 @@ function App() {
         <Route
           path="/inspections/:id/execute"
           element={
-            <PrivateRoute allowedRoles={['admin', 'arquitecto', 'inspector']}>
+            <PrivateRoute allowedRoles={['admin', 'arquitecto', 'supervisor', 'inspector']}>
               <DashboardLayout>
                 <ErrorBoundary backHref="/inspections">
                   <InspectionExecution />
@@ -183,7 +185,7 @@ function App() {
         <Route
           path="/inspections/:id/execute/areas/:areaId"
           element={
-            <PrivateRoute allowedRoles={['admin', 'arquitecto', 'inspector']}>
+            <PrivateRoute allowedRoles={['admin', 'arquitecto', 'supervisor', 'inspector']}>
               <DashboardLayout>
                 <ErrorBoundary backHref="/inspections">
                   <InspectionAreaDetail />
@@ -232,6 +234,28 @@ function App() {
             <PrivateRoute allowedRoles={['supervisor', 'admin']}>
               <DashboardLayout>
                 <Evaluations />
+              </DashboardLayout>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/suspensions"
+          element={
+            <PrivateRoute allowedRoles={['supervisor', 'admin']}>
+              <DashboardLayout>
+                <Suspensions />
+              </DashboardLayout>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/supervisor/actions"
+          element={
+            <PrivateRoute allowedRoles={['supervisor', 'admin']}>
+              <DashboardLayout>
+                <SupervisorActions />
               </DashboardLayout>
             </PrivateRoute>
           }

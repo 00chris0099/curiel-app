@@ -10,6 +10,7 @@ const { sequelize } = require('../config/database');
 
 const rolesToCreate = [
     { name: 'admin', description: 'Administrador del sistema' },
+    { name: 'supervisor', description: 'Supervisor de calidad y monitoreo' },
     { name: 'arquitecto', description: 'Arquitecto y coordinador de inspecciones' },
     { name: 'inspector', description: 'Inspector de campo' }
 ];
