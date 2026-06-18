@@ -7,6 +7,9 @@ const { createEvaluationSchema, updateEvaluationSchema } = require('../validator
 
 router.use(authenticate);
 
+// GET /api/v1/evaluations/dashboard-kpis - KPIs agregados del dashboard
+router.get('/dashboard-kpis', authorize('supervisor', 'admin'), evaluationController.getDashboardKPIs);
+
 // GET /api/v1/evaluations/ranking/inspectors - Ranking inspectores
 router.get('/ranking/inspectors', authorize('supervisor', 'admin'), evaluationController.getInspectorRanking);
 

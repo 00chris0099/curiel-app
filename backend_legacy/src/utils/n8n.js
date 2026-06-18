@@ -20,6 +20,9 @@ const triggerN8nWebhook = async (webhookType, data) => {
             case 'auditLog':
                 webhookUrl = config.n8n.auditLog;
                 break;
+            case 'evaluationNotification':
+                webhookUrl = config.n8n.evaluationNotification;
+                break;
             default:
                 throw new Error(`Tipo de webhook desconocido: ${webhookType}`);
         }

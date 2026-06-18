@@ -4,6 +4,7 @@ import type {
     CreateEvaluationDto,
     ApiResponse,
     PaginatedResponse,
+    DashboardKPIs,
 } from '../types';
 
 const evaluationService = {
@@ -61,6 +62,13 @@ const evaluationService = {
     async getArchitectRanking(weekStart: string, weekEnd: string): Promise<ApiResponse<{ ranking: Array<{ userId: string; fullName: string; score: number; inspectionsCreated: number; approvalRate: number }> }>> {
         const response = await apiClient.get(
             `/evaluations/ranking/architects?weekStart=${weekStart}&weekEnd=${weekEnd}`
+        );
+        return response.data;
+    },
+
+    async getDashboardKPIs(): Promise<ApiResponse<{ kpis: DashboardKPIs }>> {
+        const response = await apiClient.get<ApiResponse<{ kpis: DashboardKPIs }>>(
+            '/evaluations/dashboard-kpis'
         );
         return response.data;
     },
