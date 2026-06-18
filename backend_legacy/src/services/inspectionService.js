@@ -493,7 +493,7 @@ class InspectionService {
             return;
         }
 
-        if (!['admin', 'arquitecto'].includes(userRole)) {
+        if (!['admin', 'arquitecto', 'supervisor'].includes(userRole)) {
             throw new AppError('No tienes permisos para cambiar el estado de esta inspección', 403, 'FORBIDDEN_STATUS_TRANSITION');
         }
 
@@ -506,6 +506,11 @@ class InspectionService {
 
         if (!(allowedTransitions[fromStatus] || []).includes(toStatus)) {
             throw new AppError('La transición de estado no está permitida para tu rol', 403, 'FORBIDDEN_STATUS_TRANSITION');
+        }
+
+        // Supervisor no puede finalizar inspecciones
+        if (userRole === 'supervisor' && toStatus === 'finalizada') {
+            throw new AppError('El supervisor no puede finalizar inspecciones', 403, 'SUPERVISOR_CANNOT_FINALIZE');
         }
     }
 

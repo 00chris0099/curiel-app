@@ -24,6 +24,7 @@ export const reportStatusIconMap: Record<string, CustomIconName> = {
 
 export const roleIconMap: Record<string, CustomIconName> = {
     admin: 'settings',
+    supervisor: 'clipboard-check',
     arquitecto: 'buildings',
     inspector: 'clipboard-check',
 };

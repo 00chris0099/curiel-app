@@ -6,7 +6,7 @@ const { requireInspectionAccess } = require('../middlewares/inspectionPermission
 
 const router = express.Router({ mergeParams: true });
 
-router.use(authorize('admin', 'arquitecto', 'inspector'));
+router.use(authorize('admin', 'arquitecto', 'supervisor', 'inspector'));
 router.use(requireInspectionAccess);
 
 router.get('/', inspectionExecutionController.getInspectionExecution);
