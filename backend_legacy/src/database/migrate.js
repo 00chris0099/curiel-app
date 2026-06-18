@@ -136,6 +136,9 @@ const migrate = async () => {
         console.log('\n✅ Migración completada exitosamente');
         console.log('📊 Tablas creadas:');
         console.log('  - users');
+        console.log('  - roles');
+        console.log('  - user_roles');
+        console.log('  - clients');
         console.log('  - inspections');
         console.log('  - inspection_status_histories');
         console.log('  - inspection_areas');
@@ -147,7 +150,8 @@ const migrate = async () => {
         console.log('  - inspection_responses');
         console.log('  - photos');
         console.log('  - signatures');
-        console.log('  - audit_logs\n');
+        console.log('  - audit_logs');
+        console.log('  - refresh_tokens\n');
 
         process.exit(0);
     } catch (error) {

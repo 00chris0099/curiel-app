@@ -14,6 +14,7 @@ const Photo = require('./Photo');
 const Signature = require('./Signature');
 const AuditLog = require('./AuditLog');
 const RefreshToken = require('./RefreshToken');
+const Client = require('./Client');
 
 // ========================
 // RELACIONES ENTRE MODELOS
@@ -279,6 +280,17 @@ RefreshToken.belongsTo(User, {
     as: 'user'
 });
 
+// Client - Inspection
+Client.hasMany(Inspection, {
+    foreignKey: 'clientId',
+    as: 'inspections',
+    onDelete: 'SET NULL'
+});
+Inspection.belongsTo(Client, {
+    foreignKey: 'clientId',
+    as: 'client'
+});
+
 // Exportar todos los modelos
 module.exports = {
     User,
@@ -296,5 +308,6 @@ module.exports = {
     Photo,
     Signature,
     AuditLog,
-    RefreshToken
+    RefreshToken,
+    Client
 };

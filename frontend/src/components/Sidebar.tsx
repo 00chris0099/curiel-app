@@ -13,6 +13,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     const navigation: Array<{ name: string; href: string; icon: CustomIconName; roles: string[] }> = [
         { name: 'Dashboard', href: '/dashboard', icon: 'dashboard', roles: ['admin', 'arquitecto', 'inspector'] },
         { name: 'Inspecciones', href: '/inspections', icon: 'clipboard-check', roles: ['admin', 'arquitecto', 'inspector'] },
+        { name: 'Clientes', href: '/clients', icon: 'users', roles: ['admin'] },
         { name: 'Usuarios', href: '/users', icon: 'users', roles: ['admin'] },
     ];
 

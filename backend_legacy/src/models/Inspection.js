@@ -97,6 +97,15 @@ const Inspection = sequelize.define('Inspection', {
     longitude: {
         type: DataTypes.DECIMAL(11, 8),
         allowNull: true
+    },
+    clientId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+            model: 'clients',
+            key: 'id'
+        },
+        comment: 'Cliente asociado a la inspeccion'
     }
 }, {
     tableName: 'inspections',
