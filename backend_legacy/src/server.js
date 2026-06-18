@@ -26,6 +26,12 @@ const startServer = async () => {
             console.log('Modelos sincronizados');
         }
 
+        // Iniciar cron jobs (solo en produccion)
+        if (config.server.env === 'production') {
+            const { startAutoDeleteClients } = require('./cron/autoDeleteClients');
+            startAutoDeleteClients();
+        }
+
         app.listen(PORT, () => {
             console.log('\n========================================');
             console.log(`   CURIEL API Server`);

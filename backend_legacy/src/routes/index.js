@@ -6,6 +6,7 @@ const inspectionRoutes = require('./inspectionRoutes');
 const checklistRoutes = require('./checklistRoutes');
 const photoRoutes = require('./photoRoutes');
 const notificationRoutes = require('./notificationRoutes');
+const clientRoutes = require('./clientRoutes');
 
 const router = express.Router();
 
@@ -49,5 +50,6 @@ router.use('/inspections', inspectionRoutes);
 router.use('/checklists', checklistRoutes);
 router.use('/photos', photoRoutes);
 router.use('/notifications', notificationRoutes);
+router.use('/clients', clientRoutes);
 
 module.exports = router;

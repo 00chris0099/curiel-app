@@ -36,6 +36,9 @@ const createInspectionSchema = Joi.object({
         'any.required': 'El inspector es requerido'
     }),
     notes: Joi.string().optional().allow('', null),
+    clientId: Joi.string().uuid().optional().allow(null).messages({
+        'string.guid': 'El ID del cliente debe ser un UUID valido'
+    }),
     latitude: Joi.number().min(-90).max(90).optional().allow(null).messages({
         'number.min': 'La latitud debe estar entre -90 y 90',
         'number.max': 'La latitud debe estar entre -90 y 90'
@@ -59,6 +62,7 @@ const updateInspectionSchema = Joi.object({
     scheduledDate: Joi.date().iso().optional(),
     inspectorId: Joi.string().uuid().optional(),
     notes: Joi.string().optional().allow('', null),
+    clientId: Joi.string().uuid().optional().allow(null),
     latitude: Joi.number().min(-90).max(90).optional().allow(null),
     longitude: Joi.number().min(-180).max(180).optional().allow(null)
 });

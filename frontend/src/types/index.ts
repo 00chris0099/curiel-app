@@ -94,6 +94,59 @@ export interface ProfileResponse {
 }
 
 // ============================================
+// CLIENT TYPES
+// ============================================
+
+export type ClientDocumentType = 'dni' | 'ruc' | 'ce';
+
+export interface Client {
+    id: string;
+    documentType: ClientDocumentType;
+    documentNumber: string;
+    firstName?: string;
+    lastName?: string;
+    razonSocial?: string;
+    email: string;
+    phone?: string;
+    address?: string;
+    isProtected: boolean;
+    inspectionCount?: number;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface CreateClientDto {
+    documentType: ClientDocumentType;
+    documentNumber: string;
+    firstName?: string;
+    lastName?: string;
+    razonSocial?: string;
+    email: string;
+    phone?: string;
+    address?: string;
+    isProtected?: boolean;
+}
+
+export interface UpdateClientDto {
+    documentType?: ClientDocumentType;
+    documentNumber?: string;
+    firstName?: string;
+    lastName?: string;
+    razonSocial?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    isProtected?: boolean;
+}
+
+export interface ClientFilters {
+    search?: string;
+    documentType?: ClientDocumentType;
+    page?: number;
+    limit?: number;
+}
+
+// ============================================
 // INSPECTION TYPES
 // ============================================
 
@@ -179,12 +232,14 @@ export interface Inspection {
     inspectorId: string;
     createdById: string;
     notes?: string;
+    clientId?: string;
     createdAt: string;
     updatedAt: string;
     inspector?: User;
     creator?: User;
     inspectorName?: string;
     statusHistory?: InspectionStatusHistory[];
+    client?: Client;
 }
 
 export interface InspectionStats {
@@ -226,6 +281,7 @@ export interface CreateInspectionDto {
     scheduledDate: string;
     inspectorId: string;
     notes?: string;
+    clientId?: string;
 }
 
 export interface UpdateInspectionDto extends Partial<CreateInspectionDto> {
