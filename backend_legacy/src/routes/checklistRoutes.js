@@ -23,18 +23,18 @@ router.get('/templates', checklistController.getAllTemplates);
 // GET /api/v1/checklists/templates/:id - Obtener template por ID
 router.get('/templates/:id', checklistController.getTemplateById);
 
-// POST /api/v1/checklists/templates - Crear template (admin/arquitecto)
+// POST /api/v1/checklists/templates - Crear template (admin/arquitecto/supervisor)
 router.post(
     '/templates',
-    authorize('admin', 'arquitecto'),
+    authorize('admin', 'arquitecto', 'supervisor'),
     validateJoi(createTemplateSchema),
     checklistController.createTemplate
 );
 
-// PUT /api/v1/checklists/templates/:id - Actualizar template (admin/arquitecto)
+// PUT /api/v1/checklists/templates/:id - Actualizar template (admin/arquitecto/supervisor)
 router.put(
     '/templates/:id',
-    authorize('admin', 'arquitecto'),
+    authorize('admin', 'arquitecto', 'supervisor'),
     validateJoi(updateTemplateSchema),
     checklistController.updateTemplate
 );
@@ -50,18 +50,18 @@ router.delete(
 // ITEMS
 // ============================================
 
-// POST /api/v1/checklists/templates/:id/items - Agregar item al template (admin/arquitecto)
+// POST /api/v1/checklists/templates/:id/items - Agregar item al template (admin/arquitecto/supervisor)
 router.post(
     '/templates/:id/items',
-    authorize('admin', 'arquitecto'),
+    authorize('admin', 'arquitecto', 'supervisor'),
     validateJoi(createItemSchema),
     checklistController.addItemToTemplate
 );
 
-// PUT /api/v1/checklists/items/:itemId - Actualizar item (admin/arquitecto)
+// PUT /api/v1/checklists/items/:itemId - Actualizar item (admin/arquitecto/supervisor)
 router.put(
     '/items/:itemId',
-    authorize('admin', 'arquitecto'),
+    authorize('admin', 'arquitecto', 'supervisor'),
     validateJoi(updateItemSchema),
     checklistController.updateTemplateItem
 );

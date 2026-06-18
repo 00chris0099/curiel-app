@@ -201,19 +201,19 @@ describe('RBAC Permissions', () => {
             expect(res.status).toBe(403);
         });
 
-        it('supervisor NO puede crear inspeccion', async () => {
+        it('supervisor PUEDE crear inspeccion', async () => {
             const res = await request(app)
                 .post('/api/v1/inspections')
                 .set('Authorization', `Bearer ${supervisorToken}`)
                 .send({
-                    projectName: 'Should Fail',
+                    projectName: 'Supervisor Test',
                     clientName: 'Test',
                     address: 'Address',
                     inspectionType: 'general',
                     scheduledDate: new Date().toISOString(),
                     inspectorId: users.inspector.user.id
                 });
-            expect(res.status).toBe(403);
+            expect(res.status).toBe(201);
         });
     });
 

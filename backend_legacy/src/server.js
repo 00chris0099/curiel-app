@@ -30,6 +30,9 @@ const startServer = async () => {
         if (config.server.env === 'production') {
             const { startAutoDeleteClients } = require('./cron/autoDeleteClients');
             startAutoDeleteClients();
+
+            const { startWeeklyEvaluation } = require('./cron/weeklyEvaluation');
+            startWeeklyEvaluation();
         }
 
         app.listen(PORT, () => {

@@ -15,6 +15,9 @@ const Signature = require('./Signature');
 const AuditLog = require('./AuditLog');
 const RefreshToken = require('./RefreshToken');
 const Client = require('./Client');
+const Alert = require('./Alert');
+const Suspension = require('./Suspension');
+const Evaluation = require('./Evaluation');
 
 // ========================
 // RELACIONES ENTRE MODELOS
@@ -291,6 +294,78 @@ Inspection.belongsTo(Client, {
     as: 'client'
 });
 
+// Supervisor - Alert
+User.hasMany(Alert, {
+    foreignKey: 'supervisorId',
+    as: 'createdAlerts'
+});
+Alert.belongsTo(User, {
+    foreignKey: 'supervisorId',
+    as: 'supervisor'
+});
+
+// Inspection - Alert
+Inspection.hasMany(Alert, {
+    foreignKey: 'inspectionId',
+    as: 'alerts',
+    onDelete: 'SET NULL'
+});
+Alert.belongsTo(Inspection, {
+    foreignKey: 'inspectionId',
+    as: 'inspection'
+});
+
+// Suspension - Alert
+Suspension.hasMany(Alert, {
+    foreignKey: 'suspensionId',
+    as: 'alerts',
+    onDelete: 'SET NULL'
+});
+Alert.belongsTo(Suspension, {
+    foreignKey: 'suspensionId',
+    as: 'suspension'
+});
+
+// Supervisor - Suspension
+User.hasMany(Suspension, {
+    foreignKey: 'supervisorId',
+    as: 'createdSuspensions'
+});
+Suspension.belongsTo(User, {
+    foreignKey: 'supervisorId',
+    as: 'supervisor'
+});
+
+// Inspector - Suspension
+User.hasMany(Suspension, {
+    foreignKey: 'inspectorId',
+    as: 'receivedSuspensions'
+});
+Suspension.belongsTo(User, {
+    foreignKey: 'inspectorId',
+    as: 'inspector'
+});
+
+// Supervisor - Evaluation
+User.hasMany(Evaluation, {
+    foreignKey: 'supervisorId',
+    as: 'createdEvaluations'
+});
+Evaluation.belongsTo(User, {
+    foreignKey: 'supervisorId',
+    as: 'supervisor'
+});
+
+// Evaluated User - Evaluation
+User.hasMany(Evaluation, {
+    foreignKey: 'evaluatedUserId',
+    as: 'receivedEvaluations'
+});
+Evaluation.belongsTo(User, {
+    foreignKey: 'evaluatedUserId',
+    as: 'evaluatedUser'
+});
+
 // Exportar todos los modelos
 module.exports = {
     User,
@@ -309,5 +384,8 @@ module.exports = {
     Signature,
     AuditLog,
     RefreshToken,
-    Client
+    Client,
+    Alert,
+    Suspension,
+    Evaluation
 };

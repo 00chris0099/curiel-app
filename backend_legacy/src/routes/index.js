@@ -7,6 +7,9 @@ const checklistRoutes = require('./checklistRoutes');
 const photoRoutes = require('./photoRoutes');
 const notificationRoutes = require('./notificationRoutes');
 const clientRoutes = require('./clientRoutes');
+const alertRoutes = require('./alertRoutes');
+const suspensionRoutes = require('./suspensionRoutes');
+const evaluationRoutes = require('./evaluationRoutes');
 
 const router = express.Router();
 
@@ -51,5 +54,8 @@ router.use('/checklists', checklistRoutes);
 router.use('/photos', photoRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/clients', clientRoutes);
+router.use('/alerts', alertRoutes);
+router.use('/suspensions', suspensionRoutes);
+router.use('/evaluations', evaluationRoutes);
 
 module.exports = router;
