@@ -98,6 +98,7 @@ module.exports = {
     inspectionCompleted: process.env.N8N_WEBHOOK_INSPECTION_COMPLETED,
     userNotification: process.env.N8N_WEBHOOK_USER_NOTIFICATION,
     auditLog: process.env.N8N_WEBHOOK_AUDIT_LOG,
+    evaluationNotification: process.env.N8N_WEBHOOK_EVALUATION_NOTIFICATION,
     secretToken: process.env.N8N_SECRET_TOKEN
   },
 

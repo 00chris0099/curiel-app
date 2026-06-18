@@ -598,3 +598,15 @@ export interface KpiData {
     completionRate: number;
     compositeScore: number;
 }
+
+export interface DashboardKPIs {
+    totalActiveInspections: number;
+    overdueInspections: number;
+    completedThisMonth: number;
+    totalThisMonth: number;
+    cancellationRate: number;
+    avgTimeGeneral: number;
+    activeInspectors: number;
+    activeArchitects: number;
+    dailyProductivity: Array<{ date: string; count: number }>;
+}

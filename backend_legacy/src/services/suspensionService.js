@@ -1,6 +1,7 @@
-const { Suspension, User, Alert } = require('../models');
+const { Suspension, User, Alert, Role } = require('../models');
 const { AppError } = require('../middlewares/errorHandler');
 const { Op } = require('sequelize');
+const { sequelize } = require('../config/database');
 
 class SuspensionService {
     /**
@@ -11,7 +12,7 @@ class SuspensionService {
 
         // Verificar que el inspector existe y tiene el rol
         const inspector = await User.findByPk(inspectorId, {
-            include: [{ model: require('../models').Role, as: 'roles' }]
+            include: [{ model: Role, as: 'roles' }]
         });
 
         if (!inspector) {
@@ -42,7 +43,83 @@ class SuspensionService {
             status: 'activa'
         });
 
-        return suspension;
+        // Reasignar inspecciones pendientes automaticamente
+        const reassignResult = await this.reassignPendingInspections(inspectorId);
+
+        return { ...suspension.toJSON(), reassignedInspections: reassignResult.count };
+    }
+
+    /**
+     * Reasignar inspecciones pendientes de un inspector suspendido a otro disponible
+     */
+    async reassignPendingInspections(suspendedInspectorId) {
+        const Inspection = require('../models').Inspection;
+
+        // Encontrar inspecciones pendientes o en proceso del inspector suspendido
+        const pendingInspections = await Inspection.findAll({
+            where: {
+                inspectorId: suspendedInspectorId,
+                status: { [Op.in]: ['pendiente', 'en_proceso'] }
+            }
+        });
+
+        if (pendingInspections.length === 0) {
+            return { count: 0, inspections: [] };
+        }
+
+        // Encontrar inspectores disponibles (activos, no suspendidos, distintos al suspendido)
+        const suspendedUserIds = (await Suspension.findAll({
+            where: { status: 'activa' },
+            attributes: ['inspectorId']
+        })).map(s => s.inspectorId);
+
+        const excludedIds = [suspendedInspectorId, ...suspendedUserIds];
+
+        const availableInspectors = await User.findAll({
+            include: [
+                { model: Role, as: 'roles', where: { name: 'inspector' } }
+            ],
+            where: {
+                isActive: true,
+                id: { [Op.notIn]: excludedIds }
+            }
+        });
+
+        if (availableInspectors.length === 0) {
+            return { count: 0, inspections: [], warning: 'No hay inspectores disponibles para reasignar' };
+        }
+
+        // Reasignar cada inspeccion al inspector con menos inspecciones asignadas
+        const reassigned = [];
+        for (const inspection of pendingInspections) {
+            // Contar inspecciones activas de cada inspector disponible
+            const inspectorLoads = await Promise.all(
+                availableInspectors.map(async (insp) => {
+                    const count = await Inspection.count({
+                        where: {
+                            inspectorId: insp.id,
+                            status: { [Op.in]: ['pendiente', 'en_proceso'] }
+                        }
+                    });
+                    return { inspector: insp, count };
+                })
+            );
+
+            // Seleccionar el que tenga menos carga
+            inspectorLoads.sort((a, b) => a.count - b.count);
+            const bestInspector = inspectorLoads[0].inspector;
+
+            inspection.inspectorId = bestInspector.id;
+            await inspection.save();
+            reassigned.push({
+                inspectionId: inspection.id,
+                projectName: inspection.projectName,
+                newInspectorId: bestInspector.id,
+                newInspectorName: bestInspector.fullName
+            });
+        }
+
+        return { count: reassigned.length, inspections: reassigned };
     }
 
     /**

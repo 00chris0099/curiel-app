@@ -5,7 +5,7 @@ import { CustomIcon } from '../components/CustomIcon';
 import { getApiErrorMessage } from '../api/axios';
 import evaluationService from '../services/evaluation.service';
 import alertService from '../services/alert.service';
-import type { Alert, Evaluation } from '../types';
+import type { Alert, Evaluation, DashboardKPIs } from '../types';
 
 type RankingEntry = {
     userId: string;
@@ -24,16 +24,19 @@ export const SupervisorDashboard = () => {
     const [architectRanking, setArchitectRanking] = useState<RankingEntry[]>([]);
     const [recentEvaluations, setRecentEvaluations] = useState<Evaluation[]>([]);
     const [gravityFilter, setGravityFilter] = useState<number | ''>('');
+    const [dashboardKpis, setDashboardKpis] = useState<DashboardKPIs | null>(null);
 
     const loadData = useCallback(async () => {
         try {
-            const [alertsRes, evaluationsRes] = await Promise.all([
+            const [alertsRes, evaluationsRes, kpisRes] = await Promise.all([
                 alertService.getAll({ limit: 10 }),
                 evaluationService.getAll({ limit: 5 }),
+                evaluationService.getDashboardKPIs(),
             ]);
 
             setAlerts(alertsRes.data ?? []);
             setRecentEvaluations(evaluationsRes.data ?? []);
+            setDashboardKpis(kpisRes.data?.kpis ?? null);
 
             // Calculate current week for ranking
             const now = new Date();
@@ -120,13 +123,39 @@ export const SupervisorDashboard = () => {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80">
                     <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100">
+                            <CustomIcon name="clipboard-check" className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div>
+                            <p className="text-sm text-slate-500">Inspecciones Activas</p>
+                            <p className="text-2xl font-bold text-slate-900">
+                                {dashboardKpis?.totalActiveInspections ?? 0}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80">
+                    <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-100">
                             <CustomIcon name="warning-circle" className="h-5 w-5 text-red-600" />
                         </div>
                         <div>
-                            <p className="text-sm text-slate-500">Alertas Abiertas</p>
+                            <p className="text-sm text-slate-500">Vencidas</p>
                             <p className="text-2xl font-bold text-slate-900">
-                                {alerts.filter(a => a.status === 'abierta').length}
+                                {dashboardKpis?.overdueInspections ?? 0}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80">
+                    <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-100">
+                            <CustomIcon name="clipboard-check" className="h-5 w-5 text-green-600" />
+                        </div>
+                        <div>
+                            <p className="text-sm text-slate-500">Completadas (mes)</p>
+                            <p className="text-2xl font-bold text-slate-900">
+                                {dashboardKpis?.completedThisMonth ?? 0}
                             </p>
                         </div>
                     </div>
@@ -137,36 +166,82 @@ export const SupervisorDashboard = () => {
                             <CustomIcon name="warning-circle" className="h-5 w-5 text-yellow-600" />
                         </div>
                         <div>
-                            <p className="text-sm text-slate-500">Nivel 3 - Alto</p>
+                            <p className="text-sm text-slate-500">Tasa Cancelacion</p>
                             <p className="text-2xl font-bold text-slate-900">
-                                {alerts.filter(a => a.gravityLevel === 3 && a.status !== 'resuelta').length}
+                                {dashboardKpis?.cancellationRate ?? 0}%
                             </p>
                         </div>
                     </div>
                 </div>
+            </div>
+
+            {/* Secondary KPIs */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80">
                     <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100">
-                            <CustomIcon name="clipboard-check" className="h-5 w-5 text-blue-600" />
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100">
+                            <CustomIcon name="users" className="h-5 w-5 text-purple-600" />
                         </div>
                         <div>
-                            <p className="text-sm text-slate-500">Evaluaciones (mes)</p>
-                            <p className="text-2xl font-bold text-slate-900">{recentEvaluations.length}</p>
+                            <p className="text-sm text-slate-500">Inspectores Activos</p>
+                            <p className="text-2xl font-bold text-slate-900">{dashboardKpis?.activeInspectors ?? 0}</p>
                         </div>
                     </div>
                 </div>
                 <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80">
                     <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-100">
-                            <CustomIcon name="users" className="h-5 w-5 text-green-600" />
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100">
+                            <CustomIcon name="users" className="h-5 w-5 text-indigo-600" />
                         </div>
                         <div>
-                            <p className="text-sm text-slate-500">Inspectores Activos</p>
-                            <p className="text-2xl font-bold text-slate-900">{inspectorRanking.length}</p>
+                            <p className="text-sm text-slate-500">Arquitectos Activos</p>
+                            <p className="text-2xl font-bold text-slate-900">{dashboardKpis?.activeArchitects ?? 0}</p>
+                        </div>
+                    </div>
+                </div>
+                <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80">
+                    <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-100">
+                            <CustomIcon name="clipboard-check" className="h-5 w-5 text-teal-600" />
+                        </div>
+                        <div>
+                            <p className="text-sm text-slate-500">Tiempo Prom. Finalizacion</p>
+                            <p className="text-2xl font-bold text-slate-900">
+                                {dashboardKpis?.avgTimeGeneral ?? 0}h
+                            </p>
                         </div>
                     </div>
                 </div>
             </div>
+
+            {/* Productividad Diaria */}
+            {dashboardKpis?.dailyProductivity && dashboardKpis.dailyProductivity.length > 0 && (
+                <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80">
+                    <h2 className="font-display text-xl font-bold text-slate-900 mb-4">
+                        Productividad Diaria (ultima semana)
+                    </h2>
+                    <div className="flex items-end gap-2 h-40">
+                        {dashboardKpis.dailyProductivity.map((day) => {
+                            const maxCount = Math.max(...dashboardKpis.dailyProductivity.map(d => d.count), 1);
+                            const heightPercent = (day.count / maxCount) * 100;
+                            return (
+                                <div key={day.date} className="flex flex-col items-center flex-1 gap-1">
+                                    <span className="text-xs font-semibold text-slate-700">{day.count}</span>
+                                    <div className="w-full flex justify-center">
+                                        <div
+                                            className="w-8 rounded-t-lg bg-primary-500 transition-all"
+                                            style={{ height: `${Math.max(heightPercent, 4)}%` }}
+                                        />
+                                    </div>
+                                    <span className="text-[10px] text-slate-500">
+                                        {new Date(day.date + 'T12:00:00').toLocaleDateString('es-PE', { weekday: 'short' })}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
                 {/* Inspector Ranking */}

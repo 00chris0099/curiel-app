@@ -313,6 +313,123 @@ class EvaluationService {
     }
 
     /**
+     * Obtener KPIs agregados para el dashboard del supervisor
+     */
+    async getDashboardKPIs() {
+        const Inspection = require('../models').Inspection;
+        const User = require('../models').User;
+        const Role = require('../models').Role;
+
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - (now.getDay() === 0 ? 6 : now.getDay() - 1));
+        startOfWeek.setHours(0, 0, 0, 0);
+
+        // Inspecciones activas (pendiente + en_proceso)
+        const totalActiveInspections = await Inspection.count({
+            where: { status: { [Op.in]: ['pendiente', 'en_proceso', 'lista_revision'] } }
+        });
+
+        // Inspecciones vencidas (scheduledDate < hoy y no finalizada)
+        const overdueInspections = await Inspection.count({
+            where: {
+                scheduledDate: { [Op.lt]: now },
+                status: { [Op.notIn]: ['finalizada', 'cancelada'] }
+            }
+        });
+
+        // Inspecciones completadas este mes
+        const completedThisMonth = await Inspection.count({
+            where: {
+                status: 'finalizada',
+                completedDate: { [Op.between]: [startOfMonth, now] }
+            }
+        });
+
+        // Total inspecciones este mes
+        const totalThisMonth = await Inspection.count({
+            where: {
+                createdAt: { [Op.between]: [startOfMonth, now] }
+            }
+        });
+
+        // Tasa de cancelacion del mes
+        const cancelledThisMonth = await Inspection.count({
+            where: {
+                status: 'cancelada',
+                updatedAt: { [Op.between]: [startOfMonth, now] }
+            }
+        });
+        const cancellationRate = totalThisMonth > 0
+            ? Math.round((cancelledThisMonth / totalThisMonth) * 100 * 100) / 100
+            : 0;
+
+        // Tiempo promedio de finalizacion (inspecciones completadas esta semana)
+        const completedThisWeek = await Inspection.findAll({
+            where: {
+                status: 'finalizada',
+                completedDate: { [Op.between]: [startOfWeek, now] }
+            },
+            attributes: ['scheduledDate', 'completedDate']
+        });
+
+        let avgTimeGeneral = 0;
+        if (completedThisWeek.length > 0) {
+            const totalTime = completedThisWeek.reduce((sum, insp) => {
+                const diff = new Date(insp.completedDate) - new Date(insp.scheduledDate);
+                return sum + diff;
+            }, 0);
+            avgTimeGeneral = Math.round((totalTime / completedThisWeek.length / (1000 * 60 * 60)) * 100) / 100;
+        }
+
+        // Inspectores activos
+        const activeInspectors = await User.count({
+            include: [{ model: Role, as: 'roles', where: { name: 'inspector' } }],
+            where: { isActive: true }
+        });
+
+        // Arquitectos activos
+        const activeArchitects = await User.count({
+            include: [{ model: Role, as: 'roles', where: { name: 'arquitecto' } }],
+            where: { isActive: true }
+        });
+
+        // Productividad diaria (ultima semana)
+        const dailyProductivity = [];
+        for (let i = 6; i >= 0; i--) {
+            const day = new Date(now);
+            day.setDate(now.getDate() - i);
+            day.setHours(0, 0, 0, 0);
+            const nextDay = new Date(day);
+            nextDay.setDate(day.getDate() + 1);
+
+            const count = await Inspection.count({
+                where: {
+                    completedDate: { [Op.between]: [day, nextDay] },
+                    status: 'finalizada'
+                }
+            });
+            dailyProductivity.push({
+                date: day.toISOString().split('T')[0],
+                count
+            });
+        }
+
+        return {
+            totalActiveInspections,
+            overdueInspections,
+            completedThisMonth,
+            totalThisMonth,
+            cancellationRate,
+            avgTimeGeneral,
+            activeInspectors,
+            activeArchitects,
+            dailyProductivity
+        };
+    }
+
+    /**
      * Obtener ranking de inspectores para un periodo
      */
     async getInspectorRanking(weekStart, weekEnd) {

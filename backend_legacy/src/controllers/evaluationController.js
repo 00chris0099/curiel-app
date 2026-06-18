@@ -1,6 +1,7 @@
 const evaluationService = require('../services/evaluationService');
 const { asyncHandler } = require('../middlewares/errorHandler');
 const { createAuditLog } = require('../middlewares/auditLog');
+const { triggerN8nWebhook } = require('../utils/n8n');
 
 const createEvaluation = asyncHandler(async (req, res) => {
     const evaluation = await evaluationService.generateWeeklyEvaluation(
@@ -14,6 +15,17 @@ const createEvaluation = asyncHandler(async (req, res) => {
         evaluatedUserId: evaluation.evaluatedUserId,
         weekStart: evaluation.weekStart,
         weekEnd: evaluation.weekEnd
+    });
+
+    triggerN8nWebhook('evaluationNotification', {
+        event: 'evaluation_created',
+        evaluation: {
+            id: evaluation.id,
+            evaluatedUserId: evaluation.evaluatedUserId,
+            weekStart: evaluation.weekStart,
+            weekEnd: evaluation.weekEnd,
+            compositeScore: evaluation.compositeScore
+        }
     });
 
     res.status(201).json({
@@ -79,6 +91,17 @@ const generateBulkEvaluations = asyncHandler(async (req, res) => {
         totalGenerated: results.filter(r => r.success).length
     });
 
+    const successfulCount = results.filter(r => r.success).length;
+    if (successfulCount > 0) {
+        triggerN8nWebhook('evaluationNotification', {
+            event: 'bulk_evaluations_generated',
+            weekStart,
+            weekEnd,
+            totalGenerated: successfulCount,
+            supervisorId: req.userId
+        });
+    }
+
     res.status(201).json({
         success: true,
         message: 'Evaluaciones generadas exitosamente',
@@ -108,6 +131,15 @@ const getArchitectRanking = asyncHandler(async (req, res) => {
     });
 });
 
+const getDashboardKPIs = asyncHandler(async (req, res) => {
+    const kpis = await evaluationService.getDashboardKPIs();
+
+    res.json({
+        success: true,
+        data: { kpis }
+    });
+});
+
 module.exports = {
     createEvaluation,
     getAllEvaluations,
@@ -115,5 +147,6 @@ module.exports = {
     updateEvaluation,
     generateBulkEvaluations,
     getInspectorRanking,
-    getArchitectRanking
+    getArchitectRanking,
+    getDashboardKPIs
 };
