@@ -170,7 +170,7 @@ export const Clients = () => {
     if (isLoading) {
         return (
             <div className="flex h-64 items-center justify-center">
-                <Loader size="lg" />
+                <Loader />
             </div>
         );
     }
@@ -189,7 +189,7 @@ export const Clients = () => {
                     onClick={handleCreate}
                     className="inline-flex items-center gap-2 rounded-2xl bg-[#17324a] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#1e3d56] focus:outline-none focus:ring-2 focus:ring-[#17324a] focus:ring-offset-2"
                 >
-                    <CustomIcon name={isFormVisible ? 'close' : 'plus'} size="sm" tone="cream" />
+                    <CustomIcon name={isFormVisible ? 'x-circle' : 'plus'} size="sm" tone="cream" />
                     {isFormVisible ? 'Cancelar' : 'Nuevo Cliente'}
                 </button>
             </div>
@@ -441,14 +441,14 @@ export const Clients = () => {
                                                     className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
                                                     title="Ver detalles"
                                                 >
-                                                    <CustomIcon name="eye" size="sm" tone="mist" />
+                                                    <CustomIcon name="search" size="sm" tone="mist" />
                                                 </button>
                                                 <button
                                                     onClick={() => handleEdit(client)}
                                                     className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
                                                     title="Editar"
                                                 >
-                                                    <CustomIcon name="edit" size="sm" tone="mist" />
+                                                    <CustomIcon name="pencil" size="sm" tone="mist" />
                                                 </button>
                                                 <button
                                                     onClick={() => handleDelete(client)}

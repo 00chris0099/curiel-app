@@ -28,7 +28,7 @@ describe('Login Component', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        (useAuthStore as ReturnType<typeof vi.fn>).mockReturnValue({
+        (useAuthStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
             login: mockLogin,
             isAuthenticated: false,
             isLoading: false
@@ -120,7 +120,7 @@ describe('Login Component', () => {
     });
 
     it('muestra estado de loading', () => {
-        (useAuthStore as ReturnType<typeof vi.fn>).mockReturnValue({
+        (useAuthStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
             login: mockLogin,
             isAuthenticated: false,
             isLoading: true

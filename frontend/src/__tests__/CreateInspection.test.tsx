@@ -27,7 +27,7 @@ vi.mock('../services/user.service', () => ({
 }));
 
 vi.mock('../api/axios', () => ({
-    getApiErrorMessage: vi.fn((error: any, fallback: string) => fallback)
+    getApiErrorMessage: vi.fn((_error: any, fallback: string) => fallback)
 }));
 
 vi.mock('react-hot-toast', () => ({

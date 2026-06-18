@@ -121,7 +121,7 @@ export const SupervisorDashboard = () => {
                 <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80">
                     <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-100">
-                            <CustomIcon name="alert-triangle" className="h-5 w-5 text-red-600" />
+                            <CustomIcon name="warning-circle" className="h-5 w-5 text-red-600" />
                         </div>
                         <div>
                             <p className="text-sm text-slate-500">Alertas Abiertas</p>
@@ -134,7 +134,7 @@ export const SupervisorDashboard = () => {
                 <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80">
                     <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-yellow-100">
-                            <CustomIcon name="alert-triangle" className="h-5 w-5 text-yellow-600" />
+                            <CustomIcon name="warning-circle" className="h-5 w-5 text-yellow-600" />
                         </div>
                         <div>
                             <p className="text-sm text-slate-500">Nivel 3 - Alto</p>
