@@ -1,0 +1,37 @@
+PROPRIETARY SOFTWARE LICENSE
+CURIEL - Sistema de Inspecciones Tecnicas
+
+Copyright (c) 2024 CURIEL. Todos los derechos reservados.
+
+Esta licencia es proprietaria y confidencial. El uso, copia, distribucion,
+modificacion o cualquier otra forma de aprovechamiento de este software
+esta estrictamente prohibido sin autorizacion expresa por escrito de CURIEL.
+
+Este software incluye, pero no se limita a:
+- Codigo fuente del backend (Node.js, Express, Sequelize)
+- Codigo fuente del frontend (React, TypeScript, Vite)
+- Codigo fuente de la aplicacion movil (React Native, Expo)
+- Base de datos y esquemas
+- Documentacion tecnica
+- workflows de CI/CD
+- Configuraciones de infraestructura
+
+PERMISOS:
+- Uso exclusivo para el proyecto CURIEL
+- Copias de seguridad permitidas
+- Modificaciones internas permitidas para el equipo CURIEL
+
+PROHIBICIONES:
+- Distribucion a terceros
+- Uso comercial no autorizado
+- Ingenieria inversa
+- Creacion de trabajos derivados
+- Alquiler o prestamo del software
+
+Este software se distribuye "TAL CUAL", sin garantia de ningun tipo,
+expresa o implicita, incluyendo pero no limitado a garantias de
+comerciabilidad, aptitud para un proposito particular y no infraccion.
+
+EN NINGUN CASO SERA CURIEL RESPONSABLE POR DAÑOS DIRECTOS, INDIRECTOS,
+INCIDENTALES, ESPECIALES, EJEMPLARES O CONSECUENTES QUE RESULTEN DEL
+USO O INCAPACIDAD DE USO DE ESTE SOFTWARE.

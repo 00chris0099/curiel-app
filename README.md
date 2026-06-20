@@ -1,144 +1,197 @@
-# 🏗️ CURIEL - Sistema de Inspecciones Técnicas
+# CURIEL - Sistema de Inspecciones Tecnicas
 
-**Aplicación profesional para gestión de inspecciones técnicas en obras de construcción, arquitectura e ingeniería.**
+**Aplicacion profesional para gestion de inspecciones tecnicas en obras de construccion, arquitectura e ingenieria.**
 
-## 📋 Descripción
+## Descripcion
 
-CURIEL es un sistema SaaS completo que digitaliza el proceso de inspecciones técnicas, eliminando formularios en papel y automatizando la generación de reportes profesionales con evidencia fotográfica, firmas digitales y trazabilidad completa.
+CURIEL es un sistema SaaS completo que digitaliza el proceso de inspecciones tecnicas, eliminando formularios en papel y automatizando la generacion de reportes profesionales con evidencia fotografica, firmas digitales y trazabilidad completa.
 
-## 🎯 Características Principales
+## Caracteristicas Principales
 
-### ✅ Gestión de Inspecciones
+### Gestion de Inspecciones
 - Crear, editar y finalizar inspecciones
-- Asignación automática de inspectores
-- Estados: Pendiente, En Proceso, Finalizada
-- Trazabilidad completa (auditoría)
+- Asignacion automatica de inspectores
+- Estados: Pendiente, En Proceso, Lista Revision, Finalizada, Cancelada, Reprogramada
+- Trazabilidad completa (auditoria)
 
-### 👥 Sistema de Usuarios
-- Autenticación JWT
-- Roles: Admin, Arquitecto, Inspector
+### Sistema de Usuarios
+- Autenticacion JWT con refresh tokens
+- Roles: Admin, Arquitecto, Supervisor, Inspector
 - Permisos granulares por rol
 - Multi-empresa (SaaS)
+- Sistema de clientes con auto-eliminacion
 
-### 📝 Checklists Configurables
-- Plantillas por tipo de inspección
-- Ítems: Cumple / No cumple / No aplica
-- Observaciones por ítem
+### Checklists Configurables
+- Plantillas por tipo de inspeccion
+- Items: Cumple / No cumple / No aplica
+- Observaciones por item
 - Firmas digitales (inspector + cliente)
 
-### 📸 Evidencia Fotográfica
-- Integración con cámara del dispositivo
-- Metadatos: fecha, hora, ubicación GPS
-- Asociación a ítems específicos
-- Almacenamiento en la nube
+### Evidencia Fotografica
+- Integracion con camara del dispositivo
+- Metadatos: fecha, hora, ubicacion GPS
+- Compresion automatica a WebP
+- Almacenamiento en Cloudinary
 
-### 📄 Reportes Profesionales
-- Generación automática de PDF
+### Reportes Profesionales
+- Generacion automatica de PDF con Puppeteer
 - Logo de empresa personalizable
 - Fotos incrustadas
 - Firmas incluidas
 - Historial completo
 
-### 📊 Dashboard Inteligente
-- Métricas en tiempo real
-- Gráficos de estado
-- Vista por rol
+### Dashboard Inteligente
+- Metricas en tiempo real
+- Graficos de estado
+- Vista por rol (admin, supervisor)
 - Historial de actividad
 
-### 🔄 Automatización (n8n)
-- Email automático al finalizar inspección
+### Sistema de Supervisor
+- Alertas por inspecciones vencidas
+- Evaluaciones de inspectores
+- Suspensiones por bajo rendimiento
+- Dashboard con KPIs
+
+### Automatizacion (n8n)
+- Email automatico al finalizar inspeccion
 - Notificaciones a administradores
 - Webhooks configurables
-- Logs de auditoría
+- Logs de auditoria
 
-### 📱 Modo Offline
-- Trabajo sin conexión
-- Sincronización automática
-- Caché inteligente
-- Resolución de conflictos
+### Modo Offline (Mobile)
+- Trabajo sin conexion con SQLite
+- Sincronizacion automatica
+- Cache inteligente
+- Resolucion de conflictos
 
-## 🏗️ Arquitectura del Proyecto
+### PWA (Frontend)
+- Service Worker para offline support
+- Instalable como app
+- Cache de assets estaticos
+- Auto-actualizacion
+
+## Arquitectura del Proyecto
 
 ```
 CURIEL/
-├── backend/                 # API REST (Node.js + Express)
+├── frontend/                  # Web App (React 19 + TypeScript + Vite)
 │   ├── src/
-│   │   ├── config/         # Configuración (DB, JWT, etc.)
-│   │   ├── models/         # Modelos de base de datos
-│   │   ├── controllers/    # Lógica de negocio
-│   │   ├── routes/         # Endpoints de API
-│   │   ├── middlewares/    # Auth, validación, etc.
-│   │   ├── services/       # Servicios (PDF, emails, etc.)
-│   │   └── utils/          # Utilidades
-│   ├── uploads/            # Almacenamiento temporal
+│   │   ├── api/              # Axios setup, interceptors
+│   │   ├── auth/             # PrivateRoute, auth logic
+│   │   ├── components/       # Componentes reutilizables
+│   │   ├── hooks/            # Custom hooks (offline, prefetch)
+│   │   ├── pages/            # Paginas de la app
+│   │   ├── services/         # API services
+│   │   ├── store/            # Zustand stores
+│   │   ├── types/            # TypeScript types
+│   │   └── utils/            # Utilidades
 │   └── package.json
 │
-├── mobile/                  # App móvil (React Native + Expo)
+├── backend_legacy/            # API REST (Node.js + Express + Sequelize)
 │   ├── src/
-│   │   ├── screens/        # Pantallas de la app
-│   │   ├── components/     # Componentes reutilizables
-│   │   ├── navigation/     # Navegación
-│   │   ├── services/       # API client, storage, etc.
-│   │   ├── context/        # State management
-│   │   ├── utils/          # Utilidades
-│   │   └── assets/         # Imágenes, fuentes, etc.
+│   │   ├── config/           # Configuracion (DB, JWT, Redis)
+│   │   ├── controllers/      # Logica de negocio
+│   │   ├── cron/             # Tareas programadas
+│   │   ├── middlewares/       # Auth, validacion, errorHandler
+│   │   ├── models/           # Modelos de base de datos
+│   │   ├── routes/           # Endpoints de API
+│   │   ├── services/         # Servicios (PDF, emails, etc.)
+│   │   └── utils/            # Utilidades (logger, sentry, cache, cloudinary)
 │   └── package.json
 │
-├── n8n-workflows/           # Flujos de automatización
-│   ├── inspection-completed.json
-│   ├── user-notifications.json
-│   └── README.md
+├── mobile/                    # App movil (React Native + Expo)
+│   ├── src/
+│   │   ├── components/       # Componentes reutilizables
+│   │   ├── config/           # Configuracion
+│   │   ├── context/          # AuthContext, OfflineContext
+│   │   ├── database/         # SQLite repos
+│   │   ├── screens/          # Pantallas de la app
+│   │   ├── services/         # API client, sync engine
+│   │   └── utils/            # Utilidades
+│   └── package.json
 │
-└── docs/                    # Documentación
-    ├── API.md              # Documentación de API
-    ├── DEPLOYMENT.md       # Guía de deployment
-    └── USER_GUIDE.md       # Manual de usuario
+├── n8n-workflows/             # Flujos de automatizacion
+├── monitoring/                # Prometheus + Grafana
+└── docs/                      # Documentacion
 ```
 
-## 🛠️ Stack Tecnológico
+## Stack Tecnologico
+
+### Frontend
+| Tecnologia | Proposito |
+|-----------|-----------|
+| React 19 | Framework web |
+| TypeScript | Type safety |
+| Vite | Build tool |
+| Tailwind CSS | Estilos |
+| Zustand | State management |
+| React Router | Navegacion |
+| Axios | Cliente HTTP |
+| Vitest | Testing |
+| Sentry | Error tracking |
+| vite-plugin-pwa | PWA support |
 
 ### Backend
-| Tecnología | Propósito |
+| Tecnologia | Proposito |
 |-----------|-----------|
 | Node.js + Express | Framework web |
 | PostgreSQL | Base de datos |
 | Sequelize | ORM |
-| JWT | Autenticación |
+| JWT | Autenticacion |
 | Multer | Upload de archivos |
-| Cloudinary | Almacenamiento de imágenes |
-| PDFKit | Generación de PDFs |
-| Nodemailer | Envío de emails |
+| Cloudinary | Almacenamiento de imagenes |
+| Puppeteer | Generacion de PDFs |
+| Nodemailer | Envio de emails |
+| Winston | Structured logging |
+| Sentry | Error tracking |
+| prom-client | Metrics |
+| ioredis | Cache Redis |
 
 ### Mobile
-| Tecnología | Propósito |
+| Tecnologia | Proposito |
 |-----------|-----------|
-| React Native | Framework móvil |
+| React Native | Framework movil |
 | Expo | Toolchain |
-| React Navigation | Navegación |
-| AsyncStorage | Almacenamiento local |
-| Expo Camera | Cámara |
-| Expo Location | GPS |
-| React Native Signature Canvas | Firmas |
+| React Navigation | Navegacion |
+| expo-sqlite | Base de datos local |
+| expo-camera | Camara |
+| expo-location | GPS |
+| react-native-fast-image | Image caching |
+| expo-image-manipulator | Image compression |
 | Axios | Cliente HTTP |
 
-### Automatización
-| Tecnología | Propósito |
+### Infraestructura
+| Tecnologia | Proposito |
 |-----------|-----------|
+| GitHub Actions | CI/CD |
+| Docker | Containerization |
+| EasyPanel | Deployment |
 | n8n | Workflows |
-| Webhooks | Notificaciones |
+| Prometheus | Metrics |
+| Grafana | Dashboards |
 
-## 🚀 Instalación y Configuración
+## Instalacion y Configuracion
 
 ### Requisitos Previos
-- Node.js 18+ 
+- Node.js 18+
 - PostgreSQL 14+
-- Expo CLI
-- n8n (opcional)
+- Expo CLI (mobile)
+- Redis (opcional, para cache)
 
-### 1. Backend
+### 1. Frontend
 
 ```bash
-cd backend
+cd frontend
+npm install
+cp .env.example .env
+# Editar .env con la URL del backend
+npm run dev
+```
+
+### 2. Backend
+
+```bash
+cd backend_legacy
 npm install
 cp .env.example .env
 # Editar .env con tus credenciales
@@ -147,7 +200,7 @@ npm run seed
 npm run dev
 ```
 
-### 2. Mobile App
+### 3. Mobile App
 
 ```bash
 cd mobile
@@ -157,11 +210,11 @@ cp .env.example .env
 npm start
 ```
 
-### 3. Base de Datos
+### 4. Base de Datos
 
 ```bash
 # Crear base de datos
-createdb curiel_db
+createdb db_inspecciones
 
 # Ejecutar migraciones
 npm run migrate
@@ -170,221 +223,245 @@ npm run migrate
 npm run seed
 ```
 
-## 📱 Uso de la Aplicación
+## Variables de Entorno
+
+### Backend (.env)
+
+```bash
+# Database
+DATABASE_URL=postgresql://user:pass@host:5432/db_inspecciones
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=db_inspecciones
+DB_USER=postgres
+DB_PASSWORD=postgres123
+DATABASE_SSL=false
+
+# JWT
+JWT_SECRET=tu-secreto-aqui
+JWT_EXPIRES_IN=7d
+JWT_REFRESH_EXPIRES_IN=30d
+
+# Cloudinary
+CLOUDINARY_CLOUD_NAME=tu-cloud-name
+CLOUDINARY_API_KEY=tu-api-key
+CLOUDINARY_API_SECRET=tu-api-secret
+
+# Email (SMTP)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=tu-email@gmail.com
+SMTP_PASSWORD=tu-password
+FROM_EMAIL=noreply@curiel.com
+FROM_NAME=CURIEL Inspecciones
+
+# n8n Webhooks
+N8N_WEBHOOK_INSPECTION_COMPLETED=https://tu-n8n.com/webhook/...
+N8N_WEBHOOK_USER_NOTIFICATION=https://tu-n8n.com/webhook/...
+
+# Redis (opcional)
+REDIS_URL=redis://localhost:6379
+
+# Sentry
+SENTRY_DSN=https://tu-sentry-dsn
+
+# Pool (opcional)
+DB_POOL_MAX=10
+DB_POOL_MIN=2
+```
+
+### Frontend (.env)
+
+```bash
+VITE_API_URL=https://aimachristian-curielbackend.ajcxjb.easypanel.host
+VITE_SENTRY_DSN=https://tu-sentry-dsn
+```
+
+### Mobile (src/config/index.js)
+
+```javascript
+API_URL: 'https://aimachristian-curielbackend.ajcxjb.easypanel.host'
+```
+
+## Uso de la Aplicacion
 
 ### Login
-1. Abrir la app
-2. Ingresar email y contraseña
-3. El sistema asigna permisos según el rol
+1. Abrir la app o ir a la URL del frontend
+2. Ingresar email y contrasena
+3. El sistema asigna permisos segun el rol
 
-### Crear Inspección (Admin/Arquitecto)
-1. Dashboard → Nueva Inspección
+### Crear Inspeccion (Admin/Arquitecto/Supervisor)
+1. Dashboard -> Nueva Inspeccion
 2. Completar datos del proyecto
 3. Asignar inspector
-4. Seleccionar tipo de inspección
+4. Seleccionar tipo de inspeccion
 5. Guardar
 
-### Realizar Inspección (Inspector)
+### Realizar Inspeccion (Inspector)
 1. Ver inspecciones asignadas
-2. Seleccionar inspección
-3. Completar checklist
-4. Tomar fotos
+2. Seleccionar inspeccion
+3. Completar checklist por areas
+4. Tomar fotos (con compresion automatica)
 5. Firmar
-6. Finalizar → genera PDF automáticamente
+6. Finalizar -> genera PDF automaticamente
 
 ### Generar Reporte
-- Al finalizar inspección, el PDF se genera automáticamente
-- Se envía por email al cliente (vía n8n)
+- Al finalizar inspeccion, el PDF se genera automaticamente
+- Se envia por email al cliente (via n8n)
 - Disponible en historial
 
-## 🔐 Roles y Permisos
+## Roles y Permisos
 
-| Funcionalidad | Admin | Arquitecto | Inspector |
-|--------------|-------|------------|-----------|
-| Crear usuarios | ✅ | ❌ | ❌ |
-| Crear inspecciones | ✅ | ✅ | ❌ |
-| Realizar inspecciones | ✅ | ✅ | ✅ |
-| Ver todas las inspecciones | ✅ | ✅ | ❌ |
-| Ver inspecciones asignadas | ✅ | ✅ | ✅ |
-| Dashboard completo | ✅ | ✅ | ❌ |
-| Configurar checklists | ✅ | ✅ | ❌ |
-| Descargar reportes | ✅ | ✅ | ✅ |
+| Funcionalidad | Admin | Arquitecto | Supervisor | Inspector |
+|--------------|-------|------------|------------|-----------|
+| Crear usuarios | Si | No | No | No |
+| Crear inspecciones | Si | Si | Si | No |
+| Realizar inspecciones | Si | Si | Si | Si |
+| Ver todas las inspecciones | Si | Si | Si | No |
+| Ver inspecciones asignadas | Si | Si | Si | Si |
+| Dashboard completo | Si | Si | Si | No |
+| Dashboard supervisor | Si | No | Si | No |
+| Alertas y evaluaciones | Si | No | Si | No |
+| Configurar checklists | Si | Si | No | No |
+| Descargar reportes | Si | Si | Si | Si |
 
-### 🚨 Master admin (usuario con permisos totales)
+## API Endpoints
 
-Al ejecutar `npm run seed` el sistema crea (o verifica) un usuario **admin** que también recibe el flag `isMasterAdmin`. Este es el único usuario que puede:
-
-- Crear/editar/borrar usuarios
-- Transferir el rol de master admin a otro usuario
-- Acceder a todos los endpoints restringidos (incluso si no tiene el rol `admin`)
-
-> Puedes cambiar las credenciales de este usuario con las variables de entorno `ADMIN_EMAIL` y `ADMIN_PASSWORD`.
-
-- **Email:** `admin@curiel.com` (puede cambiarse con `ADMIN_EMAIL`)
-- **Contraseña:** `admin123` (puede cambiarse con `ADMIN_PASSWORD`)
-
-> Si usas un entorno real, cambia estas credenciales y asegúrate de no exponerlas públicamente.
-
-### 🔁 Transferir el Master Admin
-
-Para asignar el master admin a otro usuario:
-
-- `POST /api/v1/users/:id/transfer-master` (requiere token del master admin actual)
-
-El sistema garantiza que solo haya un único `isMasterAdmin = true` en la base de datos.
-
-## 🌐 API Endpoints
-
-### Autenticación
-- `POST /api/auth/login` - Login
-- `POST /api/auth/register` - Registro (solo admin)
-- `POST /api/auth/refresh` - Refrescar token
+### Autenticacion
+- `POST /api/v1/auth/login` - Login
+- `POST /api/v1/auth/register` - Registro (solo admin)
+- `POST /api/v1/auth/refresh` - Refrescar token
+- `POST /api/v1/auth/logout` - Cerrar sesion
+- `POST /api/v1/auth/forgot-password` - Olvide contrasena
+- `POST /api/v1/auth/reset-password` - Restablecer contrasena
 
 ### Usuarios (Admin)
-- **POST /api/v1/users** - Crear usuario (solo admin)  
-  Payload mínimo:
-  ```json
-  {
-    "email": "usuario@dominio.com",
-    "password": "secret123",
-    "firstName": "Nombre",
-    "lastName": "Apellido",
-    "role": "inspector" // o "arquitecto" / "admin"
-  }
-  ```
-- **GET /api/v1/users** - Listar usuarios (solo admin)
-- **PUT /api/v1/users/:id** - Actualizar usuario (solo admin)
-- **PATCH /api/v1/users/:id/status** - Activar/desactivar usuario (solo admin)
-- **DELETE /api/v1/users/:id** - Eliminar usuario (solo admin)
+- `GET /api/v1/users` - Listar usuarios
+- `POST /api/v1/users` - Crear usuario
+- `PUT /api/v1/users/:id` - Actualizar usuario
+- `PATCH /api/v1/users/:id/status` - Activar/desactivar
+- `DELETE /api/v1/users/:id` - Eliminar usuario
 
 ### Inspecciones
-- `GET /api/inspections` - Listar inspecciones
-- `POST /api/inspections` - Crear inspección
-- `GET /api/inspections/:id` - Ver inspección
-- `PUT /api/inspections/:id` - Actualizar inspección
-- `DELETE /api/inspections/:id` - Eliminar inspección
-- `POST /api/inspections/:id/complete` - Finalizar inspección
+- `GET /api/v1/inspections` - Listar inspecciones
+- `POST /api/v1/inspections` - Crear inspeccion
+- `GET /api/v1/inspections/:id` - Ver inspeccion
+- `PUT /api/v1/inspections/:id` - Actualizar inspeccion
+- `DELETE /api/v1/inspections/:id` - Eliminar inspeccion
+- `POST /api/v1/inspections/:id/complete` - Finalizar inspeccion
+- `POST /api/v1/inspections/:id/cancel` - Cancelar inspeccion
+- `POST /api/v1/inspections/:id/reschedule` - Reprogramar inspeccion
+
+### Ejecucion de Inspeccion
+- `GET /api/v1/inspections/:id/execution` - Obtener datos de ejecucion
+- `POST /api/v1/inspections/:id/execution/areas` - Crear area
+- `PUT /api/v1/inspections/:id/execution/areas/:areaId` - Actualizar area
+- `POST /api/v1/inspections/:id/execution/observations` - Crear observacion
+- `POST /api/v1/inspections/:id/execution/photos` - Subir foto
 
 ### Checklists
-- `GET /api/checklists` - Listar checklists
-- `POST /api/checklists` - Crear checklist
-- `PUT /api/checklists/:id` - Actualizar checklist
+- `GET /api/v1/checklists` - Listar checklists
+- `POST /api/v1/checklists` - Crear checklist
+- `PUT /api/v1/checklists/:id` - Actualizar checklist
 
 ### Fotos
-- `POST /api/photos/upload` - Subir foto
-- `GET /api/photos/:id` - Obtener foto
-- `DELETE /api/photos/:id` - Eliminar foto
+- `POST /api/v1/photos/upload` - Subir foto
+- `GET /api/v1/photos/:id` - Obtener foto
+- `DELETE /api/v1/photos/:id` - Eliminar foto
 
-### Reportes
-- `GET /api/reports/:inspectionId` - Generar/descargar PDF
-- `GET /api/reports/history` - Historial de reportes
+### Clientes (Admin)
+- `GET /api/v1/clients` - Listar clientes
+- `POST /api/v1/clients` - Crear cliente
+- `PUT /api/v1/clients/:id` - Actualizar cliente
+- `DELETE /api/v1/clients/:id` - Eliminar cliente
 
-### Dashboard
-- `GET /api/dashboard/stats` - Estadísticas
+### Supervisor
+- `GET /api/v1/alerts` - Listar alertas
+- `GET /api/v1/evaluations` - Listar evaluaciones
+- `GET /api/v1/suspensions` - Listar suspensiones
+- `GET /api/v1/supervisor/dashboard` - Dashboard de supervisor
 
-Ver documentación completa en `docs/API.md`
+### Salud y Monitoreo
+- `GET /api/v1/health` - Health check detallado
+- `GET /api/v1/metrics` - Metricas Prometheus
 
-## 🔄 Integración con n8n
+Ver documentacion completa en `docs/API.md`
 
-### Webhook al Finalizar Inspección
-```javascript
-POST https://your-n8n-instance.com/webhook/inspection-completed
-{
-  "inspectionId": "uuid",
-  "clientEmail": "cliente@empresa.com",
-  "pdfUrl": "https://cloudinary.com/...",
-  "inspectorName": "Juan Pérez",
-  "projectName": "Torre Solar"
-}
+## CI/CD
+
+### GitHub Actions
+- **test.yml**: Tests para los 3 paquetes
+- **lint.yml**: ESLint para frontend y backend
+- **build.yml**: Build verification
+
+### Deployment (EasyPanel)
+```bash
+# 1. Push a GitHub
+git push origin main
+
+# 2. En EasyPanel, ir a cada servicio y clickear "Implementar"
+# - backend: https://aimachristian-curielbackend.ajcxjb.easypanel.host
+# - frontend: https://aimachristian-curielapp.ajcxjb.easypanel.host
 ```
 
-Ver flujos completos en `n8n-workflows/`
-
-## 📦 Deployment
-
-### Backend (Railway/Render)
-```bash
-# Configurar variables de entorno
-DATABASE_URL=postgresql://...
-JWT_SECRET=...
-CLOUDINARY_URL=...
-
-# Deploy
-git push railway main
-```
-
-### Mobile (Expo)
-```bash
-# Build Android
-eas build --platform android
-
-# Build iOS
-eas build --platform ios
-
-# Publicar en stores
-eas submit
-```
-
-Ver guía completa en `docs/DEPLOYMENT.md`
-
-## 🧪 Testing
+## Testing
 
 ```bash
-# Backend tests
-cd backend
+# Backend tests (143 tests)
+cd backend_legacy
 npm test
 
-# Mobile tests
+# Frontend tests (125 tests)
+cd frontend
+npm test
+
+# Mobile tests (54 tests)
 cd mobile
 npm test
 ```
 
-## 📈 Roadmap
+## Roadmap
 
-### Versión 1.0 (MVP) ✅
-- [x] Autenticación y roles
-- [x] CRUD de inspecciones
-- [x] Checklists
-- [x] Evidencia fotográfica
-- [x] Generación de PDF
-- [x] Dashboard básico
-- [x] Integración n8n
+### Fase 0-10: COMPLETADAS
+- [x] Preparacion y seguridad base
+- [x] Testing (322+ tests)
+- [x] Entidad Cliente
+- [x] Rol Supervisor
+- [x] Offline/Online
+- [x] Notificaciones y Email
+- [x] CI/CD con GitHub Actions
+- [x] Observabilidad (Winston, Sentry, Prometheus, Grafana)
+- [x] Mobile MVP
+- [x] Performance y Pulido (PWA, code splitting, Redis cache)
 
-### Versión 1.1 (Próximamente)
+### Fase 11: Documentacion y Lanzamiento (EN PROGRESO)
+- [x] LICENSE.txt
+- [x] CHANGELOG.md
+- [x] README.md actualizado
+- [ ] Guia de usuario
+- [ ] Guia de admin
+- [ ] Git tags v1.0.0
+- [ ] Deploy a produccion
+- [ ] Smoke tests
+
+### Futuro
 - [ ] Multi-empresa (tenants)
 - [ ] Plantillas de checklist avanzadas
-- [ ] Reportes con gráficos
+- [ ] Reportes con graficos
 - [ ] Notificaciones push
-- [ ] Modo offline completo
-- [ ] Exportación a Excel
+- [ ] Exportacion a Excel
+- [ ] IA para deteccion de anomalias en fotos
 
-### Versión 2.0 (Futuro)
-- [ ] IA para detección de anomalías en fotos
-- [ ] Reconocimiento de voz para notas
-- [ ] Integración con drones
-- [ ] Realidad aumentada
-- [ ] App web (admin)
+## Licencia
 
-## 🤝 Contribución
+Propietario - Todos los derechos reservados (c) 2026
 
-Este es un proyecto privado/propietario. Para contribuir, contacta al desarrollador.
+## Soporte
 
-## 📄 Licencia
-
-Propietario - Todos los derechos reservados © 2026
-
-## 👨‍💻 Desarrollador
-
-**Freelancer:** [Tu Nombre]
-**Email:** [tu@email.com]
-**GitHub:** [tu-usuario]
-
-## 📞 Soporte
-
-Para soporte técnico o consultas comerciales:
+Para soporte tecnico o consultas comerciales:
 - Email: soporte@curiel.com
-- WhatsApp: +XX XXX XXX XXXX
 
 ---
 
-**CURIEL** - Digitaliza tus inspecciones técnicas 🏗️
+**CURIEL** - Digitaliza tus inspecciones tecnicas
