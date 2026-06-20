@@ -51,6 +51,15 @@ async function main() {
     if (existingAdmin) {
         adminUser = existingAdmin;
         console.log(`\n  Usuario admin "${ADMIN_USER.email}" ya existe (id: ${existingAdmin.id})`);
+        const passwordHash = await bcrypt.hash(ADMIN_USER.password, 12);
+        const passwordMatches = await bcrypt.compare(ADMIN_USER.password, existingAdmin.passwordHash);
+        if (!existingAdmin.isMasterAdmin || !passwordMatches) {
+            await prisma.user.update({
+                where: { id: existingAdmin.id },
+                data: { passwordHash, isMasterAdmin: ADMIN_USER.isMasterAdmin, isActive: true },
+            });
+            console.log('  Password y flags actualizados');
+        }
     } else {
         const passwordHash = await bcrypt.hash(ADMIN_USER.password, 12);
         adminUser = await prisma.user.create({
