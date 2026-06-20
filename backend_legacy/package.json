@@ -9,7 +9,6 @@
     "migrate:all": "node scripts/migrate-all.js",
     "seed:auth": "node scripts/seed-auth.js",
     "verify": "node scripts/verify.js",
-    "postinstall": "npx prisma generate",
     "test": "jest --coverage --passWithNoTests",
     "lint": "eslint src/**/*.js"
   },
