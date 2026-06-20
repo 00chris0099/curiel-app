@@ -1,5 +1,6 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from '@react-native-community/netinfo';
 import config from '../config';
 
 // Crear instancia de axios
@@ -26,12 +27,27 @@ const processQueue = (error, token = null) => {
     failedQueue = [];
 };
 
-// Interceptor para agregar token automaticamente
+// Offline interceptor: queue requests when offline
 api.interceptors.request.use(
     async (requestConfig) => {
+        // Skip offline check for auth endpoints
+        const requestUrl = requestConfig.url || '';
+        if (requestUrl.includes('/auth/login') || requestUrl.includes('/auth/refresh')) {
+            return requestConfig;
+        }
+
+        const state = await NetInfo.fetch();
+        const isOnline = state.isConnected && state.isInternetReachable !== false;
+
+        if (!isOnline && requestConfig.method !== 'get') {
+            // For mutation requests when offline, throw a specific error
+            const error = new Error('OFFLINE_QUEUED');
+            error.config = requestConfig;
+            return Promise.reject(error);
+        }
+
         try {
             const token = await AsyncStorage.getItem(config.STORAGE_KEYS.AUTH_TOKEN);
-            const requestUrl = requestConfig.url || '';
             if (token && !requestUrl.includes('/auth/login') && !requestUrl.includes('/auth/register') && !requestUrl.includes('/auth/refresh')) {
                 requestConfig.headers.Authorization = `Bearer ${token}`;
             }

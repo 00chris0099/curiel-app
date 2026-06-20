@@ -1,0 +1,72 @@
+{
+  "name": "CURIEL - Inspecciones Vencidas",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "cronExpression", "expression": "0 9 * * 1" }]
+        }
+      },
+      "id": "schedule-weekly",
+      "name": "Weekly Monday 9am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.BACKEND_URL}}/api/v1/inspections?status=en_proceso&limit=100",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "get-in-process",
+      "name": "Get In-Process Inspections",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [500, 300],
+      "credentials": {
+        "httpHeaderAuth": { "id": "curiel-api", "name": "CURIEL API" }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json.data.data.length}}",
+              "operation": "largerEqual",
+              "value2": 1
+            }
+          ]
+        }
+      },
+      "id": "check-has-overdue",
+      "name": "Has Overdue?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{$env.SMTP_FROM_EMAIL || 'noreply@curiel.com'}}",
+        "toEmail": "={{$env.ADMIN_EMAIL || 'admin@curiel.com'}}",
+        "subject": "[CURIEL] Inspecciones vencidas o en proceso prolongado",
+        "html": "<h2>Inspecciones vencidas</h2><p>Las siguientes inspecciones llevan mucho tiempo en proceso:</p><ul>{{$json.data.data.forEach(function(insp) { return '<li><strong>' + insp.projectName + '</strong> - ' + insp.scheduledDate + '</li>'; })}}</ul><p><a href='{{$env.FRONTEND_URL}}/inspections'>Revisar inspecciones</a></p>",
+        "options": {}
+      },
+      "id": "send-overdue-email",
+      "name": "Send Overdue Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [950, 300]
+    }
+  ],
+  "connections": {
+    "Weekly Monday 9am": { "main": [[ { "node": "Get In-Process Inspections", "type": "main", "index": 0 } ]] },
+    "Get In-Process Inspections": { "main": [[ { "node": "Has Overdue?", "type": "main", "index": 0 } ]] },
+    "Has Overdue?": { "main": [[ { "node": "Send Overdue Email", "type": "main", "index": 0 } ], []] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

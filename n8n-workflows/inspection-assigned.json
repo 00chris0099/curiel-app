@@ -1,0 +1,60 @@
+{
+  "name": "CURIEL - Asignacion de Inspeccion",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "inspection-assigned",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-inspection-assigned",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.headers['X-CURIEL-SECRET']}}",
+              "operation": "equals",
+              "value2": "={{$env.CURIEL_SECRET_TOKEN}}"
+            }
+          ]
+        }
+      },
+      "id": "validate-secret",
+      "name": "Validate Secret",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{$env.SMTP_FROM_EMAIL || 'noreply@curiel.com'}}",
+        "toEmail": "={{$json.body.inspector.email}}",
+        "subject": "Nueva inspeccion asignada - {{$json.body.inspection.projectName}}",
+        "html": "<h2>Nueva inspeccion asignada</h2><p>Hola {{$json.body.inspector.fullName}},</p><p>Se te ha asignado una nueva inspeccion:</p><ul><li><strong>Proyecto:</strong> {{$json.body.inspection.projectName}}</li><li><strong>Cliente:</strong> {{$json.body.inspection.clientName}}</li><li><strong>Fecha:</strong> {{$json.body.inspection.scheduledDate}}</li><li><strong>Ubicacion:</strong> {{$json.body.inspection.location}}</li></ul><p><a href='{{$env.FRONTEND_URL}}/inspections/{{$json.body.inspection.id}}'>Ver inspeccion</a></p>",
+        "options": {}
+      },
+      "id": "send-email-inspector",
+      "name": "Email to Inspector",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [650, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[ { "node": "Validate Secret", "type": "main", "index": 0 } ]] },
+    "Validate Secret": {
+      "main": [
+        [ { "node": "Email to Inspector", "type": "main", "index": 0 } ],
+        []
+      ]
+    }
+  },
+  "settings": { "executionOrder": "v1" }
+}

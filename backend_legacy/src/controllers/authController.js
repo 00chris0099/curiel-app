@@ -1,8 +1,11 @@
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const { User, Role, RefreshToken } = require('../models');
+const bcrypt = require('bcryptjs');
+const { User, Role, RefreshToken, PasswordResetToken } = require('../models');
 const config = require('../config');
 const { createAuditLog } = require('../middlewares/auditLog');
+const { sendEmail } = require('../services/emailService');
+const { welcomeEmail, passwordResetEmail } = require('../utils/emailTemplates');
 
 const formatUser = (user) => {
     const u = user.toJSON();
@@ -198,6 +201,14 @@ const register = async (req, res, next) => {
             role: roleName
         });
 
+        // Enviar email de bienvenida con contrasena temporal
+        try {
+            const { subject, html } = welcomeEmail(user, password);
+            await sendEmail({ to: user.email, subject, html });
+        } catch (emailError) {
+            console.error('Error sending welcome email:', emailError.message);
+        }
+
         res.status(201).json({
             success: true,
             message: 'Usuario creado exitosamente',
@@ -285,7 +296,7 @@ const changePassword = async (req, res, next) => {
         user.password = newPassword;
         await user.save();
 
-        await createAuditLog(req.user.id, 'change_password', 'User', user.id);
+        await createAuditLog(req.userId, 'change_password', 'User', user.id);
 
         res.json({
             success: true,
@@ -428,6 +439,131 @@ const logout = async (req, res, next) => {
     }
 };
 
+/**
+ * Solicitar restablecimiento de contrasena
+ * POST /api/auth/forgot-password
+ */
+const forgotPassword = async (req, res, next) => {
+    try {
+        const { email } = req.body;
+
+        const user = await User.findOne({ where: { email } });
+
+        // Siempre devolver success para no revelar si el email existe
+        if (!user) {
+            return res.json({
+                success: true,
+                message: 'Si el email esta registrado, recibiras un enlace para restablecer tu contrasena.'
+            });
+        }
+
+        // Invalidar tokens anteriores del mismo usuario
+        await PasswordResetToken.update(
+            { usedAt: new Date() },
+            { where: { userId: user.id, usedAt: null } }
+        );
+
+        // Crear nuevo token (1 hora de expiracion)
+        const resetToken = PasswordResetToken.generateToken();
+        const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hora
+
+        await PasswordResetToken.create({
+            userId: user.id,
+            token: resetToken,
+            expiresAt
+        });
+
+        // Enviar email
+        const resetUrl = `${config.urls.frontend}/reset-password?token=${resetToken}`;
+        const { subject, html } = passwordResetEmail(user, resetUrl);
+
+        await sendEmail({
+            to: user.email,
+            subject,
+            html
+        });
+
+        await createAuditLog(user.id, 'forgot_password', 'User', user.id);
+
+        res.json({
+            success: true,
+            message: 'Si el email esta registrado, recibiras un enlace para restablecer tu contrasena.'
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Restablecer contrasena con token
+ * POST /api/auth/reset-password
+ */
+const resetPassword = async (req, res, next) => {
+    try {
+        const { token, newPassword } = req.body;
+
+        if (!token || !newPassword) {
+            return res.status(400).json({
+                success: false,
+                message: 'Token y nueva contrasena son requeridos'
+            });
+        }
+
+        if (newPassword.length < 6) {
+            return res.status(400).json({
+                success: false,
+                message: 'La contrasena debe tener al menos 6 caracteres'
+            });
+        }
+
+        const resetTokenRecord = await PasswordResetToken.findOne({
+            where: { token, usedAt: null }
+        });
+
+        if (!resetTokenRecord) {
+            return res.status(400).json({
+                success: false,
+                message: 'Token invalido o ya utilizado'
+            });
+        }
+
+        if (resetTokenRecord.isExpired()) {
+            return res.status(400).json({
+                success: false,
+                message: 'El token ha expirado. Solicita uno nuevo.'
+            });
+        }
+
+        // Actualizar contrasena
+        const user = await User.findByPk(resetTokenRecord.userId);
+        if (!user) {
+            return res.status(400).json({
+                success: false,
+                message: 'Usuario no encontrado'
+            });
+        }
+
+        user.password = newPassword;
+        await user.save();
+
+        // Marcar token como usado
+        resetTokenRecord.usedAt = new Date();
+        await resetTokenRecord.save();
+
+        // Revocar todos los refresh tokens del usuario
+        await RefreshToken.destroy({ where: { userId: user.id } });
+
+        await createAuditLog(user.id, 'reset_password', 'User', user.id);
+
+        res.json({
+            success: true,
+            message: 'Contrasena restablecida exitosamente. Inicia sesion con tu nueva contrasena.'
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     login,
     register,
@@ -435,5 +571,7 @@ module.exports = {
     updateProfile,
     changePassword,
     refreshToken,
-    logout
+    logout,
+    forgotPassword,
+    resetPassword
 };

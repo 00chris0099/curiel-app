@@ -115,4 +115,35 @@ router.post(
     authController.logout
 );
 
+/**
+ * @route   POST /api/auth/forgot-password
+ * @desc    Solicitar restablecimiento de contrasena
+ * @access  Public
+ */
+router.post(
+    '/forgot-password',
+    [
+        body('email').isEmail().withMessage('Email inválido'),
+        validateRequest
+    ],
+    authController.forgotPassword
+);
+
+/**
+ * @route   POST /api/auth/reset-password
+ * @desc    Restablecer contrasena con token
+ * @access  Public
+ */
+router.post(
+    '/reset-password',
+    [
+        body('token').notEmpty().withMessage('Token requerido'),
+        body('newPassword')
+            .isLength({ min: 6 })
+            .withMessage('La contrasena debe tener al menos 6 caracteres'),
+        validateRequest
+    ],
+    authController.resetPassword
+);
+
 module.exports = router;

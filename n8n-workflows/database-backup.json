@@ -1,0 +1,42 @@
+{
+  "name": "CURIEL - Backup Base de Datos",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "cronExpression", "expression": "0 3 * * *" }]
+        }
+      },
+      "id": "schedule-daily-3am",
+      "name": "Daily at 3am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "command": "pg_dump -h {{$env.DB_HOST}} -U {{$env.DB_USER}} -d {{$env.DB_NAME}} | gzip > /backups/curiel_$(date +%Y%m%d_%H%M%S).sql.gz"
+      },
+      "id": "run-backup",
+      "name": "Run pg_dump",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "command": "find /backups -name 'curiel_*.sql.gz' -mtime +30 -delete"
+      },
+      "id": "cleanup-old-backups",
+      "name": "Cleanup Old Backups",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [750, 300]
+    }
+  ],
+  "connections": {
+    "Daily at 3am": { "main": [[ { "node": "Run pg_dump", "type": "main", "index": 0 } ]] },
+    "Run pg_dump": { "main": [[ { "node": "Cleanup Old Backups", "type": "main", "index": 0 } ]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

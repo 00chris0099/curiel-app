@@ -18,6 +18,7 @@ const Client = require('./Client');
 const Alert = require('./Alert');
 const Suspension = require('./Suspension');
 const Evaluation = require('./Evaluation');
+const PasswordResetToken = require('./PasswordResetToken');
 
 // ========================
 // RELACIONES ENTRE MODELOS
@@ -366,6 +367,17 @@ Evaluation.belongsTo(User, {
     as: 'evaluatedUser'
 });
 
+// User - PasswordResetToken
+User.hasMany(PasswordResetToken, {
+    foreignKey: 'userId',
+    as: 'resetTokens',
+    onDelete: 'CASCADE'
+});
+PasswordResetToken.belongsTo(User, {
+    foreignKey: 'userId',
+    as: 'user'
+});
+
 // Exportar todos los modelos
 module.exports = {
     User,
@@ -387,5 +399,6 @@ module.exports = {
     Client,
     Alert,
     Suspension,
-    Evaluation
+    Evaluation,
+    PasswordResetToken
 };
