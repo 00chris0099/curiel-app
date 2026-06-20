@@ -1,14 +1,11 @@
 const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
 
-// Variables de entorno para la app móvil
 export default {
     // URL del backend
     API_URL: apiUrl,
 
-    // En producción, usar EXPO_PUBLIC_API_URL=https://api.tudominio.com/api/v1
-
     // Timeouts
-    API_TIMEOUT: 30000, // 30 segundos
+    API_TIMEOUT: 30000,
 
     // AsyncStorage keys
     STORAGE_KEYS: {
@@ -19,10 +16,18 @@ export default {
         CACHED_INSPECTIONS: '@curiel:cached_inspections'
     },
 
-    // Configuración de la app
+    // SQLite
+    DB_NAME: 'curiel.db',
+
+    // Offline / Sync
+    SYNC_INTERVAL_MS: 30000,
+    AUTO_SAVE_INTERVAL_MS: 30000,
+    MAX_RETRY_ATTEMPTS: 3,
+    ENABLE_OFFLINE_MODE: true,
+
+    // App
     APP_CONFIG: {
-        MAX_PHOTO_SIZE: 5 * 1024 * 1024, // 5MB
-        PHOTO_QUALITY: 0.8,
-        ENABLE_OFFLINE_MODE: true
+        MAX_PHOTO_SIZE: 5 * 1024 * 1024,
+        PHOTO_QUALITY: 0.8
     }
 };

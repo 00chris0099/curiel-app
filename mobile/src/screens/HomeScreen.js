@@ -10,10 +10,15 @@ import {
     Alert
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { useOffline } from '../context/OfflineContext';
 import { inspectionService } from '../services/api';
+import { inspectionsRepo } from '../database/inspections.repo';
+import { OfflineBadge } from '../components/OfflineBadge';
+import { SyncButton } from '../components/SyncButton';
 
 const HomeScreen = ({ navigation }) => {
     const { user } = useAuth();
+    const { isOnline, pendingCount } = useOffline();
     const [inspections, setInspections] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -30,20 +35,27 @@ const HomeScreen = ({ navigation }) => {
 
     const loadInspections = async () => {
         try {
-            const response = await inspectionService.getAll();
+            // Always try local cache first
+            const localData = await inspectionsRepo.getAll();
+            if (localData.length > 0) {
+                setInspections(localData);
+                updateStats(localData);
+            }
 
-            if (response.success) {
-                const data = response.data.inspections;
-                setInspections(data);
-
-                // Calcular estadísticas
-                const newStats = {
-                    total: data.length,
-                    pendiente: data.filter(i => i.status === 'pendiente').length,
-                    en_proceso: data.filter(i => i.status === 'en_proceso').length,
-                    finalizada: data.filter(i => i.status === 'finalizada').length
-                };
-                setStats(newStats);
+            // If online, refresh from server and update cache
+            if (isOnline) {
+                try {
+                    const response = await inspectionService.getAll();
+                    if (response.success) {
+                        const data = response.data.inspections;
+                        setInspections(data);
+                        updateStats(data);
+                        // Update local cache
+                        await inspectionsRepo.upsertMany(data);
+                    }
+                } catch {
+                    // Use cached data if API fails
+                }
             }
         } catch (error) {
             Alert.alert('Error', 'No se pudieron cargar las inspecciones');
@@ -51,6 +63,15 @@ const HomeScreen = ({ navigation }) => {
             setLoading(false);
             setRefreshing(false);
         }
+    };
+
+    const updateStats = (data) => {
+        setStats({
+            total: data.length,
+            pendiente: data.filter(i => i.status === 'pendiente').length,
+            en_proceso: data.filter(i => i.status === 'en_proceso').length,
+            finalizada: data.filter(i => i.status === 'finalizada').length
+        });
     };
 
     const onRefresh = () => {
@@ -118,8 +139,13 @@ const HomeScreen = ({ navigation }) => {
         <View style={styles.container}>
             {/* Header con estadísticas */}
             <View style={styles.header}>
-                <Text style={styles.welcomeText}>Hola, {user?.firstName}!</Text>
-                <Text style={styles.roleText}>{user?.role?.toUpperCase()}</Text>
+                <View style={styles.headerTop}>
+                    <View>
+                        <Text style={styles.welcomeText}>Hola, {user?.firstName}!</Text>
+                        <Text style={styles.roleText}>{user?.role?.toUpperCase()}</Text>
+                    </View>
+                    <OfflineBadge />
+                </View>
             </View>
 
             {/* Stats Cards */}
@@ -142,9 +168,18 @@ const HomeScreen = ({ navigation }) => {
                 </View>
             </View>
 
+            {/* Sync bar */}
+            {pendingCount > 0 && (
+                <View style={styles.syncBar}>
+                    <Text style={styles.syncText}>{pendingCount} item(s) pendientes de sincronizar</Text>
+                    <SyncButton />
+                </View>
+            )}
+
             {/* Lista de inspecciones */}
             <View style={styles.listHeader}>
                 <Text style={styles.listTitle}>Mis Inspecciones</Text>
+                {!isOnline && <Text style={styles.offlineNote}>Modo offline - mostrando cache local</Text>}
             </View>
 
             <FlatList
@@ -189,6 +224,11 @@ const styles = StyleSheet.create({
         backgroundColor: '#1a237e',
         padding: 24,
         paddingTop: 48
+    },
+    headerTop: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center'
     },
     welcomeText: {
         fontSize: 24,
@@ -236,6 +276,26 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: '600',
         color: '#333'
+    },
+    offlineNote: {
+        fontSize: 12,
+        color: '#ff9800',
+        marginTop: 2
+    },
+    syncBar: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        backgroundColor: '#fff3e0',
+        marginHorizontal: 16,
+        marginBottom: 8,
+        padding: 12,
+        borderRadius: 8
+    },
+    syncText: {
+        fontSize: 13,
+        color: '#e65100',
+        flex: 1
     },
     listContainer: {
         padding: 16,

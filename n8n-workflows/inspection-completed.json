@@ -1,0 +1,75 @@
+{
+  "name": "CURIEL - Inspeccion Completada",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "inspection-completed",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-inspection-completed",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.headers['X-CURIEL-SECRET']}}",
+              "operation": "equals",
+              "value2": "={{$env.CURIEL_SECRET_TOKEN}}"
+            }
+          ]
+        }
+      },
+      "id": "validate-secret",
+      "name": "Validate Secret",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{$env.SMTP_FROM_EMAIL || 'noreply@curiel.com'}}",
+        "toEmail": "={{$json.body.inspection.clientEmail || 'admin@curiel.com'}}",
+        "subject": "Inspeccion completada - {{$json.body.inspection.projectName}}",
+        "html": "<h2>Inspeccion completada</h2><p>La inspeccion <strong>{{$json.body.inspection.projectName}}</strong> ha sido completada exitosamente.</p><p>Cliente: {{$json.body.inspection.clientName}}</p><p>Estado: {{$json.body.inspection.status}}</p>",
+        "options": {}
+      },
+      "id": "send-email-client",
+      "name": "Email to Client",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [650, 200]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{$env.SMTP_FROM_EMAIL || 'noreply@curiel.com'}}",
+        "toEmail": "={{$env.ADMIN_EMAIL || 'admin@curiel.com'}}",
+        "subject": "[CURIEL] Inspeccion completada - {{$json.body.inspection.projectName}}",
+        "html": "<h2>Nueva inspeccion completada</h2><p>Proyecto: {{$json.body.inspection.projectName}}</p><p>Cliente: {{$json.body.inspection.clientName}}</p><p>Inspector: {{$json.body.inspection.inspectorId}}</p>",
+        "options": {}
+      },
+      "id": "send-email-admin",
+      "name": "Email to Admin",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [650, 400]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[ { "node": "Validate Secret", "type": "main", "index": 0 } ]] },
+    "Validate Secret": {
+      "main": [
+        [ { "node": "Email to Client", "type": "main", "index": 0 } ],
+        []
+      ]
+    },
+    "Email to Client": { "main": [[ { "node": "Email to Admin", "type": "main", "index": 0 } ]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

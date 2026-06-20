@@ -643,6 +643,18 @@ class InspectionService {
                 title: 'Inspección finalizada',
                 message: `El informe de la inspección ${inspectionLabel} fue aprobado.`
             });
+
+            // Trigger n8n webhook para inspeccion completada
+            triggerN8nWebhook('inspectionCompleted', {
+                event: 'inspection_finalized',
+                inspection: {
+                    id: inspection.id,
+                    projectName: inspection.projectName,
+                    clientName: inspection.clientName,
+                    inspectorId: inspection.inspectorId,
+                    status: inspection.status
+                }
+            });
         }
     }
 }

@@ -2,12 +2,18 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
+import { OfflineProvider } from './src/context/OfflineContext';
 import { ActivityIndicator, View } from 'react-native';
 
 // Screens
 import LoginScreen from './src/screens/LoginScreen';
 import HomeScreen from './src/screens/HomeScreen';
-// Importaremos más screens después
+import InspectionDetailScreen from './src/screens/InspectionDetailScreen';
+import ExecutionScreen from './src/screens/ExecutionScreen';
+import PhotoCaptureScreen from './src/screens/PhotoCaptureScreen';
+import ConflictResolutionScreen from './src/screens/ConflictResolutionScreen';
+import OfflineStatusScreen from './src/screens/OfflineStatusScreen';
+import CreateInspectionScreen from './src/screens/CreateInspectionScreen';
 
 const Stack = createStackNavigator();
 
@@ -36,14 +42,12 @@ const Navigation = () => {
                 }}
             >
                 {!isAuthenticated ? (
-                    // No autenticado - mostrar Login
                     <Stack.Screen
                         name="Login"
                         component={LoginScreen}
                         options={{ headerShown: false }}
                     />
                 ) : (
-                    // Autenticado - mostrar App
                     <>
                         <Stack.Screen
                             name="Home"
@@ -53,7 +57,36 @@ const Navigation = () => {
                                 headerLeft: null
                             }}
                         />
-                        {/* Aquí agregaremos más screens */}
+                        <Stack.Screen
+                            name="InspectionDetail"
+                            component={InspectionDetailScreen}
+                            options={{ title: 'Detalle de Inspeccion' }}
+                        />
+                        <Stack.Screen
+                            name="Execution"
+                            component={ExecutionScreen}
+                            options={{ title: 'Ejecucion' }}
+                        />
+                        <Stack.Screen
+                            name="PhotoCapture"
+                            component={PhotoCaptureScreen}
+                            options={{ title: 'Tomar Foto', headerShown: false }}
+                        />
+                        <Stack.Screen
+                            name="ConflictResolution"
+                            component={ConflictResolutionScreen}
+                            options={{ title: 'Conflictos' }}
+                        />
+                        <Stack.Screen
+                            name="OfflineStatus"
+                            component={OfflineStatusScreen}
+                            options={{ title: 'Estado Offline' }}
+                        />
+                        <Stack.Screen
+                            name="CreateInspection"
+                            component={CreateInspectionScreen}
+                            options={{ title: 'Nueva Inspeccion' }}
+                        />
                     </>
                 )}
             </Stack.Navigator>
@@ -64,7 +97,9 @@ const Navigation = () => {
 export default function App() {
     return (
         <AuthProvider>
-            <Navigation />
+            <OfflineProvider>
+                <Navigation />
+            </OfflineProvider>
         </AuthProvider>
     );
 }

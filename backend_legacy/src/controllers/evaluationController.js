@@ -2,6 +2,9 @@ const evaluationService = require('../services/evaluationService');
 const { asyncHandler } = require('../middlewares/errorHandler');
 const { createAuditLog } = require('../middlewares/auditLog');
 const { triggerN8nWebhook } = require('../utils/n8n');
+const { sendEmail } = require('../services/emailService');
+const { evaluationEmail } = require('../utils/emailTemplates');
+const { User } = require('../models');
 
 const createEvaluation = asyncHandler(async (req, res) => {
     const evaluation = await evaluationService.generateWeeklyEvaluation(
@@ -27,6 +30,22 @@ const createEvaluation = asyncHandler(async (req, res) => {
             compositeScore: evaluation.compositeScore
         }
     });
+
+    // Enviar email de evaluacion al evaluado
+    try {
+        const evaluatedUser = await User.findByPk(evaluation.evaluatedUserId);
+        if (evaluatedUser) {
+            const { subject, html } = evaluationEmail(evaluatedUser, {
+                score: evaluation.compositeScore,
+                weekStart: evaluation.weekStart,
+                weekEnd: evaluation.weekEnd,
+                comment: evaluation.comment
+            });
+            await sendEmail({ to: evaluatedUser.email, subject, html });
+        }
+    } catch (emailError) {
+        console.error('Error sending evaluation email:', emailError.message);
+    }
 
     res.status(201).json({
         success: true,

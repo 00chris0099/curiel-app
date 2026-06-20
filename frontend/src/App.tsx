@@ -8,6 +8,8 @@ import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Login } from './pages/Login';
+import { ForgotPassword } from './pages/ForgotPassword';
+import { ResetPassword } from './pages/ResetPassword';
 import { Dashboard } from './pages/Dashboard';
 import { Profile } from './pages/Profile';
 import { Inspections } from './pages/Inspections';
@@ -79,6 +81,8 @@ function App() {
       <Routes>
         {/* Ruta pública */}
         <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* Rutas protegidas */}
         <Route

@@ -21,6 +21,6 @@ describe('Mobile Config', () => {
     it('tiene APP_CONFIG con valores validos', () => {
         expect(config.APP_CONFIG.MAX_PHOTO_SIZE).toBe(5 * 1024 * 1024);
         expect(config.APP_CONFIG.PHOTO_QUALITY).toBe(0.8);
-        expect(config.APP_CONFIG.ENABLE_OFFLINE_MODE).toBe(true);
+        expect(config.ENABLE_OFFLINE_MODE).toBe(true);
     });
 });

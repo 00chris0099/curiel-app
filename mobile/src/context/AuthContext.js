@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authService } from '../services/api';
+import { getDB, closeDB } from '../database/schema';
 import config from '../config';
 
 const AuthContext = createContext({});
@@ -10,7 +11,6 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-    // Cargar usuario al iniciar
     useEffect(() => {
         loadStoredUser();
     }, []);
@@ -25,6 +25,8 @@ export const AuthProvider = ({ children }) => {
             if (token[1] && userData[1]) {
                 setUser(JSON.parse(userData[1]));
                 setIsAuthenticated(true);
+                // Initialize SQLite DB on startup if already authenticated
+                await getDB();
             }
         } catch (error) {
             console.error('Error al cargar usuario:', error);
@@ -40,12 +42,14 @@ export const AuthProvider = ({ children }) => {
             if (response.success) {
                 const { user: userData, token, refreshToken } = response.data;
 
-                // Guardar tokens y datos de usuario
                 await AsyncStorage.multiSet([
                     [config.STORAGE_KEYS.AUTH_TOKEN, token],
                     [config.STORAGE_KEYS.REFRESH_TOKEN, refreshToken],
                     [config.STORAGE_KEYS.USER_DATA, JSON.stringify(userData)]
                 ]);
+
+                // Initialize SQLite DB after login
+                await getDB();
 
                 setUser(userData);
                 setIsAuthenticated(true);
@@ -60,7 +64,6 @@ export const AuthProvider = ({ children }) => {
 
     const logout = async () => {
         try {
-            // Attempt to revoke refresh token on backend (best effort)
             const refreshToken = await AsyncStorage.getItem(config.STORAGE_KEYS.REFRESH_TOKEN);
             if (refreshToken) {
                 await authService.logout(refreshToken);
@@ -72,6 +75,9 @@ export const AuthProvider = ({ children }) => {
                 config.STORAGE_KEYS.USER_DATA,
                 config.STORAGE_KEYS.CACHED_INSPECTIONS
             ]);
+
+            // Close SQLite DB on logout
+            await closeDB();
 
             setUser(null);
             setIsAuthenticated(false);

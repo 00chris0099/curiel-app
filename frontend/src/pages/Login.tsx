@@ -1,5 +1,5 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate, Link } from 'react-router-dom';
 import { CustomIcon } from '../components/CustomIcon';
 import { useAuthStore } from '../store/authStore';
 
@@ -127,6 +127,12 @@ export const Login = () => {
                                 )}
                             </button>
                         </form>
+
+                        <p className="mt-4 text-center">
+                            <Link to="/forgot-password" className="text-sm font-medium text-primary-600 hover:text-primary-700">
+                                Olvidé mi contraseña
+                            </Link>
+                        </p>
 
                         <p className="mt-6 text-center text-sm text-slate-500">© 2026 CURIEL. Todos los derechos reservados.</p>
                     </section>
