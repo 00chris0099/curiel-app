@@ -21,6 +21,7 @@
   "author": "Freelancer Developer",
   "license": "PROPRIETARY",
   "dependencies": {
+    "@sentry/node": "^10.59.0",
     "axios": "^1.16.0",
     "bcryptjs": "^2.4.3",
     "cloudinary": "^2.10.0",
@@ -40,11 +41,13 @@
     "pdfkit": "^0.14.0",
     "pg": "^8.11.3",
     "pg-hstore": "^2.3.4",
+    "prom-client": "^15.1.3",
     "puppeteer": "^24.9.0",
     "sequelize": "^6.37.8",
     "streamifier": "^0.1.1",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.0"
+    "swagger-ui-express": "^5.0.0",
+    "winston": "^3.19.0"
   },
   "devDependencies": {
     "eslint": "^8.56.0",

@@ -62,7 +62,7 @@ module.exports = {
         if (process.env.NODE_ENV === 'production') {
           throw new Error('JWT_SECRET is required in production. Set it in your environment variables.');
         }
-        console.warn('⚠️ JWT_SECRET not set. Using insecure default for development only.');
+        console.warn('JWT_SECRET not set. Using insecure default for development only.');
         return 'dev-only-insecure-secret-do-not-use-in-production';
       }
       return process.env.JWT_SECRET;

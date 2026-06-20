@@ -1,5 +1,7 @@
 const axios = require('axios');
 const config = require('../config');
+const logger = require('./logger');
+const { webhooksTriggered } = require('./metrics');
 
 /**
  * Disparar webhook de n8n
@@ -28,7 +30,7 @@ const triggerN8nWebhook = async (webhookType, data) => {
         }
 
         if (!webhookUrl) {
-            console.warn(`⚠️ Webhook ${webhookType} no configurado`);
+            logger.warn(`Webhook ${webhookType} no configurado`);
             return null;
         }
 
@@ -43,10 +45,12 @@ const triggerN8nWebhook = async (webhookType, data) => {
                 : {}
         });
 
-        console.log(`✅ Webhook ${webhookType} disparado exitosamente`);
+        logger.info(`Webhook ${webhookType} disparado exitosamente`);
+        webhooksTriggered.inc({ type: webhookType, status: 'success' });
         return response.data;
     } catch (error) {
-        console.error(`❌ Error al disparar webhook ${webhookType}:`, error.message);
+        logger.error(`Error al disparar webhook ${webhookType}`, { error: error.message });
+        webhooksTriggered.inc({ type: webhookType, status: 'failed' });
         // No lanzamos error para no romper el flujo principal
         return null;
     }

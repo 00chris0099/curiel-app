@@ -206,7 +206,8 @@ const register = async (req, res, next) => {
             const { subject, html } = welcomeEmail(user, password);
             await sendEmail({ to: user.email, subject, html });
         } catch (emailError) {
-            console.error('Error sending welcome email:', emailError.message);
+            const logger = require('../utils/logger');
+        logger.error('Error sending welcome email', { error: emailError.message });
         }
 
         res.status(201).json({

@@ -1,5 +1,6 @@
 const { Sequelize } = require('sequelize');
 const config = require('./index');
+const logger = require('../utils/logger');
 
 let sequelize;
 
@@ -46,11 +47,11 @@ if (config.database.url) {
 const testConnection = async () => {
     try {
         await sequelize.authenticate();
-        console.log('✅ Base de datos conectada exitosamente');
+        logger.info('Base de datos conectada exitosamente');
         return true;
     } catch (error) {
         const details = error.parent?.message || error.original?.message || error.message || error;
-        console.error('❌ Error al conectar a la base de datos:', details);
+        logger.error('Error al conectar a la base de datos', { error: details });
         return false;
     }
 };

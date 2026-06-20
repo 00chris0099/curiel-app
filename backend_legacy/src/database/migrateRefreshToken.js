@@ -3,10 +3,11 @@
  * Ejecutar: node src/database/migrateRefreshToken.js
  */
 const { sequelize } = require('../config/database');
+const logger = require('../utils/logger');
 
 const migrate = async () => {
     try {
-        console.log('🔄 Verificando tabla refresh_tokens...');
+        logger.info('Verificando tabla refresh_tokens...');
 
         await sequelize.query(`
             CREATE TABLE IF NOT EXISTS refresh_tokens (
@@ -22,7 +23,6 @@ const migrate = async () => {
             );
         `);
 
-        // Crear indices
         await sequelize.query(`
             CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id);
         `);
@@ -30,9 +30,9 @@ const migrate = async () => {
             CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires_at ON refresh_tokens(expires_at);
         `);
 
-        console.log('✅ Tabla refresh_tokens creada/verificada exitosamente');
+        logger.info('Tabla refresh_tokens creada/verificada exitosamente');
     } catch (error) {
-        console.error('❌ Error al crear tabla refresh_tokens:', error.message);
+        logger.error('Error al crear tabla refresh_tokens', { error: error.message });
         throw error;
     }
 };

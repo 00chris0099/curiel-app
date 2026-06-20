@@ -1,4 +1,5 @@
 const { AuditLog } = require('../models');
+const logger = require('../utils/logger');
 
 /**
  * Middleware para crear logs de auditoría
@@ -35,8 +36,7 @@ const auditLog = (action, entityType = null) => {
                     await AuditLog.create(logData);
                 }
             } catch (error) {
-                console.error('Error al crear audit log:', error);
-                // No fallar la request si el log falla
+                logger.error('Error al crear audit log (middleware)', { error: error.message });
             }
 
             // Llamar al método original
@@ -60,7 +60,7 @@ const createAuditLog = async (userId, action, entityType, entityId, changes = nu
             changes
         });
     } catch (error) {
-        console.error('Error al crear audit log:', error);
+        logger.error('Error al crear audit log (manual)', { error: error.message });
     }
 };
 

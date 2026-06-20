@@ -3,6 +3,7 @@ const { AppError } = require('../middlewares/errorHandler');
 const { Op } = require('sequelize');
 const { sequelize } = require('../config/database');
 const bcrypt = require('bcryptjs');
+const logger = require('../utils/logger');
 
 /**
  * Servicio de gestión de usuarios
@@ -369,7 +370,7 @@ class UserService {
 
             return stats;
         } catch (error) {
-            console.log(error);
+            logger.error('Error en base de datos', { error: error.message });
             throw new AppError('Error en la base de datos', 500, 'DATABASE_ERROR');
         }
     }

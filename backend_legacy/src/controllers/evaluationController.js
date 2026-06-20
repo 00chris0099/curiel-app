@@ -5,6 +5,7 @@ const { triggerN8nWebhook } = require('../utils/n8n');
 const { sendEmail } = require('../services/emailService');
 const { evaluationEmail } = require('../utils/emailTemplates');
 const { User } = require('../models');
+const logger = require('../utils/logger');
 
 const createEvaluation = asyncHandler(async (req, res) => {
     const evaluation = await evaluationService.generateWeeklyEvaluation(
@@ -44,7 +45,7 @@ const createEvaluation = asyncHandler(async (req, res) => {
             await sendEmail({ to: evaluatedUser.email, subject, html });
         }
     } catch (emailError) {
-        console.error('Error sending evaluation email:', emailError.message);
+        logger.error('Error sending evaluation email', { error: emailError.message });
     }
 
     res.status(201).json({

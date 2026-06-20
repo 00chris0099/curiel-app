@@ -1,4 +1,5 @@
 import axios from 'axios';
+import * as Sentry from '@sentry/react';
 import authService from '../services/auth.service';
 
 declare global {
@@ -167,8 +168,11 @@ api.interceptors.response.use(
         }
 
         if (isNetworkError(error)) {
-            console.warn('[api] Network error - backend may be offline:', error.message);
             error.isNetworkError = true;
+        }
+
+        if (error.response && error.response.status >= 500) {
+            Sentry.captureException(error);
         }
 
         return Promise.reject(error);

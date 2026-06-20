@@ -1,5 +1,6 @@
 const cron = require('node-cron');
 const evaluationService = require('../services/evaluationService');
+const logger = require('../utils/logger');
 
 /**
  * Cron job para generar evaluaciones semanales
@@ -7,10 +8,9 @@ const evaluationService = require('../services/evaluationService');
  */
 const startWeeklyEvaluation = () => {
     cron.schedule('0 9 * * 6', async () => {
-        console.log('[CRON] Iniciando generacion de evaluaciones semanales...');
+        logger.info('[CRON] Iniciando generacion de evaluaciones semanales...');
 
         try {
-            // Calcular inicio y fin de la semana (lunes a domingo)
             const now = new Date();
             const dayOfWeek = now.getDay();
             const monday = new Date(now);
@@ -24,10 +24,7 @@ const startWeeklyEvaluation = () => {
             const weekStart = monday.toISOString().split('T')[0];
             const weekEnd = sunday.toISOString().split('T')[0];
 
-            // Necesitamos un supervisorId para las evaluaciones
-            // Usamos el primer supervisor activo encontrado
             const { User, Role } = require('../models');
-            const { Op } = require('sequelize');
 
             const supervisor = await User.findOne({
                 include: [{
@@ -39,7 +36,7 @@ const startWeeklyEvaluation = () => {
             });
 
             if (!supervisor) {
-                console.log('[CRON] No se encontro supervisor activo. Saltando generacion.');
+                logger.info('[CRON] No se encontro supervisor activo. Saltando generacion.');
                 return;
             }
 
@@ -52,14 +49,14 @@ const startWeeklyEvaluation = () => {
             const successful = results.filter(r => r.success).length;
             const failed = results.filter(r => !r.success).length;
 
-            console.log(`[CRON] Evaluaciones generadas: ${successful} exitosas, ${failed} fallidas`);
+            logger.info(`[CRON] Evaluaciones generadas: ${successful} exitosas, ${failed} fallidas`);
 
         } catch (error) {
-            console.error('[CRON] Error en generacion de evaluaciones:', error.message);
+            logger.error('[CRON] Error en generacion de evaluaciones', { error: error.message });
         }
     });
 
-    console.log('[CRON] Tarea de evaluaciones semanales programada (sabados 9:00 AM)');
+    logger.info('[CRON] Tarea de evaluaciones semanales programada (sabados 9:00 AM)');
 };
 
 module.exports = { startWeeklyEvaluation };

@@ -1,11 +1,11 @@
 require('dotenv').config();
 const config = require('./config');
+const { initSentry } = require('./utils/sentry');
 const { testConnection } = require('./config/database');
 const app = require('./app');
+const logger = require('./utils/logger');
 
-// ===========================
-// INICIAR SERVIDOR
-// ===========================
+initSentry();
 
 const PORT = config.server.port;
 
@@ -14,19 +14,17 @@ const startServer = async () => {
         const dbConnected = await testConnection();
 
         if (!dbConnected) {
-            console.error('No se pudo conectar a la base de datos');
+            logger.error('No se pudo conectar a la base de datos');
             process.exit(1);
         }
 
-        // Sincronizar modelos (solo en desarrollo)
         if (config.server.env === 'development') {
             const { sequelize } = require('./config/database');
             require('./models');
             await sequelize.sync({ alter: false });
-            console.log('Modelos sincronizados');
+            logger.info('Modelos sincronizados');
         }
 
-        // Iniciar cron jobs (solo en produccion)
         if (config.server.env === 'production') {
             const { startAutoDeleteClients } = require('./cron/autoDeleteClients');
             startAutoDeleteClients();
@@ -36,15 +34,14 @@ const startServer = async () => {
         }
 
         app.listen(PORT, () => {
-            console.log('\n========================================');
-            console.log(`   CURIEL API Server`);
-            console.log(`   Entorno: ${config.server.env}`);
-            console.log(`   Puerto: ${PORT}`);
-            console.log(`   URL: http://localhost:${PORT}`);
-            console.log('========================================\n');
+            logger.info(`CURIEL API Server iniciado`, {
+                env: config.server.env,
+                port: PORT,
+                url: `http://localhost:${PORT}`
+            });
         });
     } catch (error) {
-        console.error('Error al iniciar el servidor:', error);
+        logger.error('Error al iniciar el servidor', { error: error.message, stack: error.stack });
         process.exit(1);
     }
 };

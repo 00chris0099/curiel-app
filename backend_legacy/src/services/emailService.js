@@ -1,5 +1,7 @@
 const nodemailer = require('nodemailer');
 const config = require('../config');
+const logger = require('../utils/logger');
+const { emailsSent } = require('../utils/metrics');
 
 let transporter = null;
 
@@ -11,7 +13,7 @@ const getTransporter = () => {
     const pass = process.env.SMTP_PASSWORD;
 
     if (!user || !pass) {
-        console.warn('⚠️ SMTP credentials not configured. Emails will be logged but not sent.');
+        logger.warn('SMTP credentials not configured. Emails will be logged but not sent.');
         return null;
     }
 
@@ -32,16 +34,19 @@ const sendEmail = async ({ to, subject, html, text }) => {
     const mailOptions = { from, to, subject, html, text };
 
     if (!transport) {
-        console.log('📧 [DRY-RUN] Email would be sent:', { to, subject });
+        logger.info('[DRY-RUN] Email would be sent', { to, subject });
+        emailsSent.inc({ status: 'dry_run', type: 'unknown' });
         return { success: true, dryRun: true };
     }
 
     try {
         const info = await transport.sendMail(mailOptions);
-        console.log('📧 Email sent:', info.messageId);
+        logger.info('Email enviado', { messageId: info.messageId, to, subject });
+        emailsSent.inc({ status: 'sent', type: 'unknown' });
         return { success: true, messageId: info.messageId };
     } catch (error) {
-        console.error('📧 Email send failed:', error.message);
+        logger.error('Email send failed', { error: error.message, to, subject });
+        emailsSent.inc({ status: 'failed', type: 'unknown' });
         return { success: false, error: error.message };
     }
 };

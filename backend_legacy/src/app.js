@@ -9,6 +9,9 @@ const rateLimit = require('express-rate-limit');
 const config = require('./config');
 const routes = require('./routes');
 const { errorHandler, notFound } = require('./middlewares/errorHandler');
+const logger = require('./utils/logger');
+const { sentryErrorHandler } = require('./utils/sentry');
+const { httpRequestDuration, httpRequestTotal } = require('./utils/metrics');
 
 const app = express();
 
@@ -34,7 +37,7 @@ app.use(compression());
 if (config.server.env === 'development') {
     app.use(morgan('dev'));
 } else if (config.server.env !== 'test') {
-    app.use(morgan('combined'));
+    app.use(morgan('combined', { stream: logger.stream }));
 }
 
 // Rate limiting
@@ -47,6 +50,19 @@ const limiter = rateLimit({
     }
 });
 app.use('/api', limiter);
+
+// Metrics middleware
+app.use((req, res, next) => {
+    if (req.path === '/api/v1/metrics') return next();
+    const start = Date.now();
+    res.on('finish', () => {
+        const duration = (Date.now() - start) / 1000;
+        const route = req.route?.path || req.path;
+        httpRequestDuration.observe({ method: req.method, route, status_code: res.statusCode }, duration);
+        httpRequestTotal.inc({ method: req.method, route, status_code: res.statusCode });
+    });
+    next();
+});
 
 // Swagger Documentation
 const { specs, swaggerUi } = require('./config/swagger');
@@ -69,6 +85,7 @@ app.use(`/api/${config.server.apiVersion}`, routes);
 
 // Manejo de errores
 app.use(notFound);
+app.use(sentryErrorHandler());
 app.use(errorHandler);
 
 module.exports = app;

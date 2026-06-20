@@ -1,6 +1,7 @@
 const puppeteer = require('puppeteer');
 const fs = require('fs');
 const config = require('../config');
+const logger = require('../utils/logger');
 const {
     Inspection,
     InspectionArea,
@@ -144,7 +145,7 @@ class InspectionReportService {
         const executablePath = this._resolveExecutablePath();
 
         try {
-            console.log('Using Chromium executable:', executablePath);
+            logger.info('Using Chromium executable', { path: executablePath });
 
             browser = await puppeteer.launch({
                 executablePath,
@@ -178,8 +179,7 @@ class InspectionReportService {
 
             const pdfBuffer = Buffer.from(pdfBinary);
 
-            console.log('PDF buffer size:', pdfBuffer.length);
-            console.log('PDF header:', pdfBuffer.subarray(0, 4).toString());
+            logger.info('PDF generado', { bufferSize: pdfBuffer.length, header: pdfBuffer.subarray(0, 4).toString() });
 
             if (!pdfBuffer || !Buffer.isBuffer(pdfBuffer) || pdfBuffer.length < 1000) {
                 throw new AppError('El PDF generado es inválido o está incompleto', 500, 'INVALID_PDF_BUFFER');
@@ -194,9 +194,10 @@ class InspectionReportService {
                 filename: this._buildFileName(inspection)
             };
         } catch (error) {
-            console.error('PUPPETEER_REPORT_ERROR:', error);
-            console.error('message:', error?.message);
-            console.error('stack:', error?.stack);
+            logger.error('PUPPETEER_REPORT_ERROR', {
+                message: error?.message,
+                stack: error?.stack
+            });
 
             throw new AppError(
                 error?.message || 'No se pudo generar el PDF de la inspección',

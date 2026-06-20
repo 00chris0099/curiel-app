@@ -7,6 +7,7 @@ const {
     ChecklistItem
 } = require('../models');
 const { sequelize } = require('../config/database');
+const logger = require('../utils/logger');
 
 const rolesToCreate = [
     { name: 'admin', description: 'Administrador del sistema' },
@@ -65,9 +66,9 @@ const getTableColumns = async (tableName) => {
 
 const seed = async () => {
     try {
-        console.log('🌱 Iniciando seed de datos...\n');
+        logger.info('Iniciando seed de datos...');
 
-        console.log('🧩 Creando roles base...');
+        logger.info('Creando roles base...');
         const createdRoles = {};
 
         for (const roleData of rolesToCreate) {
@@ -79,9 +80,9 @@ const seed = async () => {
             createdRoles[roleData.name] = role;
         }
 
-        console.log('✅ Roles verificados:', Object.keys(createdRoles).join(', '));
+        logger.info('Roles verificados', { roles: Object.keys(createdRoles) });
 
-        console.log('👤 Creando master admin...');
+        logger.info('Creando master admin...');
 
         const adminEmail = process.env.ADMIN_EMAIL || 'admin@curiel.com';
         const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
@@ -117,7 +118,7 @@ const seed = async () => {
             }
         });
 
-        console.log('✅ Master admin verificado:', adminEmail);
+        logger.info('Master admin verificado', { email: adminEmail });
 
         const userColumns = await getTableColumns('users');
         const hasLegacyRoleColumn = userColumns && Object.prototype.hasOwnProperty.call(userColumns, 'role');
@@ -151,9 +152,9 @@ const seed = async () => {
             }
         }
 
-        console.log('✅ Roles heredados sincronizados:', legacyUsersCount);
+        logger.info('Roles heredados sincronizados', { count: legacyUsersCount });
 
-        console.log('📝 Creando plantillas de checklist...');
+        logger.info('Creando plantillas de checklist...');
 
         for (const templateData of templatesToCreate) {
             const [template] = await ChecklistTemplate.findOrCreate({
@@ -177,7 +178,7 @@ const seed = async () => {
                         templateId: template.id,
                         itemText: itemData.itemText,
                         category: itemData.category,
-                        orderIndex: itemData.orderIndex,
+                        orderIndex: itemData.itemIndex,
                         isRequired: itemData.isRequired
                     }
                 });
@@ -187,18 +188,16 @@ const seed = async () => {
         const templatesCount = await ChecklistTemplate.count();
         const itemsCount = await ChecklistItem.count();
 
-        console.log('\n✨ Seed completado exitosamente!\n');
-        console.log('📊 Datos verificados:');
-        console.log(`  - ${rolesToCreate.length} roles base`);
-        console.log('  - 1 usuario master admin');
-        console.log(`  - ${templatesCount} plantillas de checklist`);
-        console.log(`  - ${itemsCount} items de checklist\n`);
-        console.log('🔑 Credenciales del admin:');
-        console.log(`  Admin: ${adminEmail} / ${adminPassword}\n`);
+        logger.info('Seed completado exitosamente', {
+            roles: rolesToCreate.length,
+            admin: adminEmail,
+            templates: templatesCount,
+            items: itemsCount
+        });
 
         process.exit(0);
     } catch (error) {
-        console.error('❌ Error en seed:', error);
+        logger.error('Error en seed', { error: error.message, stack: error.stack });
         process.exit(1);
     }
 };

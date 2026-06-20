@@ -1,6 +1,7 @@
 require('dotenv').config();
 const { sequelize } = require('../config/database');
 const models = require('../models');
+const logger = require('../utils/logger');
 
 const getTableColumns = async (tableName) => {
     const [rows] = await sequelize.query(
@@ -121,41 +122,30 @@ const prepareInspectionStatusEnum = async () => {
  */
 const migrate = async () => {
     try {
-        console.log('🔄 Iniciando migración de base de datos...\n');
+        logger.info('Iniciando migracion de base de datos...');
 
-        // Probar conexión
         await sequelize.authenticate();
-        console.log('✅ Conexión a base de datos exitosa\n');
+        logger.info('Conexion a base de datos exitosa');
 
         await prepareLegacyUsersTable();
         await prepareInspectionStatusEnum();
 
-        // Sincronizar modelos (crear tablas)
         await sequelize.sync({ force: false, alter: true });
 
-        console.log('\n✅ Migración completada exitosamente');
-        console.log('📊 Tablas creadas:');
-        console.log('  - users');
-        console.log('  - roles');
-        console.log('  - user_roles');
-        console.log('  - clients');
-        console.log('  - inspections');
-        console.log('  - inspection_status_histories');
-        console.log('  - inspection_areas');
-        console.log('  - inspection_observations');
-        console.log('  - inspection_summaries');
-        console.log('  - notifications');
-        console.log('  - checklist_templates');
-        console.log('  - checklist_items');
-        console.log('  - inspection_responses');
-        console.log('  - photos');
-        console.log('  - signatures');
-        console.log('  - audit_logs');
-        console.log('  - refresh_tokens\n');
+        logger.info('Migracion completada exitosamente', {
+            tables: [
+                'users', 'roles', 'user_roles', 'clients', 'inspections',
+                'inspection_status_histories', 'inspection_areas',
+                'inspection_observations', 'inspection_summaries',
+                'notifications', 'checklist_templates', 'checklist_items',
+                'inspection_responses', 'photos', 'signatures', 'audit_logs',
+                'refresh_tokens'
+            ]
+        });
 
         process.exit(0);
     } catch (error) {
-        console.error('❌ Error en la migración:', error);
+        logger.error('Error en la migracion', { error: error.message, stack: error.stack });
         process.exit(1);
     }
 };

@@ -2,6 +2,7 @@ const cloudinary = require('cloudinary').v2;
 const config = require('../config');
 const { AppError } = require('../middlewares/errorHandler');
 const streamifier = require('streamifier');
+const logger = require('./logger');
 
 const cloudinaryConfig = {
     cloudName: config.cloudinary?.cloudName || process.env.CLOUDINARY_CLOUD_NAME,
@@ -33,10 +34,11 @@ const ensureCloudinaryConfig = () => {
 };
 
 const logCloudinaryError = (error) => {
-    console.error('CLOUDINARY_UPLOAD_ERROR:', error);
-    console.error('message:', error?.message);
-    console.error('http_code:', error?.http_code);
-    console.error('details:', error);
+    logger.error('CLOUDINARY_UPLOAD_ERROR', {
+        message: error?.message,
+        http_code: error?.http_code,
+        details: error
+    });
 };
 
 const toCloudinaryUploadError = (error) => {

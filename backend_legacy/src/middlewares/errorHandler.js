@@ -4,16 +4,30 @@
  */
 
 const config = require('../config');
+const logger = require('../utils/logger');
+const { captureException } = require('../utils/sentry');
 
 /**
  * Error handler principal
  */
 const errorHandler = (err, req, res, next) => {
-    // Log del error (solo stack trace en desarrollo)
-    if (config.server.env === 'development') {
-        console.error('❌ Error Stack:', err.stack);
-    } else {
-        console.error('❌ Error:', err.message);
+    logger.error('Error en solicitud', {
+        message: err.message,
+        stack: err.stack,
+        statusCode: err.statusCode,
+        method: req.method,
+        url: req.originalUrl,
+        ip: req.ip,
+        userId: req.userId
+    });
+
+    if (!err.isOperational) {
+        captureException(err, {
+            method: req.method,
+            url: req.originalUrl,
+            userId: req.userId,
+            statusCode: err.statusCode
+        });
     }
 
     // ============================================

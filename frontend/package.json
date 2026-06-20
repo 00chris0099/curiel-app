@@ -12,6 +12,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@sentry/react": "^10.59.0",
     "axios": "^1.16.0",
     "idb": "^8.0.3",
     "lucide-react": "^0.574.0",
