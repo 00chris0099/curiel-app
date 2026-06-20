@@ -681,6 +681,7 @@ export const InspectionAreaDetail = () => {
                             <img
                                 src={photo.url || photo.previewUrl}
                                 alt={photo.caption || 'Foto'}
+                                loading="lazy"
                                 className="h-36 w-full rounded-lg object-cover sm:h-32"
                             />
                             {photo.caption && (

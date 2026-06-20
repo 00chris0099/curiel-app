@@ -86,7 +86,15 @@ const Photo = sequelize.define('Photo', {
     }
 }, {
     tableName: 'photos',
-    timestamps: true
+    timestamps: true,
+    indexes: [
+        { fields: ['inspectionId'] },
+        { fields: ['area_id'] },
+        { fields: ['observation_id'] },
+        { fields: ['uploadedById'] },
+        { fields: ['type'] },
+        { fields: ['takenAt'] }
+    ]
 });
 
 module.exports = Photo;

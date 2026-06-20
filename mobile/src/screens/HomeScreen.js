@@ -198,6 +198,13 @@ const HomeScreen = ({ navigation }) => {
                 renderItem={renderInspectionItem}
                 keyExtractor={(item) => item.id}
                 contentContainerStyle={styles.listContainer}
+                removeClippedSubviews={true}
+                maxToRenderPerBatch={10}
+                windowSize={5}
+                initialNumToRender={8}
+                getItemLayout={(data, index) => (
+                    { length: 120, offset: 120 * index, index }
+                )}
                 refreshControl={
                     <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
                 }

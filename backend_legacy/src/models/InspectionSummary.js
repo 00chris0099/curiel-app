@@ -72,7 +72,11 @@ const InspectionSummary = sequelize.define('InspectionSummary', {
 }, {
     tableName: 'inspection_summaries',
     timestamps: true,
-    underscored: true
+    underscored: true,
+    indexes: [
+        { fields: ['inspection_id'], unique: true },
+        { fields: ['report_status'] }
+    ]
 });
 
 module.exports = InspectionSummary;

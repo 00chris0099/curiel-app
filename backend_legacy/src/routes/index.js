@@ -3,6 +3,7 @@ const os = require('os');
 const { sequelize } = require('../config/database');
 const config = require('../config');
 const { client: metricsClient, httpRequestDuration, httpRequestTotal } = require('../utils/metrics');
+const { getCacheStatus } = require('../utils/cache');
 const authRoutes = require('./authRoutes');
 const usersRoutes = require('./usersRoutes');
 const inspectionRoutes = require('./inspectionRoutes');
@@ -52,6 +53,7 @@ router.get('/health', async (req, res) => {
             status: dbStatus,
             latency: dbLatency ? `${dbLatency}ms` : null
         },
+        cache: getCacheStatus(),
         memory: {
             rss: `${Math.round(memUsage.rss / 1024 / 1024)}MB`,
             heapUsed: `${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`,

@@ -48,6 +48,14 @@ const testConnection = async () => {
     try {
         await sequelize.authenticate();
         logger.info('Base de datos conectada exitosamente');
+
+        // Log pool events in development
+        if (process.env.NODE_ENV === 'development') {
+            sequelize.connectionManager.pool.on('release', () => {
+                logger.debug('DB pool: connection released');
+            });
+        }
+
         return true;
     } catch (error) {
         const details = error.parent?.message || error.original?.message || error.message || error;

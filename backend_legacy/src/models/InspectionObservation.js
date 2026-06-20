@@ -72,7 +72,15 @@ const InspectionObservation = sequelize.define('InspectionObservation', {
 }, {
     tableName: 'inspection_observations',
     timestamps: true,
-    underscored: true
+    underscored: true,
+    indexes: [
+        { fields: ['inspection_id'] },
+        { fields: ['area_id'] },
+        { fields: ['severity'] },
+        { fields: ['type'] },
+        { fields: ['status'] },
+        { fields: ['created_by'] }
+    ]
 });
 
 module.exports = InspectionObservation;

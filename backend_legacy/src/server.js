@@ -2,6 +2,7 @@ require('dotenv').config();
 const config = require('./config');
 const { initSentry } = require('./utils/sentry');
 const { testConnection } = require('./config/database');
+const { initRedis, closeRedis } = require('./utils/cache');
 const app = require('./app');
 const logger = require('./utils/logger');
 
@@ -17,6 +18,9 @@ const startServer = async () => {
             logger.error('No se pudo conectar a la base de datos');
             process.exit(1);
         }
+
+        // Initialize Redis cache if configured
+        initRedis();
 
         if (config.server.env === 'development') {
             const { sequelize } = require('./config/database');
@@ -45,5 +49,18 @@ const startServer = async () => {
         process.exit(1);
     }
 };
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+    logger.info('SIGTERM received, shutting down gracefully');
+    await closeRedis();
+    process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+    logger.info('SIGINT received, shutting down gracefully');
+    await closeRedis();
+    process.exit(0);
+});
 
 startServer();

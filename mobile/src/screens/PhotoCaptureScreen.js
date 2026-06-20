@@ -8,6 +8,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useOffline } from '../context/OfflineContext';
 import { photosRepo } from '../database/photos.repo';
 import { offlineQueue } from '../services/offlineQueue';
+import { compressImage, formatFileSize } from '../utils/imageOptimizer';
 import uuid from '../utils/uuid';
 
 const PhotoCaptureScreen = ({ route, navigation }) => {
@@ -47,11 +48,14 @@ const PhotoCaptureScreen = ({ route, navigation }) => {
         setUploading(true);
         try {
             const photoId = `photo_${Date.now()}_${uuid()}`;
-            const filename = photoUri.split('/').pop();
-            const destPath = `${FileSystem.documentDirectory}photos/${photoId}_${filename}`;
+
+            // Comprimir imagen antes de guardar
+            const compressed = await compressImage(photoUri, 'medium');
+            const filename = `${photoId}.webp`;
+            const destPath = `${FileSystem.documentDirectory}photos/${filename}`;
 
             await FileSystem.makeDirectoryAsync(`${FileSystem.documentDirectory}photos`, { intermediates: true });
-            await FileSystem.copyAsync({ from: photoUri, to: destPath });
+            await FileSystem.copyAsync({ from: compressed.uri, to: destPath });
 
             const photoData = {
                 id: photoId,
@@ -61,7 +65,10 @@ const PhotoCaptureScreen = ({ route, navigation }) => {
                 type: 'area',
                 localPath: destPath,
                 uploadedBy: null,
-                uploadStatus: 'pending'
+                uploadStatus: 'pending',
+                originalSize: compressed.size,
+                width: compressed.width,
+                height: compressed.height
             };
 
             await photosRepo.upsert(photoData);
@@ -69,7 +76,9 @@ const PhotoCaptureScreen = ({ route, navigation }) => {
 
             Alert.alert(
                 'Foto Guardada',
-                isOnline ? 'Foto guardada y sincronizada' : 'Foto guardada localmente. Se sincronizará cuando haya conexion.',
+                isOnline
+                    ? `Foto comprimida (${formatFileSize(compressed.size)}) y sincronizada`
+                    : `Foto comprimida (${formatFileSize(compressed.size)}). Se sincronizará cuando haya conexion.`,
                 [{ text: 'OK', onPress: () => navigation.goBack() }]
             );
         } catch (error) {

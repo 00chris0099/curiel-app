@@ -75,6 +75,10 @@ const ConflictResolutionScreen = () => {
                     data={conflicts}
                     keyExtractor={(item) => String(item.id)}
                     contentContainerStyle={styles.list}
+                    removeClippedSubviews={true}
+                    maxToRenderPerBatch={10}
+                    windowSize={5}
+                    initialNumToRender={5}
                     renderItem={({ item }) => (
                         <ConflictCard conflict={item} onResolve={resolveConflict} />
                     )}

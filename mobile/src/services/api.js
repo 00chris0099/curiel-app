@@ -231,10 +231,9 @@ export const photoService = {
     upload: async (uri, inspectionId, checklistItemId = null, caption = null) => {
         const formData = new FormData();
 
-        // Crear objeto de archivo
+        // Crear objeto de archivo - forzar WebP
         const filename = uri.split('/').pop();
-        const match = /\.(\w+)$/.exec(filename);
-        const type = match ? `image/${match[1]}` : 'image/jpeg';
+        const type = filename.endsWith('.webp') ? 'image/webp' : 'image/jpeg';
 
         formData.append('photo', {
             uri,

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, memo, type ChangeEvent, type FormEvent } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { getApiErrorMessage } from '../api/axios';
@@ -1444,9 +1444,9 @@ const StatCard = ({ icon, label, value, accent, tone }: { icon: CustomIconName; 
     </div>
 );
 
-const PhotoCard = ({ photo, syncStatus }: { photo: InspectionExecutionData['photos'][number]; syncStatus?: 'pending' | 'failed' | 'synced' }) => (
+const PhotoCard = memo(({ photo, syncStatus }: { photo: InspectionExecutionData['photos'][number]; syncStatus?: 'pending' | 'failed' | 'synced' }) => (
     <article className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800/80">
-        <img src={photo.url} alt={photo.caption || photoTypeLabels[photo.type]} className="h-36 w-full object-cover sm:h-44" />
+        <img src={photo.url} alt={photo.caption || photoTypeLabels[photo.type]} loading="lazy" className="h-36 w-full object-cover sm:h-44" />
         <div className="space-y-2 p-4">
             <div className="flex items-center justify-between gap-3">
                 <span className="badge badge-info"><CustomIcon name={photoTypeIconMap[photo.type] ?? 'camera'} size="xs" tone="white" />{photoTypeLabels[photo.type]}</span>
@@ -1460,14 +1460,16 @@ const PhotoCard = ({ photo, syncStatus }: { photo: InspectionExecutionData['phot
             </p>
         </div>
     </article>
-);
+));
+PhotoCard.displayName = 'PhotoCard';
 
-const EmptyPanel = ({ message, compact = false }: { message: string; compact?: boolean }) => (
+const EmptyPanel = memo(({ message, compact = false }: { message: string; compact?: boolean }) => (
     <div className={`rounded-2xl border border-dashed border-gray-300 bg-gray-50 text-center text-gray-500 dark:border-gray-600 dark:bg-gray-900/40 dark:text-gray-400 ${compact ? 'p-5' : 'p-8'}`}>
         <div className="mb-3 flex justify-center"><CustomIcon name="image" size={compact ? 'sm' : 'md'} tone="mist" /></div>
         {message}
     </div>
-);
+));
+EmptyPanel.displayName = 'EmptyPanel';
 
 const InputField = ({
     label,

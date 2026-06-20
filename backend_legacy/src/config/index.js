@@ -47,10 +47,11 @@ module.exports = {
     url: process.env.DATABASE_URL || null,
     ssl: parseBoolean(process.env.DATABASE_SSL, false),
     pool: {
-      max: 5,
-      min: 0,
-      acquire: 30000,
-      idle: 10000
+      max: parseInt(process.env.DB_POOL_MAX) || 10,
+      min: parseInt(process.env.DB_POOL_MIN) || 2,
+      acquire: parseInt(process.env.DB_POOL_ACQUIRE) || 30000,
+      idle: parseInt(process.env.DB_POOL_IDLE) || 10000,
+      evict: parseInt(process.env.DB_POOL_EVICT) || 30000
     },
     logging: process.env.NODE_ENV === 'development' ? console.log : false
   },
@@ -126,6 +127,11 @@ module.exports = {
     footerPhone: process.env.COMPANY_PHONE || '+51 999 999 999',
     footerEmail: process.env.COMPANY_EMAIL || 'informes@curiel.pe',
     companyTagline: process.env.COMPANY_TAGLINE || 'Tu hogar, nuestro compromiso'
+  },
+
+  // Redis Cache
+  redis: {
+    url: process.env.REDIS_URL || null
   },
 
   // URLs

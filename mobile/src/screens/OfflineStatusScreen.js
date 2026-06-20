@@ -79,6 +79,10 @@ const OfflineStatusScreen = () => {
                     data={queue}
                     keyExtractor={(item) => String(item.id)}
                     contentContainerStyle={styles.list}
+                    removeClippedSubviews={true}
+                    maxToRenderPerBatch={10}
+                    windowSize={5}
+                    initialNumToRender={10}
                     renderItem={({ item }) => (
                         <View style={styles.queueItem}>
                             <Text style={styles.queueIcon}>{getStatusIcon(item.status)}</Text>
