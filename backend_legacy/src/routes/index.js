@@ -1,7 +1,7 @@
 const express = require('express');
 const os = require('os');
-const { sequelize } = require('../config/database');
 const config = require('../config');
+const { prisma } = require('../lib/databases');
 const { client: metricsClient, httpRequestDuration, httpRequestTotal } = require('../utils/metrics');
 const { getCacheStatus } = require('../utils/cache');
 const authRoutes = require('./authRoutes');
@@ -26,33 +26,39 @@ router.get('/metrics', async (req, res) => {
     }
 });
 
-router.get('/health', async (req, res) => {
-    let dbStatus = 'disconnected';
-    let dbLatency = null;
+const checkDatabaseStatus = async () => {
+    const databases = ['auth', 'inspecciones', 'media', 'admin', 'notificaciones', 'alertas', 'auditoria'];
+    const results = {};
 
-    try {
-        const startTime = Date.now();
-        await sequelize.authenticate();
-        dbLatency = Date.now() - startTime;
-        dbStatus = 'connected';
-    } catch (error) {
-        dbStatus = 'error';
-    }
+    const checks = databases.map(async (name) => {
+        try {
+            const start = Date.now();
+            await prisma[name].$queryRaw`SELECT 1`;
+            results[name] = { status: 'connected', latency: `${Date.now() - start}ms` };
+        } catch (error) {
+            results[name] = { status: 'error', error: error.message };
+        }
+    });
+
+    await Promise.all(checks);
+    return results;
+};
+
+router.get('/health', async (req, res) => {
+    const databases = await checkDatabaseStatus();
+    const allConnected = Object.values(databases).every(db => db.status === 'connected');
 
     const memUsage = process.memoryUsage();
     const uptime = process.uptime();
 
     const healthData = {
         success: true,
-        status: dbStatus === 'connected' ? 'operational' : 'degraded',
+        status: allConnected ? 'operational' : 'degraded',
         timestamp: new Date().toISOString(),
         env: config.server.env,
         uptime: `${Math.floor(uptime / 86400)}d ${Math.floor((uptime % 86400) / 3600)}h ${Math.floor((uptime % 3600) / 60)}m`,
         uptimeSeconds: Math.round(uptime),
-        database: {
-            status: dbStatus,
-            latency: dbLatency ? `${dbLatency}ms` : null
-        },
+        databases,
         cache: getCacheStatus(),
         memory: {
             rss: `${Math.round(memUsage.rss / 1024 / 1024)}MB`,
@@ -75,7 +81,6 @@ router.get('/health', async (req, res) => {
     res.status(statusCode).json(healthData);
 });
 
-// Rutas principales
 router.use('/auth', authRoutes);
 router.use('/users', usersRoutes);
 router.use('/inspections', inspectionRoutes);

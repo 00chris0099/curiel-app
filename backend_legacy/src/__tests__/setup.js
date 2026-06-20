@@ -1,15 +1,14 @@
-const { sequelize } = require('../config/database');
-require('../models');
+const { prisma, connectAll, disconnectAll } = require('../lib/databases');
 
 let app;
 
 beforeAll(async () => {
-    await sequelize.authenticate();
+    await connectAll();
     app = require('../app');
 });
 
 afterAll(async () => {
-    await sequelize.close();
+    await disconnectAll();
 });
 
 module.exports = { getApp: () => app };

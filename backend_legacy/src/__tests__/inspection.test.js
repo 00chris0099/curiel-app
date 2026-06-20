@@ -1,8 +1,7 @@
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { sequelize } = require('../config/database');
-const { User, Role, Inspection } = require('../models');
+const { prisma, connectAll, disconnectAll } = require('../lib/databases');
 const config = require('../config');
 
 let app;
@@ -17,35 +16,30 @@ const TEST_NON_MASTER_EMAIL = 'test-nonmaster-insp-' + Date.now() + '@curiel.com
 
 async function createUserWithPassword(userData) {
     const hash = await bcrypt.hash(userData.password, 10);
-    const user = await User.create({
-        email: userData.email,
-        passwordHash: hash,
-        fullName: userData.fullName,
-        isActive: userData.isActive !== undefined ? userData.isActive : true
+    const user = await prisma.auth.user.create({
+        data: {
+            email: userData.email,
+            passwordHash: hash,
+            fullName: userData.fullName,
+            isActive: userData.isActive !== undefined ? userData.isActive : true
+        }
     });
     return user;
 }
 
 beforeAll(async () => {
-    await sequelize.authenticate();
-    require('../models');
-
-    try {
-        await sequelize.sync({ alter: true });
-    } catch (e) {
-        // sync may fail on production DB, continue anyway
-    }
+    await connectAll();
 
     app = require('../app');
 
-    const [existingAdminUser] = await sequelize.query(`
+    const existingAdminUser = await prisma.auth.$queryRaw`
         SELECT u.id, u.email, u.is_master_admin
         FROM users u
         INNER JOIN user_roles ur ON ur.user_id = u.id
         INNER JOIN roles r ON r.id = ur.role_id
         WHERE r.name = 'admin'
         LIMIT 1
-    `);
+    `;
 
     let adminUserId;
     let adminEmail;
@@ -61,11 +55,12 @@ beforeAll(async () => {
             password: 'Admin1234*',
             fullName: 'Test Admin Inspections'
         });
-        const [adminRole] = await Role.findOrCreate({
+        const adminRole = await prisma.auth.role.upsert({
             where: { name: 'admin' },
-            defaults: { name: 'admin', description: 'Test admin' }
+            update: {},
+            create: { name: 'admin', description: 'Test admin' }
         });
-        await admin.addRole(adminRole);
+        await prisma.auth.userRole.create({ data: { userId: admin.id, roleId: adminRole.id } });
         adminUserId = admin.id;
         adminEmail = admin.email;
         isMasterAdmin = false;
@@ -77,9 +72,10 @@ beforeAll(async () => {
         { expiresIn: '15m' }
     );
 
-    const [adminRole] = await Role.findOrCreate({
+    const adminRole = await prisma.auth.role.upsert({
         where: { name: 'admin' },
-        defaults: { name: 'admin', description: 'Test admin' }
+        update: {},
+        create: { name: 'admin', description: 'Test admin' }
     });
 
     const nonMasterAdmin = await createUserWithPassword({
@@ -87,16 +83,17 @@ beforeAll(async () => {
         password: 'Admin1234*',
         fullName: 'Non-Master Admin'
     });
-    await nonMasterAdmin.addRole(adminRole);
+    await prisma.auth.userRole.create({ data: { userId: nonMasterAdmin.id, roleId: adminRole.id } });
     nonMasterAdminToken = jwt.sign(
         { userId: nonMasterAdmin.id, email: nonMasterAdmin.email, isMasterAdmin: false, roles: ['admin'] },
         config.jwt.secret,
         { expiresIn: '15m' }
     );
 
-    const [inspectorRole] = await Role.findOrCreate({
+    const inspectorRole = await prisma.auth.role.upsert({
         where: { name: 'inspector' },
-        defaults: { name: 'inspector', description: 'Test inspector' }
+        update: {},
+        create: { name: 'inspector', description: 'Test inspector' }
     });
 
     const inspector = await createUserWithPassword({
@@ -104,7 +101,7 @@ beforeAll(async () => {
         password: 'Inspector123*',
         fullName: 'Test Inspector'
     });
-    await inspector.addRole(inspectorRole);
+    await prisma.auth.userRole.create({ data: { userId: inspector.id, roleId: inspectorRole.id } });
     testInspectorId = inspector.id;
 
     inspectorToken = jwt.sign(
@@ -116,11 +113,11 @@ beforeAll(async () => {
 
 afterAll(async () => {
     if (testInspectionId) {
-        await Inspection.destroy({ where: { id: testInspectionId } }).catch(() => {});
+        await prisma.inspecciones.inspection.deleteMany({ where: { id: testInspectionId } }).catch(() => {});
     }
-    await User.destroy({ where: { email: TEST_INSPECTOR_EMAIL } }).catch(() => {});
-    await User.destroy({ where: { email: TEST_NON_MASTER_EMAIL } }).catch(() => {});
-    await sequelize.close();
+    await prisma.auth.user.deleteMany({ where: { email: TEST_INSPECTOR_EMAIL } }).catch(() => {});
+    await prisma.auth.user.deleteMany({ where: { email: TEST_NON_MASTER_EMAIL } }).catch(() => {});
+    await disconnectAll();
 });
 
 describe('Inspection Endpoints', () => {

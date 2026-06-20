@@ -1,0 +1,213 @@
+// Migración: curiel_inspecciones
+// Modelos: Inspection, InspectionStatusHistory, InspectionArea, InspectionObservation, InspectionSummary, InspectionResponse
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum InspectionStatus {
+  pendiente
+  en_proceso
+  lista_revision
+  finalizada
+  cancelada
+  reprogramada
+}
+
+enum InspectionAreaStatus {
+  pendiente
+  en_revision
+  observado
+  aprobado
+}
+
+enum ObservationSeverity {
+  leve
+  media
+  alta
+  critica
+}
+
+enum ObservationType {
+  humedad
+  electrico
+  sanitario
+  acabados
+  carpinteria
+  estructura
+  seguridad
+  otro
+}
+
+enum ObservationStatus {
+  pendiente
+  corregido
+  requiere_revision
+}
+
+enum ReportStatus {
+  borrador
+  listo_para_revision
+  aprobado
+}
+
+enum InspectionResponseStatus {
+  cumple
+  no_cumple
+  no_aplica
+}
+
+model Inspection {
+  id             String           @id @default(uuid()) @db.Uuid
+  projectName    String           @map("project_name") @db.VarChar(255)
+  clientName     String           @map("client_name") @db.VarChar(255)
+  clientEmail    String?          @map("client_email") @db.VarChar(255)
+  clientPhone    String?          @map("client_phone") @db.VarChar(255)
+  address        String           @db.Text
+  city           String?          @db.VarChar(255)
+  state          String?          @db.VarChar(255)
+  zipCode        String?          @map("zip_code") @db.VarChar(255)
+  inspectionType String           @map("inspection_type") @db.VarChar(255)
+  status         InspectionStatus @default(pendiente)
+  scheduledDate  DateTime         @map("scheduled_date") @db.Timestamptz(6)
+  completedDate  DateTime?        @map("completed_date") @db.Timestamptz(6)
+  inspectorId    String           @map("inspector_id") @db.Uuid
+  createdById    String           @map("created_by_id") @db.Uuid
+  notes          String?          @db.Text
+  reportUrl      String?          @map("report_url") @db.VarChar(255)
+  latitude       Decimal?         @db.Decimal(10, 8)
+  longitude      Decimal?         @db.Decimal(11, 8)
+  clientId       String?          @map("client_id") @db.Uuid
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  statusHistory InspectionStatusHistory[]
+  areas         InspectionArea[]
+  observations  InspectionObservation[]
+  summary       InspectionSummary?
+  responses     InspectionResponse[]
+
+  @@index([inspectorId])
+  @@index([createdById])
+  @@index([clientId])
+  @@index([status])
+  @@index([scheduledDate])
+  @@map("inspections")
+}
+
+model InspectionStatusHistory {
+  id              String   @id @default(uuid()) @db.Uuid
+  inspectionId    String   @map("inspection_id") @db.Uuid
+  changedByUserId String   @map("changed_by_user_id") @db.Uuid
+  fromStatus      String   @map("from_status") @db.VarChar(50)
+  toStatus        String   @map("to_status") @db.VarChar(50)
+  reasonCode      String?  @map("reason_code") @db.VarChar(100)
+  reasonLabel     String?  @map("reason_label") @db.VarChar(255)
+  comment         String?  @db.Text
+  notifyClient    Boolean  @default(false) @map("notify_client")
+  notifyInspector Boolean  @default(false) @map("notify_inspector")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  inspection Inspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+
+  @@index([inspectionId])
+  @@index([changedByUserId])
+  @@map("inspection_status_histories")
+}
+
+model InspectionArea {
+  id               String               @id @default(uuid()) @db.Uuid
+  inspectionId     String               @map("inspection_id") @db.Uuid
+  name             String               @db.VarChar(255)
+  category         String               @default("interior") @db.VarChar(255)
+  lengthM          Decimal?             @map("length_m") @db.Decimal(10, 2)
+  widthM           Decimal?             @map("width_m") @db.Decimal(10, 2)
+  calculatedAreaM2 Decimal?             @map("calculated_area_m2") @db.Decimal(10, 2)
+  ceilingHeightM   Decimal?             @map("ceiling_height_m") @db.Decimal(10, 2)
+  notes            String?              @db.Text
+  status           InspectionAreaStatus @default(pendiente)
+  sortOrder        Int                  @default(0) @map("sort_order")
+  createdAt        DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  inspection   Inspection            @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  observations InspectionObservation[]
+
+  @@index([inspectionId])
+  @@index([category])
+  @@index([status])
+  @@index([sortOrder])
+  @@map("inspection_areas")
+}
+
+model InspectionObservation {
+  id             String            @id @default(uuid()) @db.Uuid
+  inspectionId   String            @map("inspection_id") @db.Uuid
+  areaId         String            @map("area_id") @db.Uuid
+  title          String            @db.VarChar(255)
+  description    String            @db.Text
+  severity       ObservationSeverity
+  type           ObservationType
+  recommendation String?           @db.Text
+  metricValue    Decimal?          @map("metric_value") @db.Decimal(10, 2)
+  metricUnit     String?           @map("metric_unit") @db.VarChar(255)
+  status         ObservationStatus @default(pendiente)
+  createdBy      String            @map("created_by") @db.Uuid
+  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  inspection Inspection     @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  area       InspectionArea @relation(fields: [areaId], references: [id], onDelete: Cascade)
+
+  @@index([inspectionId])
+  @@index([areaId])
+  @@index([severity])
+  @@index([type])
+  @@index([status])
+  @@index([createdBy])
+  @@map("inspection_observations")
+}
+
+model InspectionSummary {
+  id                   String       @id @default(uuid()) @db.Uuid
+  inspectionId         String       @unique @map("inspection_id") @db.Uuid
+  totalAreaM2          Decimal      @default(0) @map("total_area_m2") @db.Decimal(10, 2)
+  totalObservations    Int          @default(0) @map("total_observations")
+  criticalObservations Int          @default(0) @map("critical_observations")
+  highObservations     Int          @default(0) @map("high_observations")
+  mediumObservations   Int          @default(0) @map("medium_observations")
+  lightObservations    Int          @default(0) @map("light_observations")
+  generalConclusion    String?      @map("general_conclusion") @db.Text
+  finalRecommendations String?      @map("final_recommendations") @db.Text
+  reportStatus         ReportStatus @default(borrador) @map("report_status")
+  createdAt            DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  inspection Inspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+
+  @@index([reportStatus])
+  @@map("inspection_summaries")
+}
+
+model InspectionResponse {
+  id              String                 @id @default(uuid()) @db.Uuid
+  inspectionId    String                 @map("inspection_id") @db.Uuid
+  checklistItemId String                 @map("checklist_item_id") @db.Uuid
+  status          InspectionResponseStatus
+  observations    String?                @db.Text
+  respondedAt     DateTime               @default(now()) @map("responded_at") @db.Timestamptz(6)
+  createdAt       DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  inspection Inspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+
+  @@unique([inspectionId, checklistItemId])
+  @@index([inspectionId])
+  @@index([checklistItemId])
+  @@map("inspection_responses")
+}

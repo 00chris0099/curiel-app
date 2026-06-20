@@ -1,130 +1,114 @@
-const { User, Role } = require('../models');
+const { prisma } = require('../lib/databases');
 const { AppError } = require('../middlewares/errorHandler');
-const { Op } = require('sequelize');
-const { sequelize } = require('../config/database');
 const bcrypt = require('bcryptjs');
 const logger = require('../utils/logger');
 
-/**
- * Servicio de gestión de usuarios
- * Capa de lógica de negocio separada de controladores
- */
+const SELECT_USER_SAFE = {
+    id: true,
+    fullName: true,
+    email: true,
+    phone: true,
+    isActive: true,
+    isMasterAdmin: true,
+    createdBy: true,
+    createdAt: true,
+    updatedAt: true
+};
+
 class UserService {
-    /**
-     * Formatea un usuario con roles y rol principal
-     */
-    _formatUser(user) {
-        const u = user.toJSON();
-        const roles = (u.roles || []).map((r) => r.name);
+    _formatUser(user, roles) {
+        const roleNames = (roles || []).map(r => r.role.name);
         return {
-            ...u,
-            roles,
-            role: roles.length ? roles[0] : null
+            ...user,
+            roles: roleNames,
+            role: roleNames.length ? roleNames[0] : null
         };
     }
 
-    /**
-     * Obtener todos los usuarios con filtros
-     */
     async getAllUsers(filters = {}) {
         const { role, isActive, search, page = 1, limit = 10 } = filters;
 
         const where = {};
-
         if (typeof isActive === 'boolean') where.isActive = isActive;
         if (search) {
-            where[Op.or] = [
-                { fullName: { [Op.iLike]: `%${search}%` } },
-                { email: { [Op.iLike]: `%${search}%` } }
+            where.OR = [
+                { fullName: { contains: search, mode: 'insensitive' } },
+                { email: { contains: search, mode: 'insensitive' } }
             ];
         }
 
-        const include = [
-            {
-                model: Role,
-                as: 'roles',
-                attributes: ['name']
-            }
-        ];
+        const userRoleWhere = role ? { role: { name: role } } : {};
 
-        if (role) {
-            include[0].where = { name: role };
-        }
+        const skip = (parseInt(page) - 1) * parseInt(limit);
 
-        const offset = (page - 1) * limit;
+        const [users, total] = await Promise.all([
+            prisma.auth.user.findMany({
+                where,
+                select: {
+                    ...SELECT_USER_SAFE,
+                    roles: {
+                        where: userRoleWhere,
+                        select: { role: { select: { name: true } } }
+                    }
+                },
+                orderBy: { createdAt: 'desc' },
+                take: parseInt(limit),
+                skip
+            }),
+            prisma.auth.user.count({ where })
+        ]);
 
-        const { count, rows } = await User.findAndCountAll({
-            where,
-            include,
-            limit: parseInt(limit),
-            offset: parseInt(offset),
-            order: [['createdAt', 'DESC']],
-            attributes: { exclude: ['passwordHash', '_plainPassword'] }
-        });
-
-        const formatted = rows.map((u) => this._formatUser(u));
+        const formatted = users.map(u => this._formatUser(u, u.roles));
 
         return {
             users: formatted,
             pagination: {
-                total: count,
+                total,
                 page: parseInt(page),
                 limit: parseInt(limit),
-                totalPages: Math.ceil(count / limit)
+                totalPages: Math.ceil(total / limit)
             }
         };
     }
 
-    /**
-     * Obtener inspectores activos para asignacion
-     */
     async getInspectors() {
-        const users = await User.findAll({
+        const users = await prisma.auth.user.findMany({
             where: { isActive: true },
-            include: [
-                {
-                    model: Role,
-                    as: 'roles',
-                    where: { name: 'inspector' },
-                    attributes: ['name']
+            select: {
+                ...SELECT_USER_SAFE,
+                roles: {
+                    where: { role: { name: 'inspector' } },
+                    select: { role: { select: { name: true } } }
                 }
-            ],
-            order: [['fullName', 'ASC']],
-            attributes: { exclude: ['passwordHash', '_plainPassword'] }
+            },
+            orderBy: { fullName: 'asc' }
         });
 
-        return users.map((user) => this._formatUser(user));
+        return users
+            .filter(u => u.roles.length > 0)
+            .map(u => this._formatUser(u, u.roles));
     }
 
-    /**
-     * Obtener usuario por ID
-     */
     async getUserById(userId) {
-        const user = await User.findByPk(userId, {
-            include: [{ model: Role, as: 'roles', attributes: ['name'] }],
-            attributes: { exclude: ['passwordHash', '_plainPassword'] }
+        const user = await prisma.auth.user.findUnique({
+            where: { id: userId },
+            select: {
+                ...SELECT_USER_SAFE,
+                roles: {
+                    select: { role: { select: { name: true } } }
+                }
+            }
         });
 
         if (!user) {
             throw new AppError('Usuario no encontrado', 404, 'USER_NOT_FOUND');
         }
 
-        return this._formatUser(user);
+        return this._formatUser(user, user.roles);
     }
 
-    /**
-     * Crear nuevo usuario
-     */
     async createUser(userData, creatorId) {
-        const {
-            email,
-            password,
-            fullName,
-            firstName,
-            lastName,
-            role,
-            phone
-        } = userData;
+        const { email, password, fullName, firstName, lastName, role, phone } = userData;
 
         const normalizedEmail = email?.trim().toLowerCase();
         const normalizedFullName = (fullName || `${firstName || ''} ${lastName || ''}`).trim();
@@ -132,55 +116,65 @@ class UserService {
         if (!normalizedEmail) {
             throw new AppError('El email es requerido', 400, 'INVALID_EMAIL');
         }
-
         if (!password) {
             throw new AppError('La contraseña es requerida', 400, 'MISSING_PASSWORD');
         }
-
         if (!normalizedFullName) {
             throw new AppError('El nombre completo es requerido', 400, 'MISSING_FULL_NAME');
         }
 
-        // Verificar si el email ya existe
-        const existingUser = await User.findOne({ where: { email: normalizedEmail } });
+        const existingUser = await prisma.auth.user.findUnique({
+            where: { email: normalizedEmail }
+        });
         if (existingUser) {
             throw new AppError('El email ya está registrado', 409, 'DUPLICATE_EMAIL');
         }
 
         const passwordHash = await bcrypt.hash(password, 10);
-
-        // Crear usuario (no permitimos establecer isMasterAdmin desde el request)
-        const user = await User.create({
-            email: normalizedEmail,
-            fullName: normalizedFullName,
-            phone,
-            passwordHash,
-            createdBy: creatorId || null
-        });
-
-        // Asignar rol (si se provee) o inspector por defecto
         const roleName = role || 'inspector';
-        const roleModel = await Role.findOne({ where: { name: roleName } });
+
+        const roleModel = await prisma.auth.role.findUnique({
+            where: { name: roleName }
+        });
         if (!roleModel) {
             throw new AppError(`Rol inválido: ${roleName}`, 400, 'INVALID_ROLE');
         }
 
-        await user.addRole(roleModel, { through: { assignedBy: creatorId } });
-
-        // Reload with roles to return a normalized payload
-        await user.reload({
-            include: [{ model: Role, as: 'roles', attributes: ['name'] }]
+        const user = await prisma.auth.user.create({
+            data: {
+                email: normalizedEmail,
+                fullName: normalizedFullName,
+                phone,
+                passwordHash,
+                createdBy: creatorId || null,
+                roles: {
+                    create: {
+                        roleId: roleModel.id,
+                        assignedBy: creatorId
+                    }
+                }
+            },
+            select: {
+                ...SELECT_USER_SAFE,
+                roles: {
+                    select: { role: { select: { name: true } } }
+                }
+            }
         });
 
-        return this._formatUser(user);
+        return this._formatUser(user, user.roles);
     }
 
-    /**
-     * Actualizar usuario
-     */
     async updateUser(userId, updateData, updaterId) {
-        const user = await User.findByPk(userId, {
-            include: [{ model: Role, as: 'roles', attributes: ['name'] }]
+        const user = await prisma.auth.user.findUnique({
+            where: { id: userId },
+            select: {
+                ...SELECT_USER_SAFE,
+                fullName: true,
+                roles: {
+                    select: { role: { select: { name: true } } }
+                }
+            }
         });
 
         if (!user) {
@@ -189,39 +183,47 @@ class UserService {
 
         const { firstName, lastName, phone, role } = updateData;
 
-        // Actualizar campos permitidos
+        const updateFields = {};
         if (firstName !== undefined || lastName !== undefined) {
-            const currentFull = user.fullName || '';
-            const currentParts = currentFull.split(' ');
+            const currentParts = (user.fullName || '').split(' ');
             const newFirst = firstName !== undefined ? firstName : currentParts[0];
             const newLast = lastName !== undefined ? lastName : currentParts.slice(1).join(' ');
-            user.fullName = `${newFirst || ''} ${newLast || ''}`.trim();
+            updateFields.fullName = `${newFirst || ''} ${newLast || ''}`.trim();
         }
-        if (phone !== undefined) user.phone = phone;
+        if (phone !== undefined) updateFields.phone = phone;
 
-        // Solo admin puede cambiar roles (no se permite cambiar isMasterAdmin aquí)
+        if (Object.keys(updateFields).length > 0) {
+            await prisma.auth.user.update({
+                where: { id: userId },
+                data: updateFields
+            });
+        }
+
         if (role !== undefined) {
-            const roleModel = await Role.findOne({ where: { name: role } });
+            const roleModel = await prisma.auth.role.findUnique({
+                where: { name: role }
+            });
             if (!roleModel) {
                 throw new AppError(`Rol inválido: ${role}`, 400, 'INVALID_ROLE');
             }
-            await user.setRoles([roleModel], { through: { assignedBy: updaterId } });
+
+            await prisma.auth.userRole.deleteMany({ where: { userId } });
+            await prisma.auth.userRole.create({
+                data: {
+                    userId,
+                    roleId: roleModel.id,
+                    assignedBy: updaterId
+                }
+            });
         }
 
-        await user.save();
-
-        await user.reload({
-            include: [{ model: Role, as: 'roles', attributes: ['name'] }]
-        });
-
-        return this._formatUser(user);
+        return this.getUserById(userId);
     }
 
-    /**
-     * Transferir el master admin a otro usuario
-     */
     async transferMasterAdmin(actorUserId, newMasterUserId) {
-        const actor = await User.findByPk(actorUserId);
+        const actor = await prisma.auth.user.findUnique({
+            where: { id: actorUserId }
+        });
         if (!actor || !actor.isMasterAdmin) {
             throw new AppError('No tienes permiso para transferir el master admin', 403, 'FORBIDDEN');
         }
@@ -230,36 +232,31 @@ class UserService {
             throw new AppError('El nuevo master admin debe ser diferente al actual', 400, 'INVALID_REQUEST');
         }
 
-        const newMaster = await User.findByPk(newMasterUserId);
+        const newMaster = await prisma.auth.user.findUnique({
+            where: { id: newMasterUserId }
+        });
         if (!newMaster) {
             throw new AppError('Usuario destino no encontrado', 404, 'USER_NOT_FOUND');
         }
 
-        // Transacción para garantizar unicidad
-        await sequelize.transaction(async (t) => {
-            // Remover flag del master admin actual
-            await User.update(
-                { isMasterAdmin: false },
-                { where: { isMasterAdmin: true }, transaction: t }
-            );
+        await prisma.auth.$transaction([
+            prisma.auth.user.updateMany({
+                where: { isMasterAdmin: true },
+                data: { isMasterAdmin: false }
+            }),
+            prisma.auth.user.update({
+                where: { id: newMasterUserId },
+                data: { isMasterAdmin: true }
+            })
+        ]);
 
-            // Establecer nuevo master admin
-            newMaster.isMasterAdmin = true;
-            await newMaster.save({ transaction: t });
-        });
-
-        await newMaster.reload({
-            include: [{ model: Role, as: 'roles', attributes: ['name'] }]
-        });
-
-        return this._formatUser(newMaster);
+        return this.getUserById(newMasterUserId);
     }
 
-    /**
-     * Cambiar estado de usuario (activar/desactivar)
-     */
     async toggleUserStatus(userId, isActive) {
-        const user = await User.findByPk(userId);
+        const user = await prisma.auth.user.findUnique({
+            where: { id: userId }
+        });
 
         if (!user) {
             throw new AppError('Usuario no encontrado', 404, 'USER_NOT_FOUND');
@@ -269,21 +266,18 @@ class UserService {
             throw new AppError('No se puede desactivar al master admin', 403, 'FORBIDDEN');
         }
 
-        user.isActive = isActive;
-        await user.save();
-
-        await user.reload({
-            include: [{ model: Role, as: 'roles', attributes: ['name'] }]
+        await prisma.auth.user.update({
+            where: { id: userId },
+            data: { isActive }
         });
 
-        return this._formatUser(user);
+        return this.getUserById(userId);
     }
 
-    /**
-     * Eliminar usuario (soft delete marcando como inactivo)
-     */
     async deleteUser(userId) {
-        const user = await User.findByPk(userId);
+        const user = await prisma.auth.user.findUnique({
+            where: { id: userId }
+        });
 
         if (!user) {
             throw new AppError('Usuario no encontrado', 404, 'USER_NOT_FOUND');
@@ -293,37 +287,28 @@ class UserService {
             throw new AppError('No se puede eliminar al master admin', 403, 'FORBIDDEN');
         }
 
-        // Soft delete - marcar como inactivo
-        user.isActive = false;
-        await user.save();
-
-        await user.reload({
-            include: [{ model: Role, as: 'roles', attributes: ['name'] }]
+        await prisma.auth.user.update({
+            where: { id: userId },
+            data: { isActive: false }
         });
 
-        return this._formatUser(user);
+        return this.getUserById(userId);
     }
 
-    /**
-     * Obtener estadísticas de usuarios
-     */
     async getUserStats() {
         try {
-            const users = await User.findAll({
-                attributes: ['id', 'isActive'],
-                include: [
-                    {
-                        model: Role,
-                        as: 'roles',
-                        attributes: ['name'],
-                        through: { attributes: [] },
-                        required: false
+            const users = await prisma.auth.user.findMany({
+                select: {
+                    id: true,
+                    isActive: true,
+                    roles: {
+                        select: { role: { select: { name: true } } }
                     }
-                ]
+                }
             });
 
             const stats = {
-                total: 0,
+                total: users.length,
                 active: 0,
                 inactive: 0,
                 activos: 0,
@@ -331,17 +316,10 @@ class UserService {
                 supervisores: 0,
                 arquitectos: 0,
                 inspectores: 0,
-                byRole: [
-                    { role: 'admin', count: 0 },
-                    { role: 'supervisor', count: 0 },
-                    { role: 'arquitecto', count: 0 },
-                    { role: 'inspector', count: 0 }
-                ]
+                byRole: []
             };
 
-            users.forEach((user) => {
-                stats.total += 1;
-
+            for (const user of users) {
                 if (user.isActive) {
                     stats.active += 1;
                     stats.activos += 1;
@@ -349,24 +327,12 @@ class UserService {
                     stats.inactive += 1;
                 }
 
-                const roleNames = new Set((user.roles || []).map((role) => role.name));
-
-                if (roleNames.has('admin')) {
-                    stats.admins += 1;
-                }
-
-                if (roleNames.has('supervisor')) {
-                    stats.supervisores += 1;
-                }
-
-                if (roleNames.has('arquitecto')) {
-                    stats.arquitectos += 1;
-                }
-
-                if (roleNames.has('inspector')) {
-                    stats.inspectores += 1;
-                }
-            });
+                const roleNames = new Set(user.roles.map(r => r.role.name));
+                if (roleNames.has('admin')) stats.admins += 1;
+                if (roleNames.has('supervisor')) stats.supervisores += 1;
+                if (roleNames.has('arquitecto')) stats.arquitectos += 1;
+                if (roleNames.has('inspector')) stats.inspectores += 1;
+            }
 
             stats.byRole = [
                 { role: 'admin', count: stats.admins },

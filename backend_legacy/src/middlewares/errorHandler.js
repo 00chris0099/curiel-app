@@ -83,6 +83,42 @@ const errorHandler = (err, req, res, next) => {
     }
 
     // ============================================
+    // ERRORES DE PRISMA (Base de Datos)
+    // ============================================
+
+    if (err.code === 'P2002') {
+        const field = err.meta?.target?.[0] || 'campo';
+        return res.status(409).json({
+            success: false,
+            error: {
+                code: 'DUPLICATE_ENTRY',
+                message: `Ya existe un registro con ese ${field}`,
+                field
+            }
+        });
+    }
+
+    if (err.code === 'P2025') {
+        return res.status(404).json({
+            success: false,
+            error: {
+                code: 'RECORD_NOT_FOUND',
+                message: 'Registro no encontrado'
+            }
+        });
+    }
+
+    if (err.code === 'P2003') {
+        return res.status(400).json({
+            success: false,
+            error: {
+                code: 'INVALID_REFERENCE',
+                message: 'Referencia inválida: el registro relacionado no existe'
+            }
+        });
+    }
+
+    // ============================================
     // ERRORES DE JWT (Autenticación)
     // ============================================
 

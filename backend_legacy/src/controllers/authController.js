@@ -1,43 +1,31 @@
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
-const { User, Role, RefreshToken, PasswordResetToken } = require('../models');
+const { prisma } = require('../lib/databases');
 const config = require('../config');
 const { createAuditLog } = require('../middlewares/auditLog');
 const { sendEmail } = require('../services/emailService');
 const { welcomeEmail, passwordResetEmail } = require('../utils/emailTemplates');
 
-const formatUser = (user) => {
-    const u = user.toJSON();
-    const roles = (u.roles || []).map((r) => r.name);
+const formatUser = (user, roles) => {
+    const roleNames = (roles || []).map(r => r.role?.name || r.name);
     return {
-        ...u,
-        roles,
-        role: roles.length ? roles[0] : null
+        ...user,
+        roles: roleNames,
+        role: roleNames.length ? roleNames[0] : null
     };
 };
 
-/**
- * Generar access token JWT (corta duracion: 15min)
- */
 const generateAccessToken = (payload) => {
-    return jwt.sign(payload, config.jwt.secret, {
-        expiresIn: '15m'
-    });
+    return jwt.sign(payload, config.jwt.secret, { expiresIn: '15m' });
 };
 
-/**
- * Generar refresh token JWT (larga duracion: 30d)
- */
 const generateRefreshTokenJWT = (payload) => {
     return jwt.sign(payload, config.jwt.secret, {
         expiresIn: config.jwt.refreshExpiresIn || '30d'
     });
 };
 
-/**
- * Parsear duracion de un JWT expiresIn a milisegundos
- */
 const parseExpiresIn = (expiresIn) => {
     if (typeof expiresIn === 'number') return expiresIn * 1000;
     const match = String(expiresIn).match(/^(\d+)([smhd])$/);
@@ -47,27 +35,25 @@ const parseExpiresIn = (expiresIn) => {
     return parseInt(val) * multipliers[unit];
 };
 
-/**
- * Crear refresh token en BD y revocar anteriores del mismo usuario
- */
+const generateToken = () => crypto.randomBytes(32).toString('hex');
+
 const createRefreshToken = async (userId, req) => {
     const refreshExpiresIn = config.jwt.refreshExpiresIn || '30d';
     const expiresAt = new Date(Date.now() + parseExpiresIn(refreshExpiresIn));
 
-    const refreshToken = await RefreshToken.create({
-        token: RefreshToken.generateToken(),
-        userId,
-        expiresAt,
-        ipAddress: req.ip || req.connection?.remoteAddress,
-        userAgent: req.headers['user-agent']
+    const refreshToken = await prisma.auth.refreshToken.create({
+        data: {
+            token: generateToken(),
+            userId,
+            expiresAt,
+            ipAddress: req.ip || req.connection?.remoteAddress,
+            userAgent: req.headers['user-agent']
+        }
     });
 
     return refreshToken;
 };
 
-/**
- * Generar ambos tokens + guardar refresh en BD
- */
 const generateTokenPair = async (user, roles, req) => {
     const payload = {
         userId: user.id,
@@ -82,18 +68,15 @@ const generateTokenPair = async (user, roles, req) => {
     return { accessToken, refreshToken: refreshToken.token };
 };
 
-/**
- * Login
- * POST /api/auth/login
- */
 const login = async (req, res, next) => {
     try {
         const { email, password } = req.body;
 
-        // Buscar usuario con roles
-        const user = await User.findOne({
+        const user = await prisma.auth.user.findUnique({
             where: { email },
-            include: [{ model: Role, as: 'roles', attributes: ['name'] }]
+            include: {
+                roles: { select: { role: { select: { name: true } } } }
+            }
         });
 
         if (!user) {
@@ -103,8 +86,7 @@ const login = async (req, res, next) => {
             });
         }
 
-        // Verificar contraseña
-        const isMatch = await user.comparePassword(password);
+        const isMatch = await bcrypt.compare(password, user.passwordHash);
 
         if (!isMatch) {
             return res.status(401).json({
@@ -113,7 +95,6 @@ const login = async (req, res, next) => {
             });
         }
 
-        // Verificar si está activo
         if (!user.isActive) {
             return res.status(403).json({
                 success: false,
@@ -121,21 +102,25 @@ const login = async (req, res, next) => {
             });
         }
 
-        // Actualizar ultimo login
-        user.lastLogin = new Date();
-        await user.save();
+        const roles = (user.roles || []).map(r => r.role.name);
 
-        const roles = (user.roles || []).map(r => r.name);
-
-        // Generar access token + refresh token
         const { accessToken, refreshToken } = await generateTokenPair(user, roles, req);
 
-        // Audit log
         await createAuditLog(user.id, 'login', 'User', user.id);
 
-        const responseUser = user.toJSON();
-        responseUser.roles = roles;
-        responseUser.role = roles.length ? roles[0] : null;
+        const responseUser = {
+            id: user.id,
+            fullName: user.fullName,
+            email: user.email,
+            phone: user.phone,
+            isActive: user.isActive,
+            isMasterAdmin: user.isMasterAdmin,
+            createdBy: user.createdBy,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt,
+            roles,
+            role: roles.length ? roles[0] : null
+        };
 
         res.json({
             success: true,
@@ -151,16 +136,13 @@ const login = async (req, res, next) => {
     }
 };
 
-/**
- * Registro de nuevo usuario (solo Admin)
- * POST /api/auth/register
- */
 const register = async (req, res, next) => {
     try {
         const { email, password, firstName, lastName, role, phone } = req.body;
 
-        // Verificar si el usuario ya existe
-        const existingUser = await User.findOne({ where: { email } });
+        const existingUser = await prisma.auth.user.findUnique({
+            where: { email }
+        });
         if (existingUser) {
             return res.status(409).json({
                 success: false,
@@ -168,9 +150,10 @@ const register = async (req, res, next) => {
             });
         }
 
-        // Determinar rol y validar
         const roleName = role || 'inspector';
-        const roleModel = await Role.findOne({ where: { name: roleName } });
+        const roleModel = await prisma.auth.role.findUnique({
+            where: { name: roleName }
+        });
         if (!roleModel) {
             return res.status(400).json({
                 success: false,
@@ -178,43 +161,50 @@ const register = async (req, res, next) => {
             });
         }
 
-        // Crear usuario
-        const user = await User.create({
-            email,
-            password,
-            fullName: `${firstName || ''} ${lastName || ''}`.trim(),
-            phone
+        const passwordHash = await bcrypt.hash(password, 10);
+        const fullName = `${firstName || ''} ${lastName || ''}`.trim();
+
+        const user = await prisma.auth.user.create({
+            data: {
+                email,
+                passwordHash,
+                fullName,
+                phone,
+                createdBy: req.userId,
+                roles: {
+                    create: {
+                        roleId: roleModel.id,
+                        assignedBy: req.userId
+                    }
+                }
+            },
+            include: {
+                roles: { select: { role: { select: { name: true } } } }
+            }
         });
 
-        // Asignar rol
-        await user.addRole(roleModel, { through: { assignedBy: req.userId } });
-        await user.reload({ include: [{ model: Role, as: 'roles', attributes: ['name'] }] });
+        const roles = user.roles.map(r => r.role.name);
 
-        const roles = (user.roles || []).map(r => r.name);
-
-        // Generar tokens
         const { accessToken, refreshToken } = await generateTokenPair(user, roles, req);
 
-        // Audit log
         await createAuditLog(req.userId, 'register', 'User', user.id, {
             email: user.email,
             role: roleName
         });
 
-        // Enviar email de bienvenida con contrasena temporal
         try {
             const { subject, html } = welcomeEmail(user, password);
             await sendEmail({ to: user.email, subject, html });
         } catch (emailError) {
             const logger = require('../utils/logger');
-        logger.error('Error sending welcome email', { error: emailError.message });
+            logger.error('Error sending welcome email', { error: emailError.message });
         }
 
         res.status(201).json({
             success: true,
             message: 'Usuario creado exitosamente',
             data: {
-                user: formatUser(user),
+                user: formatUser(user, user.roles),
                 token: accessToken,
                 refreshToken
             }
@@ -224,67 +214,76 @@ const register = async (req, res, next) => {
     }
 };
 
-/**
- * Obtener perfil del usuario autenticado
- * GET /api/auth/me
- */
 const getMe = async (req, res, next) => {
     try {
-        const user = await User.findByPk(req.userId, {
-            include: [{ model: Role, as: 'roles', attributes: ['name'] }]
+        const user = await prisma.auth.user.findUnique({
+            where: { id: req.userId },
+            include: {
+                roles: { select: { role: { select: { name: true } } } }
+            }
         });
 
         res.json({
             success: true,
-            // data es directamente el User para alinear con ProfileResponse del frontend
-            data: formatUser(user)
+            data: formatUser(user, user.roles)
         });
     } catch (error) {
         next(error);
     }
 };
 
-/**
- * Actualizar perfil
- * PUT /api/auth/me
- */
 const updateProfile = async (req, res, next) => {
     try {
         const { firstName, lastName, phone } = req.body;
-        const user = await User.findByPk(req.userId);
 
-        if (firstName) user.firstName = firstName;
-        if (lastName) user.lastName = lastName;
-        if (phone) user.phone = phone;
+        const user = await prisma.auth.user.findUnique({
+            where: { id: req.userId }
+        });
 
-        await user.save();
+        const data = {};
+        if (firstName || lastName) {
+            const currentParts = (user.fullName || '').split(' ');
+            const newFirst = firstName || currentParts[0];
+            const newLast = lastName || currentParts.slice(1).join(' ');
+            data.fullName = `${newFirst || ''} ${newLast || ''}`.trim();
+        }
+        if (phone) data.phone = phone;
 
-        await createAuditLog(req.userId, 'update_profile', 'User', user.id);
+        if (Object.keys(data).length > 0) {
+            await prisma.auth.user.update({
+                where: { id: req.userId },
+                data
+            });
+        }
 
-        await user.reload({ include: [{ model: Role, as: 'roles', attributes: ['name'] }] });
+        await createAuditLog(req.userId, 'update_profile', 'User', req.userId);
+
+        const updatedUser = await prisma.auth.user.findUnique({
+            where: { id: req.userId },
+            include: {
+                roles: { select: { role: { select: { name: true } } } }
+            }
+        });
 
         res.json({
             success: true,
             message: 'Perfil actualizado',
-            // data es directamente el User para alinear con ProfileResponse del frontend
-            data: formatUser(user)
+            data: formatUser(updatedUser, updatedUser.roles)
         });
     } catch (error) {
         next(error);
     }
 };
 
-/**
- * Cambiar contraseña
- * PUT /api/auth/change-password
- */
 const changePassword = async (req, res, next) => {
     try {
         const { currentPassword, newPassword } = req.body;
-        const user = await User.findByPk(req.userId);
 
-        // Verificar contraseña actual
-        const isMatch = await user.comparePassword(currentPassword);
+        const user = await prisma.auth.user.findUnique({
+            where: { id: req.userId }
+        });
+
+        const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
 
         if (!isMatch) {
             return res.status(401).json({
@@ -293,11 +292,13 @@ const changePassword = async (req, res, next) => {
             });
         }
 
-        // Actualizar contraseña
-        user.password = newPassword;
-        await user.save();
+        const passwordHash = await bcrypt.hash(newPassword, 10);
+        await prisma.auth.user.update({
+            where: { id: req.userId },
+            data: { passwordHash }
+        });
 
-        await createAuditLog(req.userId, 'change_password', 'User', user.id);
+        await createAuditLog(req.userId, 'change_password', 'User', req.userId);
 
         res.json({
             success: true,
@@ -308,10 +309,6 @@ const changePassword = async (req, res, next) => {
     }
 };
 
-/**
- * Renovar access token usando refresh token
- * POST /api/auth/refresh
- */
 const refreshToken = async (req, res, next) => {
     try {
         const { refreshToken: token } = req.body;
@@ -326,10 +323,15 @@ const refreshToken = async (req, res, next) => {
             });
         }
 
-        // Buscar refresh token en BD
-        const storedToken = await RefreshToken.findOne({
+        const storedToken = await prisma.auth.refreshToken.findUnique({
             where: { token },
-            include: [{ model: User, as: 'user', include: [{ model: Role, as: 'roles', attributes: ['name'] }] }]
+            include: {
+                user: {
+                    include: {
+                        roles: { select: { role: { select: { name: true } } } }
+                    }
+                }
+            }
         });
 
         if (!storedToken) {
@@ -342,10 +344,10 @@ const refreshToken = async (req, res, next) => {
             });
         }
 
-        // Verificar si esta revocado
-        if (storedToken.isRevoked()) {
-            // Posible uso de refresh token revocado → revocar todos los tokens del usuario
-            await RefreshToken.destroy({ where: { userId: storedToken.userId } });
+        if (storedToken.revokedAt) {
+            await prisma.auth.refreshToken.deleteMany({
+                where: { userId: storedToken.userId }
+            });
             return res.status(401).json({
                 success: false,
                 error: {
@@ -355,9 +357,11 @@ const refreshToken = async (req, res, next) => {
             });
         }
 
-        // Verificar si esta expirado
-        if (storedToken.isExpired()) {
-            await storedToken.revoke();
+        if (new Date() > storedToken.expiresAt) {
+            await prisma.auth.refreshToken.update({
+                where: { id: storedToken.id },
+                data: { revokedAt: new Date() }
+            });
             return res.status(401).json({
                 success: false,
                 error: {
@@ -370,7 +374,10 @@ const refreshToken = async (req, res, next) => {
         const user = storedToken.user;
 
         if (!user || !user.isActive) {
-            await storedToken.revoke();
+            await prisma.auth.refreshToken.update({
+                where: { id: storedToken.id },
+                data: { revokedAt: new Date() }
+            });
             return res.status(401).json({
                 success: false,
                 error: {
@@ -380,13 +387,17 @@ const refreshToken = async (req, res, next) => {
             });
         }
 
-        const roles = (user.roles || []).map(r => r.name);
+        const roles = user.roles.map(r => r.role.name);
 
-        // Revocar el refresh token actual (rotation)
         const newRefreshToken = await createRefreshToken(user.id, req);
-        await storedToken.revoke(newRefreshToken.token);
+        await prisma.auth.refreshToken.update({
+            where: { id: storedToken.id },
+            data: {
+                revokedAt: new Date(),
+                replacedByToken: newRefreshToken.token
+            }
+        });
 
-        // Generar nuevo access token
         const accessToken = generateAccessToken({
             userId: user.id,
             email: user.email,
@@ -394,7 +405,6 @@ const refreshToken = async (req, res, next) => {
             roles
         });
 
-        // Audit log
         await createAuditLog(user.id, 'refresh_token', 'User', user.id);
 
         res.json({
@@ -410,23 +420,22 @@ const refreshToken = async (req, res, next) => {
     }
 };
 
-/**
- * Cerrar sesion (revocar refresh token)
- * POST /api/auth/logout
- */
 const logout = async (req, res, next) => {
     try {
         const { refreshToken: token } = req.body;
 
         if (token) {
-            // Revocar el refresh token especifico
-            const storedToken = await RefreshToken.findOne({ where: { token } });
+            const storedToken = await prisma.auth.refreshToken.findUnique({
+                where: { token }
+            });
             if (storedToken) {
-                await storedToken.revoke();
+                await prisma.auth.refreshToken.update({
+                    where: { id: storedToken.id },
+                    data: { revokedAt: new Date() }
+                });
             }
         }
 
-        // Audit log
         if (req.userId) {
             await createAuditLog(req.userId, 'logout', 'User', req.userId);
         }
@@ -440,17 +449,14 @@ const logout = async (req, res, next) => {
     }
 };
 
-/**
- * Solicitar restablecimiento de contrasena
- * POST /api/auth/forgot-password
- */
 const forgotPassword = async (req, res, next) => {
     try {
         const { email } = req.body;
 
-        const user = await User.findOne({ where: { email } });
+        const user = await prisma.auth.user.findUnique({
+            where: { email }
+        });
 
-        // Siempre devolver success para no revelar si el email existe
         if (!user) {
             return res.json({
                 success: true,
@@ -458,31 +464,26 @@ const forgotPassword = async (req, res, next) => {
             });
         }
 
-        // Invalidar tokens anteriores del mismo usuario
-        await PasswordResetToken.update(
-            { usedAt: new Date() },
-            { where: { userId: user.id, usedAt: null } }
-        );
-
-        // Crear nuevo token (1 hora de expiracion)
-        const resetToken = PasswordResetToken.generateToken();
-        const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hora
-
-        await PasswordResetToken.create({
-            userId: user.id,
-            token: resetToken,
-            expiresAt
+        await prisma.auth.passwordResetToken.updateMany({
+            where: { userId: user.id, usedAt: null },
+            data: { usedAt: new Date() }
         });
 
-        // Enviar email
+        const resetToken = generateToken();
+        const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+        await prisma.auth.passwordResetToken.create({
+            data: {
+                userId: user.id,
+                token: resetToken,
+                expiresAt
+            }
+        });
+
         const resetUrl = `${config.urls.frontend}/reset-password?token=${resetToken}`;
         const { subject, html } = passwordResetEmail(user, resetUrl);
 
-        await sendEmail({
-            to: user.email,
-            subject,
-            html
-        });
+        await sendEmail({ to: user.email, subject, html });
 
         await createAuditLog(user.id, 'forgot_password', 'User', user.id);
 
@@ -495,10 +496,6 @@ const forgotPassword = async (req, res, next) => {
     }
 };
 
-/**
- * Restablecer contrasena con token
- * POST /api/auth/reset-password
- */
 const resetPassword = async (req, res, next) => {
     try {
         const { token, newPassword } = req.body;
@@ -517,7 +514,7 @@ const resetPassword = async (req, res, next) => {
             });
         }
 
-        const resetTokenRecord = await PasswordResetToken.findOne({
+        const resetTokenRecord = await prisma.auth.passwordResetToken.findFirst({
             where: { token, usedAt: null }
         });
 
@@ -528,15 +525,17 @@ const resetPassword = async (req, res, next) => {
             });
         }
 
-        if (resetTokenRecord.isExpired()) {
+        if (new Date() > resetTokenRecord.expiresAt) {
             return res.status(400).json({
                 success: false,
                 message: 'El token ha expirado. Solicita uno nuevo.'
             });
         }
 
-        // Actualizar contrasena
-        const user = await User.findByPk(resetTokenRecord.userId);
+        const user = await prisma.auth.user.findUnique({
+            where: { id: resetTokenRecord.userId }
+        });
+
         if (!user) {
             return res.status(400).json({
                 success: false,
@@ -544,15 +543,20 @@ const resetPassword = async (req, res, next) => {
             });
         }
 
-        user.password = newPassword;
-        await user.save();
+        const passwordHash = await bcrypt.hash(newPassword, 10);
+        await prisma.auth.user.update({
+            where: { id: user.id },
+            data: { passwordHash }
+        });
 
-        // Marcar token como usado
-        resetTokenRecord.usedAt = new Date();
-        await resetTokenRecord.save();
+        await prisma.auth.passwordResetToken.update({
+            where: { id: resetTokenRecord.id },
+            data: { usedAt: new Date() }
+        });
 
-        // Revocar todos los refresh tokens del usuario
-        await RefreshToken.destroy({ where: { userId: user.id } });
+        await prisma.auth.refreshToken.deleteMany({
+            where: { userId: user.id }
+        });
 
         await createAuditLog(user.id, 'reset_password', 'User', user.id);
 

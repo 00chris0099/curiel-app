@@ -1,0 +1,27 @@
+// Migración: curiel_auditoria
+// Modelos: AuditLog
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String?  @map("user_id") @db.Uuid
+  action     String   @db.VarChar(255)
+  entityType String?  @map("entity_type") @db.VarChar(255)
+  entityId   String?  @map("entity_id") @db.Uuid
+  changes    Json?    @db.JsonB
+  ipAddress  String?  @map("ip_address") @db.VarChar(255)
+  userAgent  String?  @map("user_agent") @db.Text
+  details    Json?    @db.JsonB
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}

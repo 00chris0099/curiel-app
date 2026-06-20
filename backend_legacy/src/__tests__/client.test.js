@@ -1,8 +1,7 @@
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { sequelize } = require('../config/database');
-const { User, Role, Client } = require('../models');
+const { prisma, connectAll, disconnectAll } = require('../lib/databases');
 const config = require('../config');
 
 let app;
@@ -15,25 +14,23 @@ const createdClientIds = [];
 
 async function createUserWithPassword(userData) {
     const hash = await bcrypt.hash(userData.password, 10);
-    const user = await User.create({
-        email: userData.email,
-        passwordHash: hash,
-        fullName: userData.fullName,
-        isActive: true
+    const user = await prisma.auth.user.create({
+        data: {
+            email: userData.email,
+            passwordHash: hash,
+            fullName: userData.fullName,
+            isActive: true
+        }
     });
     return user;
 }
 
 beforeAll(async () => {
-    await sequelize.authenticate();
-    require('../models');
+    await connectAll();
     app = require('../app');
 
-    // Sync clients table only
-    await Client.sync({ alter: true });
-
     // Clean stale test clients from prior runs
-    await Client.destroy({ where: {}, force: true });
+    await prisma.admin.client.deleteMany({});
 
     const timestamp = Date.now();
 
@@ -46,11 +43,12 @@ beforeAll(async () => {
         fullName: 'Inspector Test'
     });
 
-    const [inspectorRole] = await Role.findOrCreate({
+    const inspectorRole = await prisma.auth.role.upsert({
         where: { name: 'inspector' },
-        defaults: { name: 'inspector', description: 'Test inspector' }
+        update: {},
+        create: { name: 'inspector', description: 'Test inspector' }
     });
-    await inspectorUser.addRole(inspectorRole);
+    await prisma.auth.userRole.create({ data: { userId: inspectorUser.id, roleId: inspectorRole.id } });
 
     inspectorToken = jwt.sign(
         { userId: inspectorUser.id, email: inspectorUser.email, isMasterAdmin: false, roles: ['inspector'] },
@@ -59,14 +57,14 @@ beforeAll(async () => {
     );
 
     // Find or create admin
-    const [existingAdminUser] = await sequelize.query(`
+    const existingAdminUser = await prisma.auth.$queryRaw`
         SELECT u.id, u.email, u.is_master_admin
         FROM users u
         INNER JOIN user_roles ur ON ur.user_id = u.id
         INNER JOIN roles r ON r.id = ur.role_id
         WHERE r.name = 'admin'
         LIMIT 1
-    `);
+    `;
 
     if (existingAdminUser.length > 0) {
         adminToken = jwt.sign(
@@ -83,11 +81,12 @@ beforeAll(async () => {
             fullName: 'Admin Test'
         });
 
-        const [adminRole] = await Role.findOrCreate({
+        const adminRole = await prisma.auth.role.upsert({
             where: { name: 'admin' },
-            defaults: { name: 'admin', description: 'Test admin' }
+            update: {},
+            create: { name: 'admin', description: 'Test admin' }
         });
-        await adminUser.addRole(adminRole);
+        await prisma.auth.userRole.create({ data: { userId: adminUser.id, roleId: adminRole.id } });
 
         adminToken = jwt.sign(
             { userId: adminUser.id, email: adminUser.email, isMasterAdmin: adminUser.isMasterAdmin, roles: ['admin'] },
@@ -104,11 +103,12 @@ beforeAll(async () => {
         password: 'Test1234*',
         fullName: 'Non Master Admin'
     });
-    const [adminRoleForNonMaster] = await Role.findOrCreate({
+    const adminRoleForNonMaster = await prisma.auth.role.upsert({
         where: { name: 'admin' },
-        defaults: { name: 'admin', description: 'Test admin' }
+        update: {},
+        create: { name: 'admin', description: 'Test admin' }
     });
-    await nonMasterAdmin.addRole(adminRoleForNonMaster);
+    await prisma.auth.userRole.create({ data: { userId: nonMasterAdmin.id, roleId: adminRoleForNonMaster.id } });
     nonMasterAdminToken = jwt.sign(
         { userId: nonMasterAdmin.id, email: nonMasterAdmin.email, isMasterAdmin: false, roles: ['admin'] },
         config.jwt.secret,
@@ -119,12 +119,12 @@ beforeAll(async () => {
 afterAll(async () => {
     // Cleanup
     for (const id of createdClientIds) {
-        await Client.destroy({ where: { id }, force: true });
+        await prisma.admin.client.deleteMany({ where: { id } });
     }
     for (const email of createdEmails) {
-        await User.destroy({ where: { email }, force: true });
+        await prisma.auth.user.deleteMany({ where: { email } });
     }
-    await sequelize.close();
+    await disconnectAll();
 });
 
 describe('Client API', () => {

@@ -1,0 +1,100 @@
+// Migración: curiel_alertas
+// Modelos: Alert, Suspension, Evaluation
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum AlertStatus {
+  abierta
+  en_revision
+  resuelta
+}
+
+enum SuspensionReason {
+  abandono
+  rendimiento
+  conducta
+  otro
+}
+
+enum SuspensionStatus {
+  activa
+  levantada
+}
+
+enum EvaluationStatus {
+  borrador
+  confirmada
+  enviada
+}
+
+model Alert {
+  id            String      @id @default(uuid()) @db.Uuid
+  inspectionId  String?     @map("inspection_id") @db.Uuid
+  suspensionId  String?     @map("suspension_id") @db.Uuid
+  supervisorId  String      @map("supervisor_id") @db.Uuid
+  gravityLevel  Int         @map("gravity_level")
+  title         String      @db.VarChar(255)
+  description   String      @db.Text
+  status        AlertStatus @default(abierta)
+  notifiedUsers Json        @default("[]") @map("notified_users") @db.Json
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([inspectionId])
+  @@index([suspensionId])
+  @@index([supervisorId])
+  @@index([status])
+  @@map("alerts")
+}
+
+model Suspension {
+  id            String           @id @default(uuid()) @db.Uuid
+  inspectorId   String           @map("inspector_id") @db.Uuid
+  supervisorId  String           @map("supervisor_id") @db.Uuid
+  reason        SuspensionReason
+  description   String           @db.Text
+  gravityLevel  Int              @map("gravity_level")
+  status        SuspensionStatus @default(activa)
+  evidence      Json             @default("[]") @db.Json
+  createdAt     DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([inspectorId])
+  @@index([supervisorId])
+  @@index([status])
+  @@map("suspensions")
+}
+
+model Evaluation {
+  id                     String          @id @default(uuid()) @db.Uuid
+  evaluatedUserId        String          @map("evaluated_user_id") @db.Uuid
+  supervisorId           String          @map("supervisor_id") @db.Uuid
+  weekStart              DateTime        @map("week_start") @db.Date
+  weekEnd                DateTime        @map("week_end") @db.Date
+  inspectionsCompleted   Int             @default(0) @map("inspections_completed")
+  avgTimePerInspection   Float           @default(0) @map("avg_time_per_inspection")
+  punctualityRate        Float           @default(0) @map("punctuality_rate")
+  avgPhotosPerInspection Float           @default(0) @map("avg_photos_per_inspection")
+  criticalObservations   Int             @default(0) @map("critical_observations")
+  rejectionRate          Float           @default(0) @map("rejection_rate")
+  completionRate         Float           @default(0) @map("completion_rate")
+  compositeScore         Float           @default(0) @map("composite_score")
+  notes                  String?         @db.Text
+  actions                String?         @db.Text
+  status                 EvaluationStatus @default(borrador)
+  createdAt              DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([evaluatedUserId, weekStart, weekEnd])
+  @@index([evaluatedUserId])
+  @@index([supervisorId])
+  @@index([weekStart])
+  @@index([weekEnd])
+  @@map("evaluations")
+}

@@ -1,129 +1,105 @@
-const { Notification, User, Role } = require('../models');
-const { Op } = require('sequelize');
-const { ensureNotificationInfra } = require('../utils/notificationInfra');
+const { prisma } = require('../lib/databases');
 const { AppError } = require('../middlewares/errorHandler');
-
-const safeUserAttributes = {
-    exclude: ['passwordHash', '_plainPassword']
-};
 
 class NotificationService {
     async getNotifications(userId, { page = 1, limit = 20 } = {}) {
-        await ensureNotificationInfra();
-
         const safeLimit = Math.max(1, Math.min(Number(limit) || 20, 100));
         const safePage = Math.max(1, Number(page) || 1);
-        const offset = (safePage - 1) * safeLimit;
+        const skip = (safePage - 1) * safeLimit;
 
-        const { rows, count } = await Notification.findAndCountAll({
-            where: { userId },
-            order: [['createdAt', 'DESC']],
-            limit: safeLimit,
-            offset
-        });
+        const [notifications, total] = await Promise.all([
+            prisma.notificaciones.notification.findMany({
+                where: { userId },
+                orderBy: { createdAt: 'desc' },
+                take: safeLimit,
+                skip
+            }),
+            prisma.notificaciones.notification.count({ where: { userId } })
+        ]);
 
         return {
-            notifications: rows,
+            notifications,
             pagination: {
-                total: count,
+                total,
                 page: safePage,
                 limit: safeLimit,
-                totalPages: Math.ceil(count / safeLimit)
+                totalPages: Math.ceil(total / safeLimit)
             }
         };
     }
 
     async getUnreadCount(userId) {
-        await ensureNotificationInfra();
-        return Notification.count({
-            where: {
-                userId,
-                readAt: null
-            }
+        return prisma.notificaciones.notification.count({
+            where: { userId, readAt: null }
         });
     }
 
     async markAsRead(notificationId, userId) {
-        await ensureNotificationInfra();
-        const notification = await Notification.findOne({ where: { id: notificationId, userId } });
+        const notification = await prisma.notificaciones.notification.findFirst({
+            where: { id: notificationId, userId }
+        });
 
         if (!notification) {
             throw new AppError('Notificación no encontrada', 404, 'NOTIFICATION_NOT_FOUND');
         }
 
-        notification.readAt = notification.readAt || new Date();
-        await notification.save();
-        return notification;
+        return prisma.notificaciones.notification.update({
+            where: { id: notificationId },
+            data: { readAt: notification.readAt || new Date() }
+        });
     }
 
     async markAllAsRead(userId) {
-        await ensureNotificationInfra();
-        await Notification.update(
-            { readAt: new Date() },
-            {
-                where: {
-                    userId,
-                    readAt: null
-                }
-            }
-        );
+        await prisma.notificaciones.notification.updateMany({
+            where: { userId, readAt: null },
+            data: { readAt: new Date() }
+        });
     }
 
     async createForUser(userId, payload) {
-        await ensureNotificationInfra();
-
-        return Notification.create({
-            userId,
-            inspectionId: payload.inspectionId || null,
-            type: payload.type,
-            title: payload.title,
-            message: payload.message,
-            readAt: null
+        return prisma.notificaciones.notification.create({
+            data: {
+                userId,
+                inspectionId: payload.inspectionId || null,
+                type: payload.type,
+                title: payload.title,
+                message: payload.message
+            }
         });
     }
 
     async createForUsers(userIds, payload) {
-        await ensureNotificationInfra();
-
         const uniqueUserIds = [...new Set(userIds.filter(Boolean))];
-        if (!uniqueUserIds.length) {
-            return [];
-        }
+        if (!uniqueUserIds.length) return [];
 
-        const rows = uniqueUserIds.map((userId) => ({
-            userId,
-            inspectionId: payload.inspectionId || null,
-            type: payload.type,
-            title: payload.title,
-            message: payload.message,
-            readAt: null
-        }));
-
-        return Notification.bulkCreate(rows);
+        return prisma.notificaciones.notification.createMany({
+            data: uniqueUserIds.map((userId) => ({
+                userId,
+                inspectionId: payload.inspectionId || null,
+                type: payload.type,
+                title: payload.title,
+                message: payload.message
+            }))
+        });
     }
 
     async createForRoles(roleNames, payload, excludeUserIds = []) {
-        const users = await User.findAll({
-            attributes: safeUserAttributes,
-            include: [
-                {
-                    model: Role,
-                    as: 'roles',
-                    attributes: ['name'],
-                    where: {
-                        name: {
-                            [Op.in]: roleNames
-                        }
-                    },
-                    through: { attributes: [] },
-                    required: true
-                }
-            ]
+        const roleRecords = await prisma.auth.role.findMany({
+            where: { name: { in: roleNames } },
+            select: { id: true }
         });
 
-        const userIds = users
-            .map((user) => user.id)
-            .filter((userId) => !excludeUserIds.includes(userId));
+        const roleIds = roleRecords.map(r => r.id);
+
+        if (roleIds.length === 0) return [];
+
+        const userRoles = await prisma.auth.userRole.findMany({
+            where: { roleId: { in: roleIds } },
+            select: { userId: true }
+        });
+
+        const userIds = [...new Set(userRoles.map(ur => ur.userId))]
+            .filter(id => !excludeUserIds.includes(id));
 
         return this.createForUsers(userIds, payload);
     }

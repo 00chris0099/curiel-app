@@ -1,17 +1,8 @@
-const { Photo, Inspection, ChecklistItem, User } = require('../models');
+const { prisma } = require('../lib/databases');
 const { uploadToCloudinary, deleteFromCloudinary, uploadMultipleToCloudinary } = require('../utils/cloudinary');
 const { asyncHandler, AppError } = require('../middlewares/errorHandler');
 const { createAuditLog } = require('../middlewares/auditLog');
 
-const safeUserAttributes = {
-    exclude: ['passwordHash', '_plainPassword']
-};
-
-/**
- * @desc    Subir foto a una inspección
- * @route   POST /api/v1/photos/inspection/:inspectionId
- * @access  Private
- */
 const uploadInspectionPhoto = asyncHandler(async (req, res) => {
     const { inspectionId } = req.params;
     const { description, caption, checklistItemId } = req.body;
@@ -20,38 +11,38 @@ const uploadInspectionPhoto = asyncHandler(async (req, res) => {
         throw new AppError('No se recibió archivo', 400, 'NO_FILE');
     }
 
-    // Verificar que la inspección existe
-    const inspection = await Inspection.findByPk(inspectionId);
+    const inspection = await prisma.inspecciones.inspection.findUnique({
+        where: { id: inspectionId }
+    });
     if (!inspection) {
         throw new AppError('Inspección no encontrada', 404, 'INSPECTION_NOT_FOUND');
     }
 
-    // Verificar permisos (si es inspector, solo puede subir fotos a sus inspecciones)
     if (!req.user.isMasterAdmin && req.userRole === 'inspector' && inspection.inspectorId !== req.userId) {
         throw new AppError('No tienes permisos para subir fotos a esta inspección', 403, 'FORBIDDEN');
     }
 
-    // Verificar checklistItem si se proporciona
     if (checklistItemId) {
-        const checklistItem = await ChecklistItem.findByPk(checklistItemId);
-        if (!checklistItem) {
+        const item = await prisma.admin.checklistItem.findUnique({ where: { id: checklistItemId } });
+        if (!item) {
             throw new AppError('Item de checklist no encontrado', 404, 'CHECKLIST_ITEM_NOT_FOUND');
         }
     }
 
-    // Subir a Cloudinary
     const cloudinaryResult = await uploadToCloudinary(req.file, {
         folder: `curiel/inspections/${inspectionId}`
     });
 
-    // Guardar en la base de datos
-    const photo = await Photo.create({
-        inspectionId,
-        checklistItemId: checklistItemId || null,
-        uploadedById: req.userId,
-        url: cloudinaryResult.secure_url,
-        publicId: cloudinaryResult.public_id,
-        caption: description || caption || null
+    const photo = await prisma.media.photo.create({
+        data: {
+            inspectionId,
+            checklistItemId: checklistItemId || null,
+            uploadedById: req.userId,
+            url: cloudinaryResult.secure_url,
+            publicId: cloudinaryResult.public_id,
+            caption: description || caption || null,
+            type: 'general'
+        }
     });
 
     await createAuditLog(req.userId, 'upload_photo', 'Photo', photo.id, {
@@ -66,11 +57,6 @@ const uploadInspectionPhoto = asyncHandler(async (req, res) => {
     });
 });
 
-/**
- * @desc    Subir múltiples fotos a una inspección
- * @route   POST /api/v1/photos/inspection/:inspectionId/multiple
- * @access  Private
- */
 const uploadMultipleInspectionPhotos = asyncHandler(async (req, res) => {
     const { inspectionId } = req.params;
 
@@ -78,36 +64,36 @@ const uploadMultipleInspectionPhotos = asyncHandler(async (req, res) => {
         throw new AppError('No se proporcionaron imágenes', 400, 'NO_FILES');
     }
 
-    // Verificar que la inspección existe
-    const inspection = await Inspection.findByPk(inspectionId);
+    const inspection = await prisma.inspecciones.inspection.findUnique({
+        where: { id: inspectionId }
+    });
     if (!inspection) {
         throw new AppError('Inspección no encontrada', 404, 'INSPECTION_NOT_FOUND');
     }
 
-    // Verificar permisos (si es inspector, solo puede subir fotos a sus inspecciones)
     if (!req.user.isMasterAdmin && req.userRole === 'inspector' && inspection.inspectorId !== req.userId) {
         throw new AppError('No tienes permisos para subir fotos a esta inspección', 403, 'FORBIDDEN');
     }
 
-    // Subir todas las fotos a Cloudinary
     const cloudinaryResults = await uploadMultipleToCloudinary(req.files, {
         folder: `curiel/inspections/${inspectionId}`
     });
 
-    // Guardar en la base de datos
-    const photoPromises = cloudinaryResults.map((result, index) => {
-        return Photo.create({
+    await prisma.media.photo.createMany({
+        data: cloudinaryResults.map((result, index) => ({
             inspectionId,
             uploadedById: req.userId,
             url: result.secure_url,
             publicId: result.public_id,
-            filename: req.files[index].originalname,
-            mimeType: req.files[index].mimetype,
-            size: req.files[index].size
-        });
+            type: 'general'
+        }))
     });
 
-    const photos = await Promise.all(photoPromises);
+    const photos = await prisma.media.photo.findMany({
+        where: { inspectionId },
+        orderBy: { createdAt: 'desc' },
+        take: cloudinaryResults.length
+    });
 
     await createAuditLog(req.userId, 'upload_multiple_photos', 'Photo', null, {
         inspectionId,
@@ -121,29 +107,12 @@ const uploadMultipleInspectionPhotos = asyncHandler(async (req, res) => {
     });
 });
 
-/**
- * @desc    Obtener fotos de una inspección
- * @route   GET /api/v1/photos/inspection/:inspectionId
- * @access  Private
- */
 const getInspectionPhotos = asyncHandler(async (req, res) => {
     const { inspectionId } = req.params;
 
-    const photos = await Photo.findAll({
+    const photos = await prisma.media.photo.findMany({
         where: { inspectionId },
-        include: [
-            {
-                model: User,
-                as: 'uploader',
-                attributes: safeUserAttributes
-            },
-            {
-                model: ChecklistItem,
-                as: 'checklistItem',
-                attributes: ['id', 'itemText', 'category']
-            }
-        ],
-        order: [['createdAt', 'DESC']]
+        orderBy: { createdAt: 'desc' }
     });
 
     res.json({
@@ -152,25 +121,9 @@ const getInspectionPhotos = asyncHandler(async (req, res) => {
     });
 });
 
-/**
- * @desc    Obtener foto por ID
- * @route   GET /api/v1/photos/:id
- * @access  Private
- */
 const getPhotoById = asyncHandler(async (req, res) => {
-    const photo = await Photo.findByPk(req.params.id, {
-        include: [
-            {
-                model: User,
-                as: 'uploader',
-                attributes: safeUserAttributes
-            },
-            {
-                model: Inspection,
-                as: 'inspection',
-                attributes: ['id', 'projectName', 'status']
-            }
-        ]
+    const photo = await prisma.media.photo.findUnique({
+        where: { id: req.params.id }
     });
 
     if (!photo) {
@@ -183,63 +136,55 @@ const getPhotoById = asyncHandler(async (req, res) => {
     });
 });
 
-/**
- * @desc    Actualizar descripción de foto
- * @route   PUT /api/v1/photos/:id
- * @access  Private
- */
 const updatePhoto = asyncHandler(async (req, res) => {
     const { description, caption } = req.body;
 
-    const photo = await Photo.findByPk(req.params.id);
+    const photo = await prisma.media.photo.findUnique({
+        where: { id: req.params.id }
+    });
 
     if (!photo) {
         throw new AppError('Foto no encontrada', 404, 'PHOTO_NOT_FOUND');
     }
 
-    // Verificar permisos
     if (photo.uploadedById !== req.userId && !(req.userRole === 'admin' || req.user.isMasterAdmin)) {
         throw new AppError('No tienes permisos para editar esta foto', 403, 'FORBIDDEN');
     }
 
-    photo.caption = description || caption || null;
-    await photo.save();
+    const updated = await prisma.media.photo.update({
+        where: { id: req.params.id },
+        data: { caption: description || caption || null }
+    });
 
     await createAuditLog(req.userId, 'update_photo', 'Photo', photo.id, {
-        caption: photo.caption
+        caption: updated.caption
     });
 
     res.json({
         success: true,
         message: 'Foto actualizada exitosamente',
-        data: { photo }
+        data: { photo: updated }
     });
 });
 
-/**
- * @desc    Eliminar foto
- * @route   DELETE /api/v1/photos/:id
- * @access  Private
- */
 const deletePhoto = asyncHandler(async (req, res) => {
-    const photo = await Photo.findByPk(req.params.id);
+    const photo = await prisma.media.photo.findUnique({
+        where: { id: req.params.id }
+    });
 
     if (!photo) {
         throw new AppError('Foto no encontrada', 404, 'PHOTO_NOT_FOUND');
     }
 
-    // Verificar permisos
     if (photo.uploadedById !== req.userId && !(req.userRole === 'admin' || req.user.isMasterAdmin)) {
         throw new AppError('No tienes permisos para eliminar esta foto', 403, 'FORBIDDEN');
     }
 
-    // Eliminar de Cloudinary
     if (photo.publicId) {
         await deleteFromCloudinary(photo.publicId);
     }
 
-    // Eliminar de la base de datos
-    await photo.destroy();
+    await prisma.media.photo.delete({ where: { id: req.params.id } });
 
     await createAuditLog(req.userId, 'delete_photo', 'Photo', photo.id, {
         inspectionId: photo.inspectionId

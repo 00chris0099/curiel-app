@@ -1,11 +1,8 @@
 const cron = require('node-cron');
+const { prisma } = require('../lib/databases');
 const evaluationService = require('../services/evaluationService');
 const logger = require('../utils/logger');
 
-/**
- * Cron job para generar evaluaciones semanales
- * Se ejecuta cada sabado a las 9:00 AM
- */
 const startWeeklyEvaluation = () => {
     cron.schedule('0 9 * * 6', async () => {
         logger.info('[CRON] Iniciando generacion de evaluaciones semanales...');
@@ -24,15 +21,20 @@ const startWeeklyEvaluation = () => {
             const weekStart = monday.toISOString().split('T')[0];
             const weekEnd = sunday.toISOString().split('T')[0];
 
-            const { User, Role } = require('../models');
-
-            const supervisor = await User.findOne({
-                include: [{
-                    model: Role,
-                    as: 'roles',
-                    where: { name: 'supervisor' }
-                }],
-                where: { isActive: true }
+            const supervisor = await prisma.auth.user.findFirst({
+                where: {
+                    isActive: true,
+                    roles: {
+                        some: {
+                            role: { name: 'supervisor' }
+                        }
+                    }
+                },
+                include: {
+                    roles: {
+                        include: { role: true }
+                    }
+                }
             });
 
             if (!supervisor) {

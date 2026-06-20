@@ -2,22 +2,9 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const config = require('../config');
 const logger = require('../utils/logger');
-const {
-    Inspection,
-    InspectionArea,
-    InspectionObservation,
-    InspectionSummary,
-    Photo,
-    Signature,
-    User,
-    Role
-} = require('../models');
+const { prisma } = require('../lib/databases');
 const { AppError } = require('../middlewares/errorHandler');
 const { buildInspectionReportHtml } = require('../pdf/inspectionReportTemplate');
-
-const safeUserAttributes = {
-    exclude: ['passwordHash', '_plainPassword']
-};
 
 const severityOrder = {
     critica: 0,
@@ -48,25 +35,11 @@ const defaultExecutablePath =
 
 class InspectionReportService {
     async generateInspectionReport(inspectionId, userId, userRole, isMasterAdmin = false) {
-        const inspection = await Inspection.findByPk(inspectionId, {
-            include: [
-                {
-                    model: User,
-                    as: 'inspector',
-                    attributes: safeUserAttributes,
-                    include: [
-                        {
-                            model: Role,
-                            as: 'roles',
-                            attributes: ['name']
-                        }
-                    ]
-                },
-                {
-                    model: Signature,
-                    as: 'signatures'
-                }
-            ]
+        const inspection = await prisma.inspecciones.inspection.findUnique({
+            where: { id: inspectionId },
+            include: {
+                statusHistory: { orderBy: { createdAt: 'desc' }, take: 1 }
+            }
         });
 
         if (!inspection) {
@@ -81,7 +54,6 @@ class InspectionReportService {
             if (inspection.inspectorId !== userId) {
                 throw new AppError('No tienes permisos para generar este informe', 403, 'FORBIDDEN');
             }
-
             if (!['lista_revision', 'finalizada'].includes(inspection.status)) {
                 throw new AppError('El inspector solo puede generar informes cuando la inspección está lista para revisión o finalizada', 403, 'FORBIDDEN');
             }
@@ -93,50 +65,50 @@ class InspectionReportService {
     }
 
     async _buildReportPayload(inspection, inspectionId) {
-
-        const [areas, observations, photos, summary] = await Promise.all([
-            InspectionArea.findAll({
+        const [areas, observations, photos, summary, signatures] = await Promise.all([
+            prisma.inspecciones.inspectionArea.findMany({
                 where: { inspectionId },
-                order: [['sortOrder', 'ASC'], ['createdAt', 'ASC']]
+                orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }]
             }),
-            InspectionObservation.findAll({
+            prisma.inspecciones.inspectionObservation.findMany({
                 where: { inspectionId },
-                order: [['areaId', 'ASC'], ['createdAt', 'ASC']]
+                orderBy: [{ areaId: 'asc' }, { createdAt: 'asc' }]
             }),
-            Photo.findAll({
+            prisma.media.photo.findMany({
                 where: { inspectionId },
-                order: [['createdAt', 'ASC']]
+                orderBy: { createdAt: 'asc' }
             }),
-            InspectionSummary.findOne({ where: { inspectionId } })
+            prisma.inspecciones.inspectionSummary.findUnique({
+                where: { inspectionId }
+            }),
+            prisma.media.signature.findMany({
+                where: { inspectionId }
+            })
         ]);
 
         const metadata = this._parseInspectionMetadata(inspection.notes);
-        const sortedAreas = this._sortAreas(areas.map((area) => area.toJSON()));
+        const sortedAreas = this._sortAreas(areas.map(a => ({ ...a })));
         const sortedObservations = observations
-            .map((observation) => observation.toJSON())
+            .map(obs => ({ ...obs }))
             .sort((left, right) => {
-                const leftArea = sortedAreas.findIndex((area) => area.id === left.areaId);
-                const rightArea = sortedAreas.findIndex((area) => area.id === right.areaId);
-
-                if (leftArea !== rightArea) {
-                    return leftArea - rightArea;
-                }
-
+                const leftArea = sortedAreas.findIndex(a => a.id === left.areaId);
+                const rightArea = sortedAreas.findIndex(a => a.id === right.areaId);
+                if (leftArea !== rightArea) return leftArea - rightArea;
                 return (severityOrder[left.severity] ?? 99) - (severityOrder[right.severity] ?? 99);
             });
-        const serializedPhotos = photos.map((photo) => photo.toJSON());
-        const inspectorSignature = (inspection.signatures || []).find((signature) => signature.signatureType === 'inspector') || null;
+        const serializedPhotos = photos.map(p => ({ ...p }));
+        const inspectorSignature = signatures.find(s => s.signatureType === 'inspector') || null;
 
         const recommendationGroups = this._buildRecommendationGroups(sortedObservations, summary);
         const html = buildInspectionReportHtml({
-            inspection: inspection.toJSON(),
+            inspection: { ...inspection },
             metadata,
             areas: sortedAreas,
             observations: sortedObservations,
             photos: serializedPhotos,
-            summary: summary ? summary.toJSON() : null,
+            summary: summary ? { ...summary } : null,
             recommendations: recommendationGroups,
-            inspectorSignature: inspectorSignature ? inspectorSignature.toJSON() : null,
+            inspectorSignature: inspectorSignature ? { ...inspectorSignature } : null,
             logoUrl: config.pdf.companyLogo,
             generatedAt: new Date().toISOString()
         });
@@ -169,12 +141,7 @@ class InspectionReportService {
                 format: 'A4',
                 printBackground: true,
                 preferCSSPageSize: true,
-                margin: {
-                    top: '0mm',
-                    right: '0mm',
-                    bottom: '0mm',
-                    left: '0mm'
-                }
+                margin: { top: '0mm', right: '0mm', bottom: '0mm', left: '0mm' }
             });
 
             const pdfBuffer = Buffer.from(pdfBinary);
@@ -221,19 +188,15 @@ class InspectionReportService {
             '/usr/bin/google-chrome-stable'
         ].filter(Boolean);
 
-        const existingPath = candidates.find((candidate) => fs.existsSync(candidate));
+        const existingPath = candidates.find(candidate => fs.existsSync(candidate));
         return existingPath || defaultExecutablePath;
     }
 
     _parseInspectionMetadata(notes) {
-        if (!notes) {
-            return {};
-        }
+        if (!notes) return {};
 
         const match = notes.match(/\[department-inspection-meta\]\n([\s\S]*?)\n\[\/department-inspection-meta\]/);
-        if (!match) {
-            return {};
-        }
+        if (!match) return {};
 
         try {
             return JSON.parse(match[1]);
@@ -301,7 +264,7 @@ class InspectionReportService {
         if (summary?.finalRecommendations) {
             const lines = summary.finalRecommendations
                 .split(/\n+/)
-                .map((line) => line.trim())
+                .map(line => line.trim())
                 .filter(Boolean);
 
             lines.forEach((line) => {

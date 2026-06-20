@@ -1,7 +1,7 @@
 require('dotenv').config();
 const config = require('./config');
 const { initSentry } = require('./utils/sentry');
-const { testConnection } = require('./config/database');
+const { connectAll, disconnectAll } = require('./lib/databases');
 const { initRedis, closeRedis } = require('./utils/cache');
 const app = require('./app');
 const logger = require('./utils/logger');
@@ -12,22 +12,10 @@ const PORT = config.server.port;
 
 const startServer = async () => {
     try {
-        const dbConnected = await testConnection();
+        await connectAll();
+        logger.info('Todas las bases de datos conectadas exitosamente');
 
-        if (!dbConnected) {
-            logger.error('No se pudo conectar a la base de datos');
-            process.exit(1);
-        }
-
-        // Initialize Redis cache if configured
         initRedis();
-
-        if (config.server.env === 'development') {
-            const { sequelize } = require('./config/database');
-            require('./models');
-            await sequelize.sync({ alter: false });
-            logger.info('Modelos sincronizados');
-        }
 
         if (config.server.env === 'production') {
             const { startAutoDeleteClients } = require('./cron/autoDeleteClients');
@@ -50,17 +38,14 @@ const startServer = async () => {
     }
 };
 
-// Graceful shutdown
-process.on('SIGTERM', async () => {
-    logger.info('SIGTERM received, shutting down gracefully');
+const gracefulShutdown = async (signal) => {
+    logger.info(`${signal} received, shutting down gracefully`);
+    await disconnectAll();
     await closeRedis();
     process.exit(0);
-});
+};
 
-process.on('SIGINT', async () => {
-    logger.info('SIGINT received, shutting down gracefully');
-    await closeRedis();
-    process.exit(0);
-});
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 startServer();

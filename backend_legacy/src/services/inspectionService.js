@@ -1,14 +1,7 @@
-const { Inspection, User, Role, InspectionResponse, ChecklistItem, Photo, ChecklistTemplate, InspectionStatusHistory } = require('../models');
+const { prisma } = require('../lib/databases');
 const { AppError } = require('../middlewares/errorHandler');
-const { Op } = require('sequelize');
-const { sequelize } = require('../config/database');
 const { triggerN8nWebhook } = require('../utils/n8n');
-const { ensureInspectionStatusInfra } = require('../utils/inspectionStatusInfra');
 const notificationService = require('./notificationService');
-
-const safeUserAttributes = {
-    exclude: ['passwordHash', '_plainPassword']
-};
 
 const inspectionStatuses = ['pendiente', 'en_proceso', 'lista_revision', 'finalizada', 'cancelada', 'reprogramada'];
 
@@ -49,19 +42,12 @@ const statusReasonCatalog = {
     correction_return: correctionReasons
 };
 
-/**
- * Servicio de gestión de inspecciones
- */
 class InspectionService {
-    /**
-     * Obtener todas las inspecciones con filtros
-     */
     async getAllInspections(filters = {}, userId, userRole, isMasterAdmin = false) {
         const { status, inspectorId, startDate, endDate, search, page = 1, limit = 10 } = filters;
 
         const where = {};
 
-        // Si es inspector (y no es master admin), solo ver sus propias inspecciones
         if (!isMasterAdmin && userRole === 'inspector') {
             where.inspectorId = userId;
         }
@@ -70,103 +56,60 @@ class InspectionService {
         if (inspectorId && (userRole !== 'inspector' || isMasterAdmin)) where.inspectorId = inspectorId;
 
         if (startDate && endDate) {
-            where.scheduledDate = {
-                [Op.between]: [new Date(startDate), new Date(endDate)]
-            };
+            where.scheduledDate = { gte: new Date(startDate), lte: new Date(endDate) };
         }
 
         if (search) {
-            where[Op.or] = [
-                { projectName: { [Op.iLike]: `%${search}%` } },
-                { clientName: { [Op.iLike]: `%${search}%` } },
-                { address: { [Op.iLike]: `%${search}%` } }
+            where.OR = [
+                { projectName: { contains: search, mode: 'insensitive' } },
+                { clientName: { contains: search, mode: 'insensitive' } },
+                { address: { contains: search, mode: 'insensitive' } }
             ];
         }
 
-        const offset = (page - 1) * limit;
+        const skip = (parseInt(page) - 1) * parseInt(limit);
 
-        const { count, rows } = await Inspection.findAndCountAll({
-            where,
-            limit: parseInt(limit),
-            offset: parseInt(offset),
-            order: [['scheduledDate', 'DESC']],
-            include: [
-                {
-                    model: User,
-                    as: 'inspector',
-                    attributes: safeUserAttributes
-                },
-                {
-                    model: User,
-                    as: 'creator',
-                    attributes: safeUserAttributes
-                }
-            ]
-        });
+        const [inspections, total] = await Promise.all([
+            prisma.inspecciones.inspection.findMany({
+                where,
+                take: parseInt(limit),
+                skip,
+                orderBy: { scheduledDate: 'desc' }
+            }),
+            prisma.inspecciones.inspection.count({ where })
+        ]);
 
         return {
-            inspections: rows,
+            inspections,
             pagination: {
-                total: count,
+                total,
                 page: parseInt(page),
                 limit: parseInt(limit),
-                totalPages: Math.ceil(count / limit)
+                totalPages: Math.ceil(total / limit)
             }
         };
     }
 
-    /**
-     * Obtener inspección por ID con todos sus datos relacionados
-     */
     async getInspectionById(inspectionId, userId, userRole, isMasterAdmin = false) {
-        await ensureInspectionStatusInfra();
-
-        const inspection = await Inspection.findByPk(inspectionId, {
-            include: [
-                {
-                    model: User,
-                    as: 'inspector',
-                    attributes: safeUserAttributes
+        const inspection = await prisma.inspecciones.inspection.findUnique({
+            where: { id: inspectionId },
+            include: {
+                statusHistory: { orderBy: { createdAt: 'desc' } },
+                areas: {
+                    include: {
+                        observations: true
+                    },
+                    orderBy: { sortOrder: 'asc' }
                 },
-                {
-                    model: User,
-                    as: 'creator',
-                    attributes: safeUserAttributes
-                },
-                {
-                    model: InspectionResponse,
-                    as: 'responses',
-                    include: [
-                        {
-                            model: ChecklistItem,
-                            as: 'checklistItem'
-                        }
-                    ]
-                },
-                {
-                    model: Photo,
-                    as: 'photos'
-                },
-                {
-                    model: InspectionStatusHistory,
-                    as: 'statusHistory',
-                    include: [
-                        {
-                            model: User,
-                            as: 'changedByUser',
-                            attributes: safeUserAttributes
-                        }
-                    ]
-                }
-            ],
-            order: [[{ model: InspectionStatusHistory, as: 'statusHistory' }, 'createdAt', 'DESC']]
+                summary: true,
+                responses: true
+            }
         });
 
         if (!inspection) {
             throw new AppError('Inspección no encontrada', 404, 'INSPECTION_NOT_FOUND');
         }
 
-        // Verificar permisos (los master admin tienen acceso completo)
         if (!isMasterAdmin && userRole === 'inspector' && inspection.inspectorId !== userId) {
             throw new AppError('No tienes permisos para ver esta inspección', 403, 'FORBIDDEN');
         }
@@ -174,83 +117,66 @@ class InspectionService {
         return inspection;
     }
 
-    /**
-     * Crear nueva inspección
-     */
     async createInspection(inspectionData, creatorId) {
         const {
-            projectName,
-            clientName,
-            clientEmail,
-            clientPhone,
-            address,
-            city,
-            state,
-            zipCode,
-            inspectionType,
-            scheduledDate,
-            inspectorId,
-            notes,
-            latitude,
-            longitude
+            projectName, clientName, clientEmail, clientPhone,
+            address, city, state, zipCode, inspectionType,
+            scheduledDate, inspectorId, notes, latitude, longitude
         } = inspectionData;
 
-        // Verificar que el inspector existe
-        const inspector = await User.findByPk(inspectorId, {
-            include: [{ model: Role, as: 'roles', attributes: ['name'] }]
+        const inspector = await prisma.auth.user.findUnique({
+            where: { id: inspectorId },
+            select: {
+                id: true,
+                roles: { select: { role: { select: { name: true } } } }
+            }
         });
+
         if (!inspector) {
             throw new AppError('Inspector no encontrado', 404, 'INSPECTOR_NOT_FOUND');
         }
 
-        const inspectorRoles = (inspector.roles || []).map((r) => r.name);
+        const inspectorRoles = inspector.roles.map(r => r.role.name);
         if (!inspectorRoles.includes('inspector') && !inspectorRoles.includes('arquitecto')) {
             throw new AppError('El usuario asignado no es inspector ni arquitecto', 400, 'INVALID_INSPECTOR');
         }
 
-        // Crear inspección
-        const inspection = await Inspection.create({
-            projectName,
-            clientName,
-            clientEmail,
-            clientPhone,
-            address,
-            city,
-            state,
-            zipCode,
-            inspectionType,
-            scheduledDate,
-            inspectorId,
-            createdById: creatorId,
-            notes,
-            latitude,
-            longitude,
-            status: 'pendiente'
+        const inspection = await prisma.inspecciones.inspection.create({
+            data: {
+                projectName,
+                clientName,
+                clientEmail,
+                clientPhone,
+                address,
+                city,
+                state,
+                zipCode,
+                inspectionType,
+                scheduledDate,
+                inspectorId,
+                createdById: creatorId,
+                notes,
+                latitude,
+                longitude,
+                status: 'pendiente'
+            }
         });
 
-        // Cargar relaciones
-        await inspection.reload({
-            include: [
-                { model: User, as: 'inspector', attributes: safeUserAttributes },
-                { model: User, as: 'creator', attributes: safeUserAttributes }
-            ]
-        });
-
+        const district = state || city || 'Lima';
         await notificationService.createForUser(inspectorId, {
             inspectionId: inspection.id,
             type: 'inspection_assigned',
             title: 'Nueva inspección asignada',
-            message: `Se te asignó la inspección del departamento ${inspection.projectName} en ${state || city || 'Lima'}.`
+            message: `Se te asignó la inspección del departamento ${projectName} en ${district}.`
         });
 
         return inspection;
     }
 
-    /**
-     * Actualizar inspección
-     */
     async updateInspection(inspectionId, updateData, userId, userRole, isMasterAdmin = false) {
-        const inspection = await Inspection.findByPk(inspectionId);
+        const inspection = await prisma.inspecciones.inspection.findUnique({
+            where: { id: inspectionId }
+        });
 
         if (!inspection) {
             throw new AppError('Inspección no encontrada', 404, 'INSPECTION_NOT_FOUND');
@@ -260,62 +186,48 @@ class InspectionService {
             throw new AppError('No tienes permisos para editar esta inspección', 403, 'FORBIDDEN');
         }
 
-        // No permitir editar inspecciones finalizadas
         if (['finalizada', 'cancelada'].includes(inspection.status)) {
             throw new AppError('No se puede editar una inspección finalizada', 400, 'INSPECTION_COMPLETED');
         }
 
-        // Actualizar campos permitidos
         const allowedFields = [
             'projectName', 'clientName', 'clientEmail', 'clientPhone',
             'address', 'city', 'state', 'zipCode', 'inspectionType',
             'scheduledDate', 'notes', 'latitude', 'longitude'
         ];
 
+        const data = {};
         allowedFields.forEach(field => {
             if (updateData[field] !== undefined) {
-                inspection[field] = updateData[field];
+                data[field] = updateData[field];
             }
         });
 
-        // Solo admin/arquitecto/master admin puede reasignar inspector
         if (updateData.inspectorId && (userRole === 'admin' || userRole === 'arquitecto' || isMasterAdmin)) {
-            const inspector = await User.findByPk(updateData.inspectorId);
+            const inspector = await prisma.auth.user.findUnique({
+                where: { id: updateData.inspectorId }
+            });
             if (!inspector) {
                 throw new AppError('Inspector no encontrado', 404, 'INSPECTOR_NOT_FOUND');
             }
-            inspection.inspectorId = updateData.inspectorId;
+            data.inspectorId = updateData.inspectorId;
         }
 
-        await inspection.save();
-
-        return inspection;
+        return prisma.inspecciones.inspection.update({
+            where: { id: inspectionId },
+            data
+        });
     }
 
-    /**
-     * Cambiar estado de inspección
-     */
     async updateInspectionStatus(inspectionId, statusData, userId, userRole, isMasterAdmin = false) {
-        await ensureInspectionStatusInfra();
-
         const {
-            status: newStatus,
-            reasonCode,
-            reasonLabel,
-            comment,
-            notifyClient = false,
-            notifyInspector = false,
-            scheduledDate
+            status: newStatus, reasonCode, reasonLabel, comment,
+            notifyClient = false, notifyInspector = false, scheduledDate
         } = statusData;
 
-        const inspection = await Inspection.findByPk(inspectionId, {
-            include: [
-                {
-                    model: User,
-                    as: 'inspector',
-                    attributes: safeUserAttributes
-                }
-            ]
+        const inspection = await prisma.inspecciones.inspection.findUnique({
+            where: { id: inspectionId },
+            include: { statusHistory: { orderBy: { createdAt: 'desc' }, take: 1 } }
         });
 
         if (!inspection) {
@@ -343,94 +255,67 @@ class InspectionService {
 
         const resolvedReasonLabel = this._resolveReasonLabel(oldStatus, newStatus, reasonCode, reasonLabel);
         this._validateStatusTransitionPayload(oldStatus, newStatus, {
-            reasonCode,
-            comment,
-            scheduledDate,
-            reasonLabel: resolvedReasonLabel
+            reasonCode, comment, scheduledDate, reasonLabel: resolvedReasonLabel
         });
 
         const normalizedComment = comment?.trim() || null;
         const nextScheduledDate = scheduledDate ? new Date(scheduledDate) : null;
 
+        const updateFields = { status: newStatus };
         if (newStatus === 'reprogramada' && nextScheduledDate) {
-            inspection.scheduledDate = nextScheduledDate;
+            updateFields.scheduledDate = nextScheduledDate;
         }
-
-        inspection.status = newStatus;
-
         if (newStatus === 'finalizada') {
-            inspection.completedDate = new Date();
+            updateFields.completedDate = new Date();
         } else if (['pendiente', 'en_proceso', 'lista_revision', 'reprogramada'].includes(newStatus)) {
-            inspection.completedDate = null;
+            updateFields.completedDate = null;
         }
 
         let history;
-        await sequelize.transaction(async (transaction) => {
-            await inspection.save({ transaction });
+        await prisma.inspecciones.$transaction(async (tx) => {
+            await tx.inspection.update({
+                where: { id: inspectionId },
+                data: updateFields
+            });
 
-            history = await InspectionStatusHistory.create({
-                inspectionId,
-                changedByUserId: userId,
-                fromStatus: oldStatus,
-                toStatus: newStatus,
-                reasonCode: reasonCode || null,
-                reasonLabel: resolvedReasonLabel,
-                comment: normalizedComment,
-                notifyClient: Boolean(notifyClient),
-                notifyInspector: Boolean(notifyInspector)
-            }, { transaction });
+            history = await tx.inspectionStatusHistory.create({
+                data: {
+                    inspectionId,
+                    changedByUserId: userId,
+                    fromStatus: oldStatus,
+                    toStatus: newStatus,
+                    reasonCode: reasonCode || null,
+                    reasonLabel: resolvedReasonLabel,
+                    comment: normalizedComment,
+                    notifyClient: Boolean(notifyClient),
+                    notifyInspector: Boolean(notifyInspector)
+                }
+            });
         });
 
-        await inspection.reload({
-            include: [
-                {
-                    model: User,
-                    as: 'inspector',
-                    attributes: safeUserAttributes
-                },
-                {
-                    model: User,
-                    as: 'creator',
-                    attributes: safeUserAttributes
-                },
-                {
-                    model: InspectionStatusHistory,
-                    as: 'statusHistory',
-                    include: [
-                        {
-                            model: User,
-                            as: 'changedByUser',
-                            attributes: safeUserAttributes
-                        }
-                    ]
-                }
-            ],
-            order: [[{ model: InspectionStatusHistory, as: 'statusHistory' }, 'createdAt', 'DESC']]
+        const updatedInspection = await prisma.inspecciones.inspection.findUnique({
+            where: { id: inspectionId },
+            include: {
+                statusHistory: { orderBy: { createdAt: 'desc' } }
+            }
         });
 
         await this._triggerStatusNotifications({
-            inspection,
-            history,
-            notifyClient: Boolean(notifyClient),
-            notifyInspector: Boolean(notifyInspector),
-            userRole
+            inspection: updatedInspection, history, notifyClient: Boolean(notifyClient),
+            notifyInspector: Boolean(notifyInspector), userRole
         });
 
-        await this._createStatusNotifications({ inspection, history, notifyInspector: Boolean(notifyInspector) });
+        await this._createStatusNotifications({
+            inspection: updatedInspection, history, notifyInspector: Boolean(notifyInspector)
+        });
 
-        return {
-            inspection,
-            oldStatus,
-            newStatus,
-            history
-        };
+        return { inspection: updatedInspection, oldStatus, newStatus, history };
     }
 
-    /**
-     * Eliminar inspección (solo admin)
-     */
     async deleteInspection(inspectionId) {
-        const inspection = await Inspection.findByPk(inspectionId);
+        const inspection = await prisma.inspecciones.inspection.findUnique({
+            where: { id: inspectionId }
+        });
 
         if (!inspection) {
             throw new AppError('Inspección no encontrada', 404, 'INSPECTION_NOT_FOUND');
@@ -440,56 +325,38 @@ class InspectionService {
             throw new AppError('No se puede eliminar una inspección finalizada', 400, 'CANNOT_DELETE_COMPLETED');
         }
 
-        await inspection.destroy();
+        await prisma.inspecciones.inspection.delete({ where: { id: inspectionId } });
 
         return inspection;
     }
 
-    /**
-     * Obtener estadísticas de inspecciones
-     */
     async getInspectionStats(userId, userRole, isMasterAdmin = false) {
-        const where = {};
-
-        // Si es inspector (y no es master admin), solo ver sus propias estadísticas
+        const baseWhere = {};
         if (!isMasterAdmin && userRole === 'inspector') {
-            where.inspectorId = userId;
+            baseWhere.inspectorId = userId;
         }
 
-        const total = await Inspection.count({ where });
-        const pendiente = await Inspection.count({ where: { ...where, status: 'pendiente' } });
-        const enProceso = await Inspection.count({ where: { ...where, status: 'en_proceso' } });
-        const listaRevision = await Inspection.count({ where: { ...where, status: 'lista_revision' } });
-        const finalizada = await Inspection.count({ where: { ...where, status: 'finalizada' } });
-        const cancelada = await Inspection.count({ where: { ...where, status: 'cancelada' } });
-        const reprogramada = await Inspection.count({ where: { ...where, status: 'reprogramada' } });
+        const [total, pendiente, enProceso, listaRevision, finalizada, cancelada, reprogramada] = await Promise.all([
+            prisma.inspecciones.inspection.count({ where: baseWhere }),
+            prisma.inspecciones.inspection.count({ where: { ...baseWhere, status: 'pendiente' } }),
+            prisma.inspecciones.inspection.count({ where: { ...baseWhere, status: 'en_proceso' } }),
+            prisma.inspecciones.inspection.count({ where: { ...baseWhere, status: 'lista_revision' } }),
+            prisma.inspecciones.inspection.count({ where: { ...baseWhere, status: 'finalizada' } }),
+            prisma.inspecciones.inspection.count({ where: { ...baseWhere, status: 'cancelada' } }),
+            prisma.inspecciones.inspection.count({ where: { ...baseWhere, status: 'reprogramada' } })
+        ]);
 
-        return {
-            total,
-            pendiente,
-            en_proceso: enProceso,
-            lista_revision: listaRevision,
-            finalizada,
-            cancelada,
-            reprogramada
-        };
+        return { total, pendiente, en_proceso: enProceso, lista_revision: listaRevision, finalizada, cancelada, reprogramada };
     }
 
     _assertAllowedStatusTransition(fromStatus, toStatus, userRole, isMasterAdmin) {
-        if (isMasterAdmin) {
-            return;
-        }
+        if (isMasterAdmin) return;
 
         if (userRole === 'inspector') {
-            const allowedInspectorTransitions = {
-                pendiente: ['en_proceso'],
-                en_proceso: ['lista_revision']
-            };
-
-            if (!(allowedInspectorTransitions[fromStatus] || []).includes(toStatus)) {
+            const allowed = { pendiente: ['en_proceso'], en_proceso: ['lista_revision'] };
+            if (!(allowed[fromStatus] || []).includes(toStatus)) {
                 throw new AppError('No tienes permisos para realizar esta transición de estado', 403, 'FORBIDDEN_STATUS_TRANSITION');
             }
-
             return;
         }
 
@@ -497,36 +364,28 @@ class InspectionService {
             throw new AppError('No tienes permisos para cambiar el estado de esta inspección', 403, 'FORBIDDEN_STATUS_TRANSITION');
         }
 
-        const allowedTransitions = {
+        const allowed = {
             pendiente: ['en_proceso', 'cancelada', 'reprogramada'],
             en_proceso: ['lista_revision', 'cancelada', 'reprogramada', 'finalizada'],
             lista_revision: ['en_proceso', 'cancelada', 'reprogramada', 'finalizada'],
             reprogramada: ['pendiente', 'en_proceso', 'cancelada', 'lista_revision', 'finalizada']
         };
 
-        if (!(allowedTransitions[fromStatus] || []).includes(toStatus)) {
+        if (!(allowed[fromStatus] || []).includes(toStatus)) {
             throw new AppError('La transición de estado no está permitida para tu rol', 403, 'FORBIDDEN_STATUS_TRANSITION');
         }
 
-        // Supervisor no puede finalizar inspecciones
         if (userRole === 'supervisor' && toStatus === 'finalizada') {
             throw new AppError('El supervisor no puede finalizar inspecciones', 403, 'SUPERVISOR_CANNOT_FINALIZE');
         }
     }
 
     _resolveReasonLabel(fromStatus, toStatus, reasonCode, customReasonLabel) {
-        if (!reasonCode) {
-            return null;
-        }
-
-        if (customReasonLabel?.trim()) {
-            return customReasonLabel.trim();
-        }
-
+        if (!reasonCode) return null;
+        if (customReasonLabel?.trim()) return customReasonLabel.trim();
         if (toStatus === 'en_proceso' && fromStatus === 'lista_revision') {
             return statusReasonCatalog.correction_return[reasonCode] || null;
         }
-
         return statusReasonCatalog[toStatus]?.[reasonCode] || null;
     }
 
@@ -547,7 +406,6 @@ class InspectionService {
             if (!rescheduleReasons[payload.reasonCode]) {
                 throw new AppError('Motivo de reprogramación inválido', 422, 'INVALID_REASON_CODE');
             }
-
             if (!payload.scheduledDate) {
                 throw new AppError('Debes indicar la nueva fecha y hora al reprogramar', 422, 'MISSING_SCHEDULED_DATE');
             }
@@ -564,22 +422,29 @@ class InspectionService {
             || (history.fromStatus === 'lista_revision' && history.toStatus === 'en_proceso')
             || history.toStatus === 'finalizada';
 
-        if (shouldNotifyInspector && inspection.inspector) {
-            await triggerN8nWebhook('userNotification', {
-                channel: 'internal',
-                type: 'inspection_status_changed',
-                inspectionId: inspection.id,
-                inspectionStatus: history.toStatus,
-                recipient: {
-                    id: inspection.inspector.id,
-                    email: inspection.inspector.email,
-                    fullName: inspection.inspector.fullName
-                },
-                reasonCode: history.reasonCode,
-                reasonLabel: history.reasonLabel,
-                comment: history.comment,
-                notifyClient: Boolean(notifyClient)
+        if (shouldNotifyInspector && inspection.inspectorId) {
+            const inspector = await prisma.auth.user.findUnique({
+                where: { id: inspection.inspectorId },
+                select: { id: true, email: true, fullName: true }
             });
+
+            if (inspector) {
+                await triggerN8nWebhook('userNotification', {
+                    channel: 'internal',
+                    type: 'inspection_status_changed',
+                    inspectionId: inspection.id,
+                    inspectionStatus: history.toStatus,
+                    recipient: {
+                        id: inspector.id,
+                        email: inspector.email,
+                        fullName: inspector.fullName
+                    },
+                    reasonCode: history.reasonCode,
+                    reasonLabel: history.reasonLabel,
+                    comment: history.comment,
+                    notifyClient: Boolean(notifyClient)
+                });
+            }
         }
     }
 
@@ -644,7 +509,6 @@ class InspectionService {
                 message: `El informe de la inspección ${inspectionLabel} fue aprobado.`
             });
 
-            // Trigger n8n webhook para inspeccion completada
             triggerN8nWebhook('inspectionCompleted', {
                 event: 'inspection_finalized',
                 inspection: {

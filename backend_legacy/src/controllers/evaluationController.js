@@ -4,7 +4,7 @@ const { createAuditLog } = require('../middlewares/auditLog');
 const { triggerN8nWebhook } = require('../utils/n8n');
 const { sendEmail } = require('../services/emailService');
 const { evaluationEmail } = require('../utils/emailTemplates');
-const { User } = require('../models');
+const { prisma } = require('../lib/databases');
 const logger = require('../utils/logger');
 
 const createEvaluation = asyncHandler(async (req, res) => {
@@ -34,7 +34,9 @@ const createEvaluation = asyncHandler(async (req, res) => {
 
     // Enviar email de evaluacion al evaluado
     try {
-        const evaluatedUser = await User.findByPk(evaluation.evaluatedUserId);
+        const evaluatedUser = await prisma.auth.user.findUnique({
+            where: { id: evaluation.evaluatedUserId }
+        });
         if (evaluatedUser) {
             const { subject, html } = evaluationEmail(evaluatedUser, {
                 score: evaluation.compositeScore,

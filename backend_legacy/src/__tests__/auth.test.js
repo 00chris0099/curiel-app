@@ -1,8 +1,8 @@
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { sequelize } = require('../config/database');
-const { User, Role, UserRole, RefreshToken } = require('../models');
+const { Prisma } = require('@prisma/client');
+const { prisma, connectAll, disconnectAll } = require('../lib/databases');
 const config = require('../config');
 
 let app;
@@ -15,60 +15,47 @@ let refreshTokenValue;
 
 async function createTestUser(email, password, fullName, options = {}) {
     const hash = await bcrypt.hash(password, 10);
-    const user = await User.create({
-        email,
-        passwordHash: hash,
-        fullName,
-        isActive: options.isActive !== undefined ? options.isActive : true
+    const user = await prisma.auth.user.create({
+        data: {
+            email,
+            passwordHash: hash,
+            fullName,
+            isActive: options.isActive !== undefined ? options.isActive : true
+        }
     });
     return user;
 }
 
 beforeAll(async () => {
-    await sequelize.authenticate();
-    require('../models');
-
-    try {
-        await sequelize.query(`
-            CREATE TABLE IF NOT EXISTS refresh_tokens (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                token VARCHAR(512) NOT NULL UNIQUE,
-                user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                expires_at TIMESTAMP NOT NULL,
-                revoked_at TIMESTAMP,
-                replaced_by_token VARCHAR(512),
-                ip_address VARCHAR(255),
-                user_agent TEXT,
-                created_at TIMESTAMP DEFAULT NOW()
-            );
-        `);
-    } catch (e) {
-        // Table may already exist
-    }
+    await connectAll();
 
     app = require('../app');
 
-    const [adminRole] = await Role.findOrCreate({
+    const adminRole = await prisma.auth.role.upsert({
         where: { name: 'admin' },
-        defaults: { name: 'admin', description: 'Test admin role' }
+        update: {},
+        create: { name: 'admin', description: 'Test admin role' }
     });
 
-    const [inspectorRole] = await Role.findOrCreate({
+    const inspectorRole = await prisma.auth.role.upsert({
         where: { name: 'inspector' },
-        defaults: { name: 'inspector', description: 'Test inspector' }
+        update: {},
+        create: { name: 'inspector', description: 'Test inspector' }
     });
 
     testUser = await createTestUser(TEST_EMAIL, TEST_PASSWORD, 'Test Auth User');
-    await testUser.addRole(inspectorRole);
+    await prisma.auth.userRole.create({
+        data: { userId: testUser.id, roleId: inspectorRole.id }
+    });
 
-    const [existingAdminUser] = await sequelize.query(`
+    const existingAdminUser = await prisma.auth.$queryRaw`
         SELECT u.id, u.email, u.is_master_admin
         FROM users u
         INNER JOIN user_roles ur ON ur.user_id = u.id
         INNER JOIN roles r ON r.id = ur.role_id
         WHERE r.name = 'admin'
         LIMIT 1
-    `);
+    `;
 
     let adminUserId;
     let adminEmail;
@@ -84,7 +71,9 @@ beforeAll(async () => {
             'Admin1234*',
             'Test Admin'
         );
-        await adminUser.addRole(adminRole);
+        await prisma.auth.userRole.create({
+            data: { userId: adminUser.id, roleId: adminRole.id }
+        });
         adminUserId = adminUser.id;
         adminEmail = adminUser.email;
         isMasterAdmin = false;
@@ -104,11 +93,11 @@ beforeAll(async () => {
 
 afterAll(async () => {
     if (testUser) {
-        await RefreshToken.destroy({ where: { userId: testUser.id } }).catch(() => {});
-        await UserRole.destroy({ where: { userId: testUser.id } }).catch(() => {});
-        await User.destroy({ where: { id: testUser.id } }).catch(() => {});
+        await prisma.auth.refreshToken.deleteMany({ where: { userId: testUser.id } }).catch(() => {});
+        await prisma.auth.userRole.deleteMany({ where: { userId: testUser.id } }).catch(() => {});
+        await prisma.auth.user.delete({ where: { id: testUser.id } }).catch(() => {});
     }
-    await sequelize.close();
+    await disconnectAll();
 });
 
 describe('Auth Endpoints', () => {

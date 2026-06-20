@@ -1,113 +1,87 @@
-const { Evaluation, User, Role } = require('../models');
+const { prisma } = require('../lib/databases');
 const { AppError } = require('../middlewares/errorHandler');
-const { Op } = require('sequelize');
-const { sequelize } = require('../config/database');
 
 class EvaluationService {
-    /**
-     * Calcular KPIs de un usuario para un rango de fechas
-     */
     async calculateKPIs(userId, weekStart, weekEnd) {
-        const user = await User.findByPk(userId, {
-            include: [{ model: Role, as: 'roles' }]
+        const user = await prisma.auth.user.findUnique({
+            where: { id: userId },
+            select: {
+                id: true,
+                roles: { select: { role: { select: { name: true } } } }
+            }
         });
 
         if (!user) {
             throw new AppError('Usuario no encontrado', 404, 'USER_NOT_FOUND');
         }
 
-        const userRole = user.roles[0]?.name;
-        const Inspection = require('../models').Inspection;
-        const InspectionPhoto = require('../models').Photo;
-        const InspectionObservation = require('../models').InspectionObservation;
-
+        const userRole = user.roles[0]?.role.name;
         const startDate = new Date(weekStart);
         const endDate = new Date(weekEnd);
         endDate.setHours(23, 59, 59, 999);
 
         if (userRole === 'inspector') {
-            // KPIs para inspector
-            const totalAssigned = await Inspection.count({
-                where: {
-                    inspectorId: userId,
-                    createdAt: { [Op.between]: [startDate, endDate] }
-                }
-            });
+            const dateFilter = { gte: startDate, lte: endDate };
 
-            const completed = await Inspection.count({
-                where: {
-                    inspectorId: userId,
-                    status: 'finalizada',
-                    completedDate: { [Op.between]: [startDate, endDate] }
-                }
-            });
+            const [totalAssigned, completed, cancelled] = await Promise.all([
+                prisma.inspecciones.inspection.count({
+                    where: { inspectorId: userId, createdAt: dateFilter }
+                }),
+                prisma.inspecciones.inspection.count({
+                    where: { inspectorId: userId, status: 'finalizada', completedDate: dateFilter }
+                }),
+                prisma.inspecciones.inspection.count({
+                    where: { inspectorId: userId, status: 'cancelada', updatedAt: dateFilter }
+                })
+            ]);
 
-            const cancelled = await Inspection.count({
-                where: {
-                    inspectorId: userId,
-                    status: 'cancelada',
-                    updatedAt: { [Op.between]: [startDate, endDate] }
-                }
-            });
-
-            // Tiempo promedio (en horas) - simplificado
-            const inspections = await Inspection.findAll({
-                where: {
-                    inspectorId: userId,
-                    status: 'finalizada',
-                    completedDate: { [Op.between]: [startDate, endDate] }
-                },
-                attributes: ['scheduledDate', 'completedDate']
+            const inspections = await prisma.inspecciones.inspection.findMany({
+                where: { inspectorId: userId, status: 'finalizada', completedDate: dateFilter },
+                select: { scheduledDate: true, completedDate: true }
             });
 
             let avgTime = 0;
             if (inspections.length > 0) {
                 const totalTime = inspections.reduce((sum, insp) => {
-                    const diff = new Date(insp.completedDate) - new Date(insp.scheduledDate);
-                    return sum + diff;
+                    return sum + (new Date(insp.completedDate) - new Date(insp.scheduledDate));
                 }, 0);
-                avgTime = totalTime / inspections.length / (1000 * 60 * 60); // hours
+                avgTime = totalTime / inspections.length / (1000 * 60 * 60);
             }
 
-            // Fotos promedio
-            const totalPhotos = await InspectionPhoto.count({
-                include: [{
-                    model: Inspection,
-                    as: 'inspection',
-                    where: {
-                        inspectorId: userId,
-                        createdAt: { [Op.between]: [startDate, endDate] }
-                    }
-                }]
+            const totalPhotos = await prisma.inspecciones.inspection.findMany({
+                where: { inspectorId: userId, createdAt: dateFilter },
+                select: { id: true }
             });
-            const avgPhotos = totalAssigned > 0 ? totalPhotos / totalAssigned : 0;
+            const inspectionIds = totalPhotos.map(i => i.id);
 
-            // Observaciones criticas
-            const criticalObs = await InspectionObservation.count({
-                include: [{
-                    model: Inspection,
-                    as: 'inspection',
+            let photoCount = 0;
+            if (inspectionIds.length > 0) {
+                photoCount = await prisma.media.photo.count({
+                    where: { inspectionId: { in: inspectionIds } }
+                });
+            }
+
+            const avgPhotos = totalAssigned > 0 ? photoCount / totalAssigned : 0;
+
+            let criticalObs = 0;
+            if (inspectionIds.length > 0) {
+                criticalObs = await prisma.inspecciones.inspectionObservation.count({
                     where: {
-                        inspectorId: userId,
-                        createdAt: { [Op.between]: [startDate, endDate] }
+                        inspectionId: { in: inspectionIds },
+                        severity: 'critica'
                     }
-                }],
-                where: { severity: 'critica' }
-            });
+                });
+            }
 
-            // Tasa de finalizacion
             const completionRate = totalAssigned > 0 ? (completed / totalAssigned) * 100 : 0;
-
-            // Tasa de rechazo (inspecciones que volvieron de lista_revision a en_proceso)
             const rejectionRate = totalAssigned > 0 ? (cancelled / totalAssigned) * 100 : 0;
 
-            // Score compuesto
             const compositeScore = (
                 (completionRate * 0.3) +
                 (Math.min(100, (100 - rejectionRate)) * 0.25) +
                 (Math.min(100, avgPhotos * 3.33) * 0.15) +
                 (Math.min(100, (100 - criticalObs * 5)) * 0.2) +
-                (80 * 0.1) // satisfaccion placeholder
+                (80 * 0.1)
             );
 
             return {
@@ -123,39 +97,28 @@ class EvaluationService {
         }
 
         if (userRole === 'arquitecto') {
-            // KPIs para arquitecto
-            const created = await Inspection.count({
-                where: {
-                    createdById: userId,
-                    createdAt: { [Op.between]: [startDate, endDate] }
-                }
-            });
+            const dateFilter = { gte: startDate, lte: endDate };
 
-            const finalized = await Inspection.count({
-                where: {
-                    createdById: userId,
-                    status: 'finalizada',
-                    completedDate: { [Op.between]: [startDate, endDate] }
-                }
-            });
+            const [created, finalized] = await Promise.all([
+                prisma.inspecciones.inspection.count({
+                    where: { createdById: userId, createdAt: dateFilter }
+                }),
+                prisma.inspecciones.inspection.count({
+                    where: { createdById: userId, status: 'finalizada', completedDate: dateFilter }
+                })
+            ]);
 
             const approvalRate = created > 0 ? (finalized / created) * 100 : 0;
 
-            // Tiempo promedio de revision
-            const inspections = await Inspection.findAll({
-                where: {
-                    createdById: userId,
-                    status: 'finalizada',
-                    completedDate: { [Op.between]: [startDate, endDate] }
-                },
-                attributes: ['scheduledDate', 'completedDate']
+            const inspections = await prisma.inspecciones.inspection.findMany({
+                where: { createdById: userId, status: 'finalizada', completedDate: dateFilter },
+                select: { scheduledDate: true, completedDate: true }
             });
 
             let avgTime = 0;
             if (inspections.length > 0) {
                 const totalTime = inspections.reduce((sum, insp) => {
-                    const diff = new Date(insp.completedDate) - new Date(insp.scheduledDate);
-                    return sum + diff;
+                    return sum + (new Date(insp.completedDate) - new Date(insp.scheduledDate));
                 }, 0);
                 avgTime = totalTime / inspections.length / (1000 * 60 * 60);
             }
@@ -163,7 +126,7 @@ class EvaluationService {
             const compositeScore = (
                 (approvalRate * 0.4) +
                 (Math.min(100, (100 / Math.max(1, avgTime))) * 0.3) +
-                (80 * 0.3) // satisfaccion placeholder
+                (80 * 0.3)
             );
 
             return {
@@ -181,17 +144,9 @@ class EvaluationService {
         throw new AppError('Rol no soportado para evaluacion', 400, 'UNSUPPORTED_ROLE');
     }
 
-    /**
-     * Generar evaluacion semanal automatica
-     */
     async generateWeeklyEvaluation(userId, weekStart, weekEnd, supervisorId) {
-        // Verificar que no exista ya una evaluacion para esta semana
-        const existing = await Evaluation.findOne({
-            where: {
-                evaluatedUserId: userId,
-                weekStart,
-                weekEnd
-            }
+        const existing = await prisma.alertas.evaluation.findFirst({
+            where: { evaluatedUserId: userId, weekStart, weekEnd }
         });
 
         if (existing) {
@@ -200,91 +155,76 @@ class EvaluationService {
 
         const kpis = await this.calculateKPIs(userId, weekStart, weekEnd);
 
-        const evaluation = await Evaluation.create({
-            evaluatedUserId: userId,
-            supervisorId,
-            weekStart,
-            weekEnd,
-            ...kpis,
-            status: 'borrador'
+        return prisma.alertas.evaluation.create({
+            data: {
+                evaluatedUserId: userId,
+                supervisorId,
+                weekStart,
+                weekEnd,
+                ...kpis,
+                status: 'borrador'
+            }
         });
-
-        return evaluation;
     }
 
-    /**
-     * Generar evaluaciones masivas para todos los usuarios activos
-     */
     async generateBulkWeeklyEvaluations(weekStart, weekEnd, supervisorId) {
-        const users = await User.findAll({
-            include: [{
-                model: Role,
-                as: 'roles',
-                where: { name: { [Op.in]: ['inspector', 'arquitecto'] } }
-            }],
-            where: { isActive: true }
+        const userRoleRecords = await prisma.auth.userRole.findMany({
+            where: {
+                role: { name: { in: ['inspector', 'arquitecto'] } },
+                user: { isActive: true }
+            },
+            select: { userId: true }
         });
 
+        const userIds = [...new Set(userRoleRecords.map(ur => ur.userId))];
         const results = [];
-        for (const user of users) {
+
+        for (const userId of userIds) {
             try {
-                const evaluation = await this.generateWeeklyEvaluation(
-                    user.id, weekStart, weekEnd, supervisorId
-                );
-                results.push({ userId: user.id, evaluation, success: true });
+                const evaluation = await this.generateWeeklyEvaluation(userId, weekStart, weekEnd, supervisorId);
+                results.push({ userId, evaluation, success: true });
             } catch (error) {
-                results.push({ userId: user.id, error: error.message, success: false });
+                results.push({ userId, error: error.message, success: false });
             }
         }
 
         return results;
     }
 
-    /**
-     * Obtener evaluaciones con filtros
-     */
     async getAllEvaluations(filters = {}) {
         const { evaluatedUserId, supervisorId, status, page = 1, limit = 20 } = filters;
 
         const where = {};
-
         if (evaluatedUserId) where.evaluatedUserId = evaluatedUserId;
         if (supervisorId) where.supervisorId = supervisorId;
         if (status) where.status = status;
 
-        const offset = (page - 1) * limit;
+        const skip = (parseInt(page) - 1) * parseInt(limit);
 
-        const { count, rows } = await Evaluation.findAndCountAll({
-            where,
-            include: [
-                { model: User, as: 'evaluatedUser', attributes: ['id', 'fullName', 'email'] },
-                { model: User, as: 'supervisor', attributes: ['id', 'fullName', 'email'] }
-            ],
-            limit: parseInt(limit),
-            offset: parseInt(offset),
-            order: [['weekStart', 'DESC']]
-        });
+        const [evaluations, total] = await Promise.all([
+            prisma.alertas.evaluation.findMany({
+                where,
+                take: parseInt(limit),
+                skip,
+                orderBy: { weekStart: 'desc' }
+            }),
+            prisma.alertas.evaluation.count({ where })
+        ]);
 
         return {
-            evaluations: rows,
+            evaluations,
             pagination: {
-                total: count,
+                total,
                 page: parseInt(page),
                 limit: parseInt(limit),
-                totalPages: Math.ceil(count / limit)
+                totalPages: Math.ceil(total / limit)
             }
         };
     }
 
-    /**
-     * Obtener evaluacion por ID
-     */
     async getEvaluationById(id) {
-        const evaluation = await Evaluation.findByPk(id, {
-            include: [
-                { model: User, as: 'evaluatedUser', attributes: ['id', 'fullName', 'email'] },
-                { model: User, as: 'supervisor', attributes: ['id', 'fullName', 'email'] }
-            ]
+        const evaluation = await prisma.alertas.evaluation.findUnique({
+            where: { id }
         });
 
         if (!evaluation) {
@@ -294,108 +234,85 @@ class EvaluationService {
         return evaluation;
     }
 
-    /**
-     * Actualizar evaluacion (notas, acciones, estado)
-     */
     async updateEvaluation(id, data) {
-        const evaluation = await Evaluation.findByPk(id);
+        const evaluation = await prisma.alertas.evaluation.findUnique({
+            where: { id }
+        });
 
         if (!evaluation) {
             throw new AppError('Evaluacion no encontrada', 404, 'EVALUATION_NOT_FOUND');
         }
 
-        if (data.notes !== undefined) evaluation.notes = data.notes;
-        if (data.actions !== undefined) evaluation.actions = data.actions;
-        if (data.status) evaluation.status = data.status;
+        const updateFields = {};
+        if (data.notes !== undefined) updateFields.notes = data.notes;
+        if (data.actions !== undefined) updateFields.actions = data.actions;
+        if (data.status) updateFields.status = data.status;
 
-        await evaluation.save();
-        return evaluation;
+        return prisma.alertas.evaluation.update({
+            where: { id },
+            data: updateFields
+        });
     }
 
-    /**
-     * Obtener KPIs agregados para el dashboard del supervisor
-     */
     async getDashboardKPIs() {
-        const Inspection = require('../models').Inspection;
-        const User = require('../models').User;
-        const Role = require('../models').Role;
-
         const now = new Date();
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const startOfWeek = new Date(now);
         startOfWeek.setDate(now.getDate() - (now.getDay() === 0 ? 6 : now.getDay() - 1));
         startOfWeek.setHours(0, 0, 0, 0);
 
-        // Inspecciones activas (pendiente + en_proceso)
-        const totalActiveInspections = await Inspection.count({
-            where: { status: { [Op.in]: ['pendiente', 'en_proceso', 'lista_revision'] } }
-        });
+        const [
+            totalActiveInspections,
+            overdueInspections,
+            completedThisMonth,
+            totalThisMonth,
+            cancelledThisMonth,
+            activeInspectors,
+            activeArchitects
+        ] = await Promise.all([
+            prisma.inspecciones.inspection.count({
+                where: { status: { in: ['pendiente', 'en_proceso', 'lista_revision'] } }
+            }),
+            prisma.inspecciones.inspection.count({
+                where: {
+                    scheduledDate: { lt: now },
+                    status: { notIn: ['finalizada', 'cancelada'] }
+                }
+            }),
+            prisma.inspecciones.inspection.count({
+                where: { status: 'finalizada', completedDate: { gte: startOfMonth, lte: now } }
+            }),
+            prisma.inspecciones.inspection.count({
+                where: { createdAt: { gte: startOfMonth, lte: now } }
+            }),
+            prisma.inspecciones.inspection.count({
+                where: { status: 'cancelada', updatedAt: { gte: startOfMonth, lte: now } }
+            }),
+            prisma.auth.userRole.count({
+                where: { role: { name: 'inspector' }, user: { isActive: true } }
+            }),
+            prisma.auth.userRole.count({
+                where: { role: { name: 'arquitecto' }, user: { isActive: true } }
+            })
+        ]);
 
-        // Inspecciones vencidas (scheduledDate < hoy y no finalizada)
-        const overdueInspections = await Inspection.count({
-            where: {
-                scheduledDate: { [Op.lt]: now },
-                status: { [Op.notIn]: ['finalizada', 'cancelada'] }
-            }
-        });
-
-        // Inspecciones completadas este mes
-        const completedThisMonth = await Inspection.count({
-            where: {
-                status: 'finalizada',
-                completedDate: { [Op.between]: [startOfMonth, now] }
-            }
-        });
-
-        // Total inspecciones este mes
-        const totalThisMonth = await Inspection.count({
-            where: {
-                createdAt: { [Op.between]: [startOfMonth, now] }
-            }
-        });
-
-        // Tasa de cancelacion del mes
-        const cancelledThisMonth = await Inspection.count({
-            where: {
-                status: 'cancelada',
-                updatedAt: { [Op.between]: [startOfMonth, now] }
-            }
-        });
         const cancellationRate = totalThisMonth > 0
             ? Math.round((cancelledThisMonth / totalThisMonth) * 100 * 100) / 100
             : 0;
 
-        // Tiempo promedio de finalizacion (inspecciones completadas esta semana)
-        const completedThisWeek = await Inspection.findAll({
-            where: {
-                status: 'finalizada',
-                completedDate: { [Op.between]: [startOfWeek, now] }
-            },
-            attributes: ['scheduledDate', 'completedDate']
+        const completedThisWeek = await prisma.inspecciones.inspection.findMany({
+            where: { status: 'finalizada', completedDate: { gte: startOfWeek, lte: now } },
+            select: { scheduledDate: true, completedDate: true }
         });
 
         let avgTimeGeneral = 0;
         if (completedThisWeek.length > 0) {
             const totalTime = completedThisWeek.reduce((sum, insp) => {
-                const diff = new Date(insp.completedDate) - new Date(insp.scheduledDate);
-                return sum + diff;
+                return sum + (new Date(insp.completedDate) - new Date(insp.scheduledDate));
             }, 0);
             avgTimeGeneral = Math.round((totalTime / completedThisWeek.length / (1000 * 60 * 60)) * 100) / 100;
         }
 
-        // Inspectores activos
-        const activeInspectors = await User.count({
-            include: [{ model: Role, as: 'roles', where: { name: 'inspector' } }],
-            where: { isActive: true }
-        });
-
-        // Arquitectos activos
-        const activeArchitects = await User.count({
-            include: [{ model: Role, as: 'roles', where: { name: 'arquitecto' } }],
-            where: { isActive: true }
-        });
-
-        // Productividad diaria (ultima semana)
         const dailyProductivity = [];
         for (let i = 6; i >= 0; i--) {
             const day = new Date(now);
@@ -404,16 +321,10 @@ class EvaluationService {
             const nextDay = new Date(day);
             nextDay.setDate(day.getDate() + 1);
 
-            const count = await Inspection.count({
-                where: {
-                    completedDate: { [Op.between]: [day, nextDay] },
-                    status: 'finalizada'
-                }
+            const count = await prisma.inspecciones.inspection.count({
+                where: { completedDate: { gte: day, lt: nextDay }, status: 'finalizada' }
             });
-            dailyProductivity.push({
-                date: day.toISOString().split('T')[0],
-                count
-            });
+            dailyProductivity.push({ date: day.toISOString().split('T')[0], count });
         }
 
         return {
@@ -429,21 +340,19 @@ class EvaluationService {
         };
     }
 
-    /**
-     * Obtener ranking de inspectores para un periodo
-     */
     async getInspectorRanking(weekStart, weekEnd) {
-        const users = await User.findAll({
-            include: [{
-                model: Role,
-                as: 'roles',
-                where: { name: 'inspector' }
-            }],
-            where: { isActive: true }
+        const userRoleRecords = await prisma.auth.userRole.findMany({
+            where: { role: { name: 'inspector' }, user: { isActive: true } },
+            select: { userId: true }
+        });
+
+        const userIds = [...new Set(userRoleRecords.map(ur => ur.userId))];
+        const users = await prisma.auth.user.findMany({
+            where: { id: { in: userIds } },
+            select: { id: true, fullName: true }
         });
 
         const rankings = [];
-
         for (const user of users) {
             try {
                 const kpis = await this.calculateKPIs(user.id, weekStart, weekEnd);
@@ -462,21 +371,19 @@ class EvaluationService {
         return rankings.sort((a, b) => b.score - a.score);
     }
 
-    /**
-     * Obtener ranking de arquitectos para un periodo
-     */
     async getArchitectRanking(weekStart, weekEnd) {
-        const users = await User.findAll({
-            include: [{
-                model: Role,
-                as: 'roles',
-                where: { name: 'arquitecto' }
-            }],
-            where: { isActive: true }
+        const userRoleRecords = await prisma.auth.userRole.findMany({
+            where: { role: { name: 'arquitecto' }, user: { isActive: true } },
+            select: { userId: true }
+        });
+
+        const userIds = [...new Set(userRoleRecords.map(ur => ur.userId))];
+        const users = await prisma.auth.user.findMany({
+            where: { id: { in: userIds } },
+            select: { id: true, fullName: true }
         });
 
         const rankings = [];
-
         for (const user of users) {
             try {
                 const kpis = await this.calculateKPIs(user.id, weekStart, weekEnd);

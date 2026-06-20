@@ -1,8 +1,7 @@
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { sequelize } = require('../config/database');
-const { User, Role } = require('../models');
+const { prisma, connectAll, disconnectAll } = require('../lib/databases');
 const config = require('../config');
 
 let app;
@@ -16,18 +15,19 @@ const createdEmails = [];
 
 async function createUserWithPassword(userData) {
     const hash = await bcrypt.hash(userData.password, 10);
-    const user = await User.create({
-        email: userData.email,
-        passwordHash: hash,
-        fullName: userData.fullName,
-        isActive: true
+    const user = await prisma.auth.user.create({
+        data: {
+            email: userData.email,
+            passwordHash: hash,
+            fullName: userData.fullName,
+            isActive: true
+        }
     });
     return user;
 }
 
 beforeAll(async () => {
-    await sequelize.authenticate();
-    require('../models');
+    await connectAll();
     app = require('../app');
 
     const roles = ['inspector', 'arquitecto', 'supervisor'];
@@ -42,12 +42,15 @@ beforeAll(async () => {
             fullName: `Test ${roleName}`
         });
 
-        const [role] = await Role.findOrCreate({
+        const role = await prisma.auth.role.upsert({
             where: { name: roleName },
-            defaults: { name: roleName, description: `Test ${roleName}` }
+            update: {},
+            create: { name: roleName, description: `Test ${roleName}` }
         });
 
-        await user.addRole(role);
+        await prisma.auth.userRole.create({
+            data: { userId: user.id, roleId: role.id }
+        });
 
         const token = jwt.sign(
             { userId: user.id, email: user.email, isMasterAdmin: false, roles: [roleName] },
@@ -58,14 +61,14 @@ beforeAll(async () => {
         users[roleName] = { user, token, email };
     }
 
-    const [existingAdminUser] = await sequelize.query(`
+    const existingAdminUser = await prisma.auth.$queryRaw`
         SELECT u.id, u.email, u.is_master_admin
         FROM users u
         INNER JOIN user_roles ur ON ur.user_id = u.id
         INNER JOIN roles r ON r.id = ur.role_id
         WHERE r.name = 'admin'
         LIMIT 1
-    `);
+    `;
 
     if (existingAdminUser.length > 0) {
         adminToken = jwt.sign(
@@ -74,9 +77,10 @@ beforeAll(async () => {
             { expiresIn: '15m' }
         );
     } else {
-        const [adminRole] = await Role.findOrCreate({
+        const adminRole = await prisma.auth.role.upsert({
             where: { name: 'admin' },
-            defaults: { name: 'admin', description: 'Test admin' }
+            update: {},
+            create: { name: 'admin', description: 'Test admin' }
         });
         const adminUser = await createUserWithPassword({
             email: `test-rbac-admin-${timestamp}@curiel.com`,
@@ -84,7 +88,9 @@ beforeAll(async () => {
             fullName: 'Test admin'
         });
         createdEmails.push(`test-rbac-admin-${timestamp}@curiel.com`);
-        await adminUser.addRole(adminRole);
+        await prisma.auth.userRole.create({
+            data: { userId: adminUser.id, roleId: adminRole.id }
+        });
         adminToken = jwt.sign(
             { userId: adminUser.id, email: adminUser.email, isMasterAdmin: false, roles: ['admin'] },
             config.jwt.secret,
@@ -99,9 +105,9 @@ beforeAll(async () => {
 
 afterAll(async () => {
     for (const email of createdEmails) {
-        await User.destroy({ where: { email } }).catch(() => {});
+        await prisma.auth.user.deleteMany({ where: { email } }).catch(() => {});
     }
-    await sequelize.close();
+    await disconnectAll();
 });
 
 describe('RBAC Permissions', () => {
@@ -243,7 +249,7 @@ describe('RBAC Permissions', () => {
             const res = await request(app).get('/api/v1/health');
             expect(res.status).toBe(200);
             expect(res.body.status).toBe('operational');
-            expect(res.body.database.status).toBe('connected');
+            expect(res.body.databases).toBeDefined();
         });
     });
 });

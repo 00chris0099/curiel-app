@@ -1,8 +1,7 @@
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { sequelize } = require('../config/database');
-const { User, Role, Alert, Suspension, Evaluation, Client, Inspection } = require('../models');
+const { prisma, connectAll, disconnectAll } = require('../lib/databases');
 const config = require('../config');
 
 let app;
@@ -15,29 +14,24 @@ const createdUserIds = [];
 
 async function createUserWithPassword(userData) {
     const hash = await bcrypt.hash(userData.password, 10);
-    const user = await User.create({
-        email: userData.email,
-        passwordHash: hash,
-        fullName: userData.fullName,
-        isActive: true
+    const user = await prisma.auth.user.create({
+        data: {
+            email: userData.email,
+            passwordHash: hash,
+            fullName: userData.fullName,
+            isActive: true
+        }
     });
     return user;
 }
 
 beforeAll(async () => {
-    await sequelize.authenticate();
-    require('../models');
+    await connectAll();
     app = require('../app');
 
-    await Alert.sync({ alter: true });
-    await Suspension.sync({ alter: true });
-    await Evaluation.sync({ alter: true });
-    await Client.sync({ alter: true });
-    await Inspection.sync({ alter: true });
-
-    await Alert.destroy({ where: {}, force: true });
-    await Suspension.destroy({ where: {}, force: true });
-    await Evaluation.destroy({ where: {}, force: true });
+    await prisma.alertas.alert.deleteMany({});
+    await prisma.alertas.suspension.deleteMany({});
+    await prisma.alertas.evaluation.deleteMany({});
 
     const timestamp = Date.now();
 
@@ -50,11 +44,12 @@ beforeAll(async () => {
         fullName: 'Supervisor Test'
     });
     createdUserIds.push(supUser.id);
-    const [supRole] = await Role.findOrCreate({
+    const supRole = await prisma.auth.role.upsert({
         where: { name: 'supervisor' },
-        defaults: { name: 'supervisor', description: 'Test supervisor' }
+        update: {},
+        create: { name: 'supervisor', description: 'Test supervisor' }
     });
-    await supUser.addRole(supRole);
+    await prisma.auth.userRole.create({ data: { userId: supUser.id, roleId: supRole.id } });
 
     supervisorToken = jwt.sign(
         { userId: supUser.id, email: supUser.email, isMasterAdmin: false, roles: ['supervisor'] },
@@ -63,14 +58,14 @@ beforeAll(async () => {
     );
 
     // --- Find admin (must NOT be masterAdmin to test RBAC properly) ---
-    const [existingAdminUser] = await sequelize.query(`
+    const existingAdminUser = await prisma.auth.$queryRaw`
         SELECT u.id, u.email, u.is_master_admin
         FROM users u
         INNER JOIN user_roles ur ON ur.user_id = u.id
         INNER JOIN roles r ON r.id = ur.role_id
         WHERE r.name = 'admin' AND u.is_master_admin = false
         LIMIT 1
-    `);
+    `;
 
     if (existingAdminUser.length > 0) {
         adminToken = jwt.sign(
@@ -87,11 +82,12 @@ beforeAll(async () => {
             fullName: 'Admin Test'
         });
         createdUserIds.push(adminUser.id);
-        const [adminRole] = await Role.findOrCreate({
+        const adminRole = await prisma.auth.role.upsert({
             where: { name: 'admin' },
-            defaults: { name: 'admin', description: 'Test admin' }
+            update: {},
+            create: { name: 'admin', description: 'Test admin' }
         });
-        await adminUser.addRole(adminRole);
+        await prisma.auth.userRole.create({ data: { userId: adminUser.id, roleId: adminRole.id } });
 
         adminToken = jwt.sign(
             { userId: adminUser.id, email: adminUser.email, isMasterAdmin: false, roles: ['admin'] },
@@ -109,11 +105,12 @@ beforeAll(async () => {
         fullName: 'Inspector Test'
     });
     createdUserIds.push(inspUser.id);
-    const [inspRole] = await Role.findOrCreate({
+    const inspRole = await prisma.auth.role.upsert({
         where: { name: 'inspector' },
-        defaults: { name: 'inspector', description: 'Test inspector' }
+        update: {},
+        create: { name: 'inspector', description: 'Test inspector' }
     });
-    await inspUser.addRole(inspRole);
+    await prisma.auth.userRole.create({ data: { userId: inspUser.id, roleId: inspRole.id } });
 
     inspectorToken = jwt.sign(
         { userId: inspUser.id, email: inspUser.email, isMasterAdmin: false, roles: ['inspector'] },
@@ -124,9 +121,9 @@ beforeAll(async () => {
 
 afterAll(async () => {
     if (createdUserIds.length > 0) {
-        await User.destroy({ where: { id: createdUserIds }, force: true });
+        await prisma.auth.user.deleteMany({ where: { id: { in: createdUserIds } } });
     }
-    await sequelize.close();
+    await disconnectAll();
 });
 
 // ──────────────────────────────────────────────
@@ -271,10 +268,11 @@ describe('Suspensiones - Supervisor', () => {
     let testInspectorId;
 
     beforeAll(async () => {
-        const insps = await User.findAll({
-            include: [{ model: Role, as: 'roles', where: { name: 'inspector' } }],
+        const allUsers = await prisma.auth.user.findMany({
+            include: { roles: { include: { role: true } } },
             where: { isActive: true }
         });
+        const insps = allUsers.filter(u => u.roles.some(ur => ur.role.name === 'inspector'));
         const testInsp = insps.find(u => createdEmails.includes(u.email));
         testInspectorId = testInsp ? testInsp.id : insps[0]?.id;
     });
@@ -475,10 +473,11 @@ describe('Evaluaciones - Supervisor', () => {
     let testUserId;
 
     beforeAll(async () => {
-        const users = await User.findAll({
-            include: [{ model: Role, as: 'roles', where: { name: { [require('sequelize').Op.in]: ['inspector', 'arquitecto'] } } }],
+        const allUsers = await prisma.auth.user.findMany({
+            include: { roles: { include: { role: true } } },
             where: { isActive: true }
         });
+        const users = allUsers.filter(u => u.roles.some(ur => ['inspector', 'arquitecto'].includes(ur.role.name)));
         const testUser = users.find(u => createdEmails.includes(u.email));
         testUserId = testUser ? testUser.id : users[0]?.id;
     });

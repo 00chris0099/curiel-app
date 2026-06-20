@@ -1,88 +1,63 @@
-const { Client, Inspection, User, Role } = require('../models');
+const { prisma } = require('../lib/databases');
 const { AppError } = require('../middlewares/errorHandler');
-const { Op } = require('sequelize');
 
 class ClientService {
-    /**
-     * Obtener todos los clientes con filtros y paginacion
-     */
     async getAllClients(filters = {}) {
         const { search, documentType, page = 1, limit = 10 } = filters;
 
         const where = {};
-
-        if (documentType) {
-            where.documentType = documentType;
-        }
-
+        if (documentType) where.documentType = documentType;
         if (search) {
-            where[Op.or] = [
-                { documentNumber: { [Op.iLike]: `%${search}%` } },
-                { firstName: { [Op.iLike]: `%${search}%` } },
-                { lastName: { [Op.iLike]: `%${search}%` } },
-                { razonSocial: { [Op.iLike]: `%${search}%` } },
-                { email: { [Op.iLike]: `%${search}%` } }
+            where.OR = [
+                { documentNumber: { contains: search, mode: 'insensitive' } },
+                { firstName: { contains: search, mode: 'insensitive' } },
+                { lastName: { contains: search, mode: 'insensitive' } },
+                { razonSocial: { contains: search, mode: 'insensitive' } },
+                { email: { contains: search, mode: 'insensitive' } }
             ];
         }
 
-        const offset = (page - 1) * limit;
+        const skip = (parseInt(page) - 1) * parseInt(limit);
 
-        const { count, rows } = await Client.findAndCountAll({
-            where,
-            limit: parseInt(limit),
-            offset: parseInt(offset),
-            order: [['createdAt', 'DESC']]
-        });
+        const [clients, total] = await Promise.all([
+            prisma.admin.client.findMany({
+                where,
+                orderBy: { createdAt: 'desc' },
+                take: parseInt(limit),
+                skip
+            }),
+            prisma.admin.client.count({ where })
+        ]);
 
         return {
-            clients: rows,
+            clients,
             pagination: {
-                total: count,
+                total,
                 page: parseInt(page),
                 limit: parseInt(limit),
-                totalPages: Math.ceil(count / limit)
+                totalPages: Math.ceil(total / limit)
             }
         };
     }
 
-    /**
-     * Obtener cliente por ID con conteo de inspecciones
-     */
     async getClientById(clientId) {
-        const client = await Client.findByPk(clientId, {
-            include: [{
-                model: Inspection,
-                as: 'inspections',
-                attributes: ['id']
-            }]
+        const client = await prisma.admin.client.findUnique({
+            where: { id: clientId }
         });
 
         if (!client) {
             throw new AppError('Cliente no encontrado', 404, 'CLIENT_NOT_FOUND');
         }
 
-        const plain = client.toJSON();
-        plain.inspectionCount = plain.inspections ? plain.inspections.length : 0;
-        delete plain.inspections;
+        const inspectionCount = await prisma.inspecciones.inspection.count({
+            where: { clientId }
+        });
 
-        return plain;
+        return { ...client, inspectionCount };
     }
 
-    /**
-     * Crear nuevo cliente
-     */
     async createClient(data, creatorId, isMasterAdmin = false) {
-        const {
-            documentType,
-            documentNumber,
-            firstName,
-            lastName,
-            razonSocial,
-            email,
-            phone,
-            address,
-            isProtected
-        } = data;
+        const { documentType, documentNumber, firstName, lastName, razonSocial, email, phone, address, isProtected } = data;
 
         const normalizedEmail = email?.trim().toLowerCase();
         const normalizedDoc = documentNumber?.trim();
@@ -90,139 +65,94 @@ class ClientService {
         if (!normalizedEmail) {
             throw new AppError('El email es requerido', 400, 'INVALID_EMAIL');
         }
-
         if (!normalizedDoc) {
             throw new AppError('El numero de documento es requerido', 400, 'INVALID_DOCUMENT');
         }
 
-        // Validar que tenga nombre o razon social
         const hasName = firstName && lastName;
         const hasRazon = razonSocial;
         if (!hasName && !hasRazon) {
-            throw new AppError(
-                'Debe proporcionar nombre y apellido, o razon social',
-                400,
-                'MISSING_NAME_OR_RAZON'
-            );
+            throw new AppError('Debe proporcionar nombre y apellido, o razon social', 400, 'MISSING_NAME_OR_RAZON');
         }
 
-        // Solo masterAdmin puede marcar isProtected
         if (isProtected && !isMasterAdmin) {
-            throw new AppError(
-                'Solo el master admin puede proteger clientes',
-                403,
-                'FORBIDDEN'
-            );
+            throw new AppError('Solo el master admin puede proteger clientes', 403, 'FORBIDDEN');
         }
 
-        // Verificar duplicados
-        const existingDoc = await Client.findOne({ where: { documentNumber: normalizedDoc } });
-        if (existingDoc) {
-            throw new AppError(
-                'Ya existe un cliente con ese documento',
-                409,
-                'DUPLICATE_DOCUMENT'
-            );
-        }
-
-        const existingEmail = await Client.findOne({ where: { email: normalizedEmail } });
-        if (existingEmail) {
-            throw new AppError(
-                'Ya existe un cliente con ese email',
-                409,
-                'DUPLICATE_EMAIL'
-            );
-        }
-
-        const client = await Client.create({
-            documentType,
-            documentNumber: normalizedDoc,
-            firstName: firstName || null,
-            lastName: lastName || null,
-            razonSocial: razonSocial || null,
-            email: normalizedEmail,
-            phone: phone || null,
-            address: address || null,
-            isProtected: isProtected || false
+        const existingDoc = await prisma.admin.client.findUnique({
+            where: { documentNumber: normalizedDoc }
         });
+        if (existingDoc) {
+            throw new AppError('Ya existe un cliente con ese documento', 409, 'DUPLICATE_DOCUMENT');
+        }
 
-        return client;
+        const existingEmail = await prisma.admin.client.findUnique({
+            where: { email: normalizedEmail }
+        });
+        if (existingEmail) {
+            throw new AppError('Ya existe un cliente con ese email', 409, 'DUPLICATE_EMAIL');
+        }
+
+        return prisma.admin.client.create({
+            data: {
+                documentType,
+                documentNumber: normalizedDoc,
+                firstName: firstName || null,
+                lastName: lastName || null,
+                razonSocial: razonSocial || null,
+                email: normalizedEmail,
+                phone: phone || null,
+                address: address || null,
+                isProtected: isProtected || false
+            }
+        });
     }
 
-    /**
-     * Actualizar cliente
-     */
     async updateClient(clientId, data) {
-        const client = await Client.findByPk(clientId);
+        const client = await prisma.admin.client.findUnique({
+            where: { id: clientId }
+        });
 
         if (!client) {
             throw new AppError('Cliente no encontrado', 404, 'CLIENT_NOT_FOUND');
         }
 
-        const {
-            documentType,
-            documentNumber,
-            firstName,
-            lastName,
-            razonSocial,
-            email,
-            phone,
-            address,
-            isProtected
-        } = data;
+        const { documentType, documentNumber, firstName, lastName, razonSocial, email, phone, address, isProtected } = data;
 
-        // Verificar duplicados si cambia documento
         if (documentNumber && documentNumber !== client.documentNumber) {
-            const existing = await Client.findOne({ where: { documentNumber } });
+            const existing = await prisma.admin.client.findUnique({ where: { documentNumber } });
             if (existing) {
-                throw new AppError(
-                    'Ya existe un cliente con ese documento',
-                    409,
-                    'DUPLICATE_DOCUMENT'
-                );
+                throw new AppError('Ya existe un cliente con ese documento', 409, 'DUPLICATE_DOCUMENT');
             }
         }
 
-        // Verificar duplicados si cambia email
         if (email && email.toLowerCase() !== client.email) {
-            const existing = await Client.findOne({
-                where: { email: email.toLowerCase() }
-            });
+            const existing = await prisma.admin.client.findUnique({ where: { email: email.toLowerCase() } });
             if (existing) {
-                throw new AppError(
-                    'Ya existe un cliente con ese email',
-                    409,
-                    'DUPLICATE_EMAIL'
-                );
+                throw new AppError('Ya existe un cliente con ese email', 409, 'DUPLICATE_EMAIL');
             }
         }
 
-        // Actualizar campos
-        if (documentType !== undefined) client.documentType = documentType;
-        if (documentNumber !== undefined) client.documentNumber = documentNumber;
-        if (firstName !== undefined) client.firstName = firstName;
-        if (lastName !== undefined) client.lastName = lastName;
-        if (razonSocial !== undefined) client.razonSocial = razonSocial;
-        if (email !== undefined) client.email = email.toLowerCase().trim();
-        if (phone !== undefined) client.phone = phone;
-        if (address !== undefined) client.address = address;
-        if (isProtected !== undefined) client.isProtected = isProtected;
+        const updateData = {};
+        if (documentType !== undefined) updateData.documentType = documentType;
+        if (documentNumber !== undefined) updateData.documentNumber = documentNumber;
+        if (firstName !== undefined) updateData.firstName = firstName;
+        if (lastName !== undefined) updateData.lastName = lastName;
+        if (razonSocial !== undefined) updateData.razonSocial = razonSocial;
+        if (email !== undefined) updateData.email = email.toLowerCase().trim();
+        if (phone !== undefined) updateData.phone = phone;
+        if (address !== undefined) updateData.address = address;
+        if (isProtected !== undefined) updateData.isProtected = isProtected;
 
-        await client.save();
-
-        return client;
+        return prisma.admin.client.update({
+            where: { id: clientId },
+            data: updateData
+        });
     }
 
-    /**
-     * Eliminar cliente (hard delete)
-     */
     async deleteClient(clientId) {
-        const client = await Client.findByPk(clientId, {
-            include: [{
-                model: Inspection,
-                as: 'inspections',
-                attributes: ['id']
-            }]
+        const client = await prisma.admin.client.findUnique({
+            where: { id: clientId }
         });
 
         if (!client) {
@@ -230,124 +160,95 @@ class ClientService {
         }
 
         if (client.isProtected) {
-            throw new AppError(
-                'No se puede eliminar un cliente protegido',
-                403,
-                'CLIENT_PROTECTED'
-            );
+            throw new AppError('No se puede eliminar un cliente protegido', 403, 'CLIENT_PROTECTED');
         }
 
-        // Si tiene inspecciones, solo admin/masterAdmin puede eliminar
-        if (client.inspections && client.inspections.length > 0) {
-            throw new AppError(
-                'No se puede eliminar un cliente con inspecciones asociadas',
-                400,
-                'CLIENT_HAS_INSPECTIONS'
-            );
+        const inspectionCount = await prisma.inspecciones.inspection.count({
+            where: { clientId }
+        });
+
+        if (inspectionCount > 0) {
+            throw new AppError('No se puede eliminar un cliente con inspecciones asociadas', 400, 'CLIENT_HAS_INSPECTIONS');
         }
 
-        await client.destroy();
+        await prisma.admin.client.delete({ where: { id: clientId } });
 
         return { deleted: true, clientId };
     }
 
-    /**
-     * Buscar clientes por documento, nombre o email
-     */
     async searchClients(query) {
-        if (!query || query.length < 2) {
-            return [];
-        }
+        if (!query || query.length < 2) return [];
 
-        const clients = await Client.findAll({
+        return prisma.admin.client.findMany({
             where: {
-                [Op.or]: [
-                    { documentNumber: { [Op.iLike]: `%${query}%` } },
-                    { firstName: { [Op.iLike]: `%${query}%` } },
-                    { lastName: { [Op.iLike]: `%${query}%` } },
-                    { razonSocial: { [Op.iLike]: `%${query}%` } },
-                    { email: { [Op.iLike]: `%${query}%` } }
+                OR: [
+                    { documentNumber: { contains: query, mode: 'insensitive' } },
+                    { firstName: { contains: query, mode: 'insensitive' } },
+                    { lastName: { contains: query, mode: 'insensitive' } },
+                    { razonSocial: { contains: query, mode: 'insensitive' } },
+                    { email: { contains: query, mode: 'insensitive' } }
                 ]
             },
-            limit: 10,
-            order: [['firstName', 'ASC']]
+            take: 10,
+            orderBy: { firstName: 'asc' }
         });
-
-        return clients;
     }
 
-    /**
-     * Obtener historial de inspecciones de un cliente
-     */
     async getClientInspections(clientId, filters = {}) {
-        const client = await Client.findByPk(clientId);
+        const client = await prisma.admin.client.findUnique({
+            where: { id: clientId }
+        });
 
         if (!client) {
             throw new AppError('Cliente no encontrado', 404, 'CLIENT_NOT_FOUND');
         }
 
         const { status, page = 1, limit = 10 } = filters;
-
         const where = { clientId };
-        if (status) {
-            where.status = status;
-        }
+        if (status) where.status = status;
 
-        const offset = (page - 1) * limit;
+        const skip = (parseInt(page) - 1) * parseInt(limit);
 
-        const { count, rows } = await Inspection.findAndCountAll({
-            where,
-            include: [
-                {
-                    model: User,
-                    as: 'inspector',
-                    attributes: ['id', 'fullName', 'email']
-                }
-            ],
-            limit: parseInt(limit),
-            offset: parseInt(offset),
-            order: [['scheduledDate', 'DESC']]
-        });
+        const [inspections, total] = await Promise.all([
+            prisma.inspecciones.inspection.findMany({
+                where,
+                take: parseInt(limit),
+                skip,
+                orderBy: { scheduledDate: 'desc' }
+            }),
+            prisma.inspecciones.inspection.count({ where })
+        ]);
 
         return {
-            inspections: rows,
+            inspections,
             pagination: {
-                total: count,
+                total,
                 page: parseInt(page),
                 limit: parseInt(limit),
-                totalPages: Math.ceil(count / limit)
+                totalPages: Math.ceil(total / limit)
             }
         };
     }
 
-    /**
-     * Auto-eliminacion de clientes sin inspecciones (cron job)
-     * Elimina clientes que:
-     * - Tienen mas de 15 dias creados
-     * - No estan protegidos
-     * - No tienen inspecciones asociadas
-     */
     async autoDeleteClients() {
         const fifteenDaysAgo = new Date();
         fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
 
-        const clientsToDelete = await Client.findAll({
+        const clientsToDelete = await prisma.admin.client.findMany({
             where: {
-                createdAt: { [Op.lt]: fifteenDaysAgo },
+                createdAt: { lt: fifteenDaysAgo },
                 isProtected: false
-            },
-            include: [{
-                model: Inspection,
-                as: 'inspections',
-                attributes: ['id'],
-                required: false
-            }]
+            }
         });
 
         const deleted = [];
         for (const client of clientsToDelete) {
-            if (!client.inspections || client.inspections.length === 0) {
-                await client.destroy();
+            const inspectionCount = await prisma.inspecciones.inspection.count({
+                where: { clientId: client.id }
+            });
+
+            if (inspectionCount === 0) {
+                await prisma.admin.client.delete({ where: { id: client.id } });
                 deleted.push(client.id);
             }
         }

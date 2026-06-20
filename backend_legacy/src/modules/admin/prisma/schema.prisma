@@ -1,0 +1,67 @@
+// Migración: curiel_admin
+// Modelos: Client, ChecklistTemplate, ChecklistItem
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum DocumentType {
+  dni
+  ruc
+  ce
+}
+
+model Client {
+  id             String       @id @default(uuid()) @db.Uuid
+  documentType   DocumentType @map("document_type")
+  documentNumber String       @unique @map("document_number") @db.VarChar(255)
+  firstName      String?      @map("first_name") @db.VarChar(255)
+  lastName       String?      @map("last_name") @db.VarChar(255)
+  razonSocial    String?      @map("razon_social") @db.VarChar(255)
+  email          String       @unique @db.VarChar(255)
+  phone          String?      @db.VarChar(255)
+  address        String?      @db.Text
+  isProtected    Boolean      @default(false) @map("is_protected")
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([documentNumber])
+  @@index([email])
+  @@map("clients")
+}
+
+model ChecklistTemplate {
+  id             String   @id @default(uuid()) @db.Uuid
+  name           String   @db.VarChar(255)
+  description    String?  @db.Text
+  inspectionType String   @map("inspection_type") @db.VarChar(255)
+  isActive       Boolean  @default(true) @map("is_active")
+  createdById    String   @map("created_by_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  items ChecklistItem[]
+
+  @@index([createdById])
+  @@map("checklist_templates")
+}
+
+model ChecklistItem {
+  id         String   @id @default(uuid()) @db.Uuid
+  templateId String   @map("template_id") @db.Uuid
+  itemText   String   @map("item_text") @db.Text
+  category   String?  @db.VarChar(255)
+  orderIndex Int      @default(0) @map("order_index")
+  isRequired Boolean  @default(false) @map("is_required")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  template ChecklistTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+  @@map("checklist_items")
+}

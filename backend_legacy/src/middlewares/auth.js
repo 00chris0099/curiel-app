@@ -1,13 +1,9 @@
 const jwt = require('jsonwebtoken');
 const config = require('../config');
-const { User, Role } = require('../models');
+const { prisma } = require('../lib/databases');
 
-/**
- * Middleware para verificar JWT token
- */
 const authenticate = async (req, res, next) => {
     try {
-        // Obtener token del header
         const authHeader = req.headers.authorization;
 
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -21,13 +17,15 @@ const authenticate = async (req, res, next) => {
         }
 
         const token = authHeader.substring(7);
-
-        // Verificar token
         const decoded = jwt.verify(token, config.jwt.secret);
 
-        // Buscar usuario con roles
-        const user = await User.findByPk(decoded.userId, {
-            include: [{ model: Role, as: 'roles', attributes: ['name'] }]
+        const user = await prisma.auth.user.findUnique({
+            where: { id: decoded.userId },
+            include: {
+                roles: {
+                    include: { role: true }
+                }
+            }
         });
 
         if (!user || !user.isActive) {
@@ -40,9 +38,8 @@ const authenticate = async (req, res, next) => {
             });
         }
 
-        const roles = (user.roles || []).map(r => r.name);
+        const roles = (user.roles || []).map(ur => ur.role.name);
 
-        // Agregar usuario al request
         req.user = user;
         req.userId = user.id;
         req.userRoles = roles;
@@ -82,10 +79,6 @@ const authenticate = async (req, res, next) => {
     }
 };
 
-/**
- * Middleware para verificar roles específicos
- * @param  {...string} allowedRoles - Roles permitidos
- */
 const authorize = (...allowedRoles) => {
     return (req, res, next) => {
         if (!req.user) {
@@ -95,7 +88,6 @@ const authorize = (...allowedRoles) => {
             });
         }
 
-        // El master admin siempre tiene permisos completos
         if (req.user.isMasterAdmin) {
             return next();
         }
@@ -106,7 +98,7 @@ const authorize = (...allowedRoles) => {
         if (!hasAllowedRole) {
             return res.status(403).json({
                 success: false,
-                message: 'No tienes permisos para realizar esta acción'
+                message: 'No tienes permisos para realizar esta accion'
             });
         }
 
@@ -114,9 +106,6 @@ const authorize = (...allowedRoles) => {
     };
 };
 
-/**
- * Middleware opcional de autenticación (no falla si no hay token)
- */
 const optionalAuth = async (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;
@@ -127,12 +116,18 @@ const optionalAuth = async (req, res, next) => {
 
         const token = authHeader.substring(7);
         const decoded = jwt.verify(token, config.jwt.secret);
-        const user = await User.findByPk(decoded.userId, {
-            include: [{ model: Role, as: 'roles', attributes: ['name'] }]
+
+        const user = await prisma.auth.user.findUnique({
+            where: { id: decoded.userId },
+            include: {
+                roles: {
+                    include: { role: true }
+                }
+            }
         });
 
         if (user && user.isActive) {
-            const roles = (user.roles || []).map(r => r.name);
+            const roles = (user.roles || []).map(ur => ur.role.name);
 
             req.user = user;
             req.userId = user.id;
@@ -143,7 +138,6 @@ const optionalAuth = async (req, res, next) => {
 
         next();
     } catch (error) {
-        // Ignorar errores de token en auth opcional
         next();
     }
 };

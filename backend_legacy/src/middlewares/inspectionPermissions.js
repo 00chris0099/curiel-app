@@ -1,11 +1,13 @@
-const { Inspection } = require('../models');
+const { prisma } = require('../lib/databases');
 const { AppError, asyncHandler } = require('./errorHandler');
 
 const loadInspection = async (inspectionId) => {
-    const inspection = await Inspection.findByPk(inspectionId);
+    const inspection = await prisma.inspecciones.inspection.findUnique({
+        where: { id: inspectionId }
+    });
 
     if (!inspection) {
-        throw new AppError('Inspección no encontrada', 404, 'INSPECTION_NOT_FOUND');
+        throw new AppError('Inspeccion no encontrada', 404, 'INSPECTION_NOT_FOUND');
     }
 
     return inspection;
@@ -32,7 +34,7 @@ const requireInspectionAccess = asyncHandler(async (req, res, next) => {
         return next();
     }
 
-    throw new AppError('No tienes permisos para acceder a esta inspección', 403, 'FORBIDDEN');
+    throw new AppError('No tienes permisos para acceder a esta inspeccion', 403, 'FORBIDDEN');
 });
 
 const requireInspectionEditAccess = asyncHandler(async (req, res, next) => {
@@ -42,7 +44,7 @@ const requireInspectionEditAccess = asyncHandler(async (req, res, next) => {
         return next();
     }
 
-    throw new AppError('No tienes permisos para editar esta inspección', 403, 'FORBIDDEN');
+    throw new AppError('No tienes permisos para editar esta inspeccion', 403, 'FORBIDDEN');
 });
 
 const requireInspectionStatusAccess = asyncHandler(async (req, res, next) => {
@@ -56,7 +58,7 @@ const requireInspectionStatusAccess = asyncHandler(async (req, res, next) => {
         return next();
     }
 
-    throw new AppError('No tienes permisos para cambiar el estado de esta inspección', 403, 'FORBIDDEN');
+    throw new AppError('No tienes permisos para cambiar el estado de esta inspeccion', 403, 'FORBIDDEN');
 });
 
 const requireInspectionReportAccess = asyncHandler(async (req, res, next) => {
@@ -71,7 +73,7 @@ const requireInspectionReportAccess = asyncHandler(async (req, res, next) => {
             return next();
         }
 
-        throw new AppError('El inspector solo puede generar informes cuando la inspección está lista para revisión o finalizada', 403, 'FORBIDDEN');
+        throw new AppError('El inspector solo puede generar informes cuando la inspeccion esta lista para revision o finalizada', 403, 'FORBIDDEN');
     }
 
     throw new AppError('No tienes permisos para generar este informe', 403, 'FORBIDDEN');
