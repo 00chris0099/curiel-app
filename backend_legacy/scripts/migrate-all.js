@@ -83,8 +83,26 @@ async function applySql(url, sql, migrationName) {
             return;
         }
         
-        // Apply the SQL
-        await client.query(sql);
+        // Make SQL idempotent: CREATE TABLE -> CREATE TABLE IF NOT EXISTS
+        // For enums/types: split SQL and skip statements that fail with "already exists"
+        let safeSql = sql
+            .replace(/CREATE TABLE\s+/g, 'CREATE TABLE IF NOT EXISTS ');
+
+        // Apply the SQL statement by statement so we can skip existing-type errors
+        const statements = safeSql.split(/;\s*\n/).filter(s => s.trim());
+        for (const stmt of statements) {
+            try {
+                await client.query(stmt + ';');
+            } catch (stmtErr) {
+                // Skip errors about already-existing types/enums
+                if (stmtErr.code === '42710' || stmtErr.code === '42P07' ||
+                    stmtErr.message?.includes('already exists') ||
+                    stmtErr.message?.includes('duplicate_object')) {
+                    continue;
+                }
+                throw stmtErr;
+            }
+        }
         
         // Record migration
         const id = require('crypto').randomUUID();
