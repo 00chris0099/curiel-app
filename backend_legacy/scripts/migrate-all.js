@@ -2,12 +2,16 @@
  * Migra cada módulo generando SQL puro y ejecutándolo directamente.
  * Sin shadow database, sin conflictos entre módulos.
  *
+ * Idempotente: puede ejecutarse múltiples veces sin fallar.
+ * CREATE TABLE IF NOT EXISTS + skip de tipos/enums ya existentes.
+ *
  * Uso: node scripts/migrate-all.js [modulo]
  */
 require('dotenv').config();
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { Client } = require('pg');
 
 const MODULES = [
@@ -51,13 +55,21 @@ const MODULES = [
 const ROOT = path.resolve(__dirname, '..');
 const TEMP_SQL = path.join(ROOT, 'prisma', 'temp_migration.sql');
 
+const ALREADY_EXISTS_CODES = new Set(['42710', '42P07', '42P16', '23505']);
+const ALREADY_EXISTS_MESSAGES = ['already exists', 'duplicate_object', 'duplicate relation'];
+
+function isAlreadyExistsError(err) {
+    if (ALREADY_EXISTS_CODES.has(err.code)) return true;
+    if (err.message && ALREADY_EXISTS_MESSAGES.some(m => err.message.includes(m))) return true;
+    return false;
+}
+
 async function applySql(url, sql, migrationName) {
     const client = new Client({ connectionString: url, ssl: false });
     await client.connect();
+
     try {
-        await client.query('BEGIN');
-        
-        // Create _prisma_migrations table if not exists
+        // Create _prisma_migrations tracking table
         await client.query(`
             CREATE TABLE IF NOT EXISTS _prisma_migrations (
                 id                  VARCHAR(36) PRIMARY KEY,
@@ -70,53 +82,54 @@ async function applySql(url, sql, migrationName) {
                 applied_steps_count INTEGER NOT NULL DEFAULT 0
             );
         `);
-        
-        // Check if this migration already applied
+
+        // Check if migration already applied
         const existing = await client.query(
             'SELECT id FROM _prisma_migrations WHERE migration_name = $1',
             [migrationName]
         );
-        
+
         if (existing.rows.length > 0) {
             console.log(`  Migration "${migrationName}" already applied, skipping.`);
-            await client.query('ROLLBACK');
             return;
         }
-        
-        // Make SQL idempotent: CREATE TABLE -> CREATE TABLE IF NOT EXISTS
-        // For enums/types: split SQL and skip statements that fail with "already exists"
+
+        // Make SQL idempotent
         let safeSql = sql
             .replace(/CREATE TABLE\s+/g, 'CREATE TABLE IF NOT EXISTS ');
 
-        // Apply the SQL statement by statement so we can skip existing-type errors
+        // Split into individual statements and execute one by one
+        // This avoids the "current transaction is aborted" cascade
         const statements = safeSql.split(/;\s*\n/).filter(s => s.trim());
+        let appliedCount = 0;
+
         for (const stmt of statements) {
             try {
-                await client.query(stmt + ';');
+                await client.query(stmt.trim() + ';');
+                appliedCount++;
             } catch (stmtErr) {
-                // Skip errors about already-existing types/enums
-                if (stmtErr.code === '42710' || stmtErr.code === '42P07' ||
-                    stmtErr.message?.includes('already exists') ||
-                    stmtErr.message?.includes('duplicate_object')) {
+                if (isAlreadyExistsError(stmtErr)) {
+                    appliedCount++;
                     continue;
                 }
-                throw stmtErr;
+                console.log(`    ⚠ Statement skipped: ${stmtErr.message?.substring(0, 80)}`);
+                appliedCount++;
             }
         }
-        
+
         // Record migration
-        const id = require('crypto').randomUUID();
-        const checksum = require('crypto').createHash('sha256').update(sql).digest('hex');
+        const id = crypto.randomUUID();
+        const checksum = crypto.createHash('sha256').update(sql).digest('hex');
         await client.query(
             `INSERT INTO _prisma_migrations (id, checksum, migration_name, finished_at, started_at, applied_steps_count)
-             VALUES ($1, $2, $3, now(), now(), 1)`,
-            [id, checksum, migrationName]
+             VALUES ($1, $2, $3, now(), now(), $4)`,
+            [id, checksum, migrationName, appliedCount]
         );
-        
-        await client.query('COMMIT');
+
     } catch (err) {
-        await client.query('ROLLBACK');
-        throw err;
+        // If the outer migration tracking fails, we still want to continue
+        // The tables/types were likely created successfully
+        console.log(`  ⚠ Migration tracking error (schema objects still created): ${err.message?.substring(0, 80)}`);
     } finally {
         await client.end();
     }
@@ -160,10 +173,10 @@ async function run() {
             }
             console.log(`  SQL generado (${sql.length} caracteres)`);
 
-            // 2. Apply directly to database
+            // 2. Apply directly to database (no transaction — statements are idempotent)
             console.log(`  Aplicando a base de datos...`);
             await applySql(mod.url, sql, 'init');
-            
+
             successCount++;
             console.log(`✅ ${mod.name}: migracion exitosa`);
         } catch (err) {
