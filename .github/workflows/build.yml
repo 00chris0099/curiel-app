@@ -76,6 +76,10 @@ jobs:
 
       - name: TypeScript check
         run: npx tsc -b
+        env:
+          VITE_API_URL: http://localhost:4000/api/v1
 
       - name: Build
         run: npm run build
+        env:
+          VITE_API_URL: http://localhost:4000/api/v1

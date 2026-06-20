@@ -14,6 +14,20 @@
     "coverage/",
     "node_modules/"
   ],
+  "overrides": [
+    {
+      "files": ["src/__tests__/**/*.js", "**/*.test.js", "**/*.spec.js"],
+      "env": {
+        "jest": true
+      },
+      "globals": {
+        "pending": "readonly"
+      },
+      "rules": {
+        "no-empty": ["error", { "allowEmptyCatch": true }]
+      }
+    }
+  ],
   "rules": {
     "no-unused-vars": "off"
   }
