@@ -286,7 +286,10 @@ const ExecutionScreen = ({ route, navigation }) => {
                         <TouchableOpacity
                             key={area.id}
                             style={[styles.areaCard, selectedAreaId === area.id && styles.areaCardSelected]}
-                            onPress={() => setSelectedAreaId(area.id)}
+                            onPress={() => {
+                                setSelectedAreaId(area.id);
+                                navigation.navigate('AreaDetail', { areaId: area.id, inspectionId, areaName: area.name });
+                            }}
                         >
                             <Text style={styles.areaName}>{area.name}</Text>
                             <Text style={styles.areaCategory}>{area.category}</Text>

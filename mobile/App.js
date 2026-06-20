@@ -4,6 +4,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { OfflineProvider } from './src/context/OfflineContext';
 import { ActivityIndicator, View } from 'react-native';
+import ErrorBoundary from './src/components/ErrorBoundary';
 
 // Screens
 import LoginScreen from './src/screens/LoginScreen';
@@ -14,6 +15,10 @@ import PhotoCaptureScreen from './src/screens/PhotoCaptureScreen';
 import ConflictResolutionScreen from './src/screens/ConflictResolutionScreen';
 import OfflineStatusScreen from './src/screens/OfflineStatusScreen';
 import CreateInspectionScreen from './src/screens/CreateInspectionScreen';
+import AreaDetailScreen from './src/screens/AreaDetailScreen';
+import ObservationFormScreen from './src/screens/ObservationFormScreen';
+import ProfileScreen from './src/screens/ProfileScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
 
 const Stack = createStackNavigator();
 
@@ -73,6 +78,16 @@ const Navigation = () => {
                             options={{ title: 'Tomar Foto', headerShown: false }}
                         />
                         <Stack.Screen
+                            name="AreaDetail"
+                            component={AreaDetailScreen}
+                            options={{ title: 'Detalle de Area' }}
+                        />
+                        <Stack.Screen
+                            name="ObservationForm"
+                            component={ObservationFormScreen}
+                            options={{ title: 'Observacion' }}
+                        />
+                        <Stack.Screen
                             name="ConflictResolution"
                             component={ConflictResolutionScreen}
                             options={{ title: 'Conflictos' }}
@@ -87,6 +102,16 @@ const Navigation = () => {
                             component={CreateInspectionScreen}
                             options={{ title: 'Nueva Inspeccion' }}
                         />
+                        <Stack.Screen
+                            name="Profile"
+                            component={ProfileScreen}
+                            options={{ title: 'Mi Perfil' }}
+                        />
+                        <Stack.Screen
+                            name="Settings"
+                            component={SettingsScreen}
+                            options={{ title: 'Configuracion' }}
+                        />
                     </>
                 )}
             </Stack.Navigator>
@@ -96,10 +121,12 @@ const Navigation = () => {
 
 export default function App() {
     return (
-        <AuthProvider>
-            <OfflineProvider>
-                <Navigation />
-            </OfflineProvider>
-        </AuthProvider>
+        <ErrorBoundary>
+            <AuthProvider>
+                <OfflineProvider>
+                    <Navigation />
+                </OfflineProvider>
+            </AuthProvider>
+        </ErrorBoundary>
     );
 }

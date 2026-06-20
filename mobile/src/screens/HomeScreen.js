@@ -17,7 +17,7 @@ import { OfflineBadge } from '../components/OfflineBadge';
 import { SyncButton } from '../components/SyncButton';
 
 const HomeScreen = ({ navigation }) => {
-    const { user } = useAuth();
+    const { user, logout } = useAuth();
     const { isOnline, pendingCount } = useOffline();
     const [inspections, setInspections] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -144,7 +144,18 @@ const HomeScreen = ({ navigation }) => {
                         <Text style={styles.welcomeText}>Hola, {user?.firstName}!</Text>
                         <Text style={styles.roleText}>{user?.role?.toUpperCase()}</Text>
                     </View>
-                    <OfflineBadge />
+                    <View style={styles.headerActions}>
+                        <OfflineBadge />
+                        <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.navigate('Profile')}>
+                            <Text style={styles.headerBtnText}>Perfil</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.navigate('Settings')}>
+                            <Text style={styles.headerBtnText}>Config</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
+                            <Text style={styles.logoutBtnText}>Salir</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </View>
 
@@ -228,7 +239,34 @@ const styles = StyleSheet.create({
     headerTop: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center'
+        alignItems: 'flex-start'
+    },
+    headerActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8
+    },
+    headerBtn: {
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 8
+    },
+    headerBtnText: {
+        color: '#fff',
+        fontSize: 12,
+        fontWeight: '600'
+    },
+    logoutBtn: {
+        backgroundColor: 'rgba(244,67,54,0.8)',
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 8
+    },
+    logoutBtnText: {
+        color: '#fff',
+        fontSize: 12,
+        fontWeight: '600'
     },
     welcomeText: {
         fontSize: 24,
