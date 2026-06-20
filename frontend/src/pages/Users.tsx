@@ -290,7 +290,7 @@ export const Users = () => {
                 </button>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-5">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-6">
                 <div className="card">
                     <div className="flex items-center justify-between">
                         <div>
@@ -324,6 +324,16 @@ export const Users = () => {
                 <div className="card">
                     <div className="flex items-center justify-between">
                         <div>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">Supervisores</p>
+                            <p className="text-3xl font-bold text-yellow-600">{roleCounts.supervisor}</p>
+                        </div>
+                        <CustomIcon name="seal-check" size="md" tone="amber" />
+                    </div>
+                </div>
+
+                <div className="card">
+                    <div className="flex items-center justify-between">
+                        <div>
                             <p className="text-sm text-gray-600 dark:text-gray-400">Arquitectos</p>
                             <p className="text-3xl font-bold text-blue-600">{roleCounts.arquitecto}</p>
                         </div>
@@ -342,7 +352,7 @@ export const Users = () => {
                 </div>
             </div>
 
-            <div className={`grid grid-cols-1 items-start gap-6 ${isFormVisible ? '2xl:grid-cols-[minmax(0,1.55fr)_minmax(340px,0.95fr)]' : ''}`}>
+            <div className="grid grid-cols-1 items-start gap-6">
                 <div className="min-w-0 space-y-6">
                     <div className="card">
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -504,111 +514,113 @@ export const Users = () => {
                     </div>
                 </div>
 
-                {isFormVisible && (
-                <div className="card self-start">
-                    <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
-                            <h2 className="text-lg font-semibold">{isEditing ? 'Editar usuario' : 'Crear usuario'}</h2>
-                            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                                {isEditing ? 'Actualiza el rol o los datos basicos de la cuenta.' : 'Crea nuevas cuentas para administradores, arquitectos o inspectores.'}
-                            </p>
+            {isFormVisible && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={(e) => { if (e.target === e.currentTarget) resetForm(); }}>
+                    <div className="card relative max-h-[90vh] w-full max-w-lg overflow-y-auto">
+                        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                                <h2 className="text-lg font-semibold">{isEditing ? 'Editar usuario' : 'Crear usuario'}</h2>
+                                <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                                    {isEditing ? 'Actualiza el rol o los datos basicos de la cuenta.' : 'Crea nuevas cuentas para administradores, supervisores, arquitectos o inspectores.'}
+                                </p>
+                            </div>
+
+                            <button type="button" onClick={resetForm} className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400">
+                                {isEditing ? 'Cancelar' : 'Cerrar'}
+                            </button>
                         </div>
 
-                        <button type="button" onClick={resetForm} className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400">
-                            {isEditing ? 'Cancelar' : 'Cerrar formulario'}
-                        </button>
+                        <form className="space-y-5" onSubmit={handleSubmit}>
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                <div>
+                                    <label htmlFor="firstName" className="mb-2 block text-sm font-medium">Nombre</label>
+                                    <input
+                                        id="firstName"
+                                        name="firstName"
+                                        className="input"
+                                        value={form.firstName}
+                                        onChange={(event) => setForm((current) => ({ ...current, firstName: event.target.value }))}
+                                        minLength={2}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label htmlFor="lastName" className="mb-2 block text-sm font-medium">Apellido</label>
+                                    <input
+                                        id="lastName"
+                                        name="lastName"
+                                        className="input"
+                                        value={form.lastName}
+                                        onChange={(event) => setForm((current) => ({ ...current, lastName: event.target.value }))}
+                                        minLength={2}
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label htmlFor="email" className="mb-2 block text-sm font-medium">Correo electronico</label>
+                                <input
+                                    id="email"
+                                    name="email"
+                                    type="email"
+                                    className="input"
+                                    value={form.email}
+                                    disabled={isEditing}
+                                    onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
+                                />
+                            </div>
+
+                            {!isEditing && (
+                                <div>
+                                    <label htmlFor="password" className="mb-2 block text-sm font-medium">Contrasena</label>
+                                    <input
+                                        id="password"
+                                        name="password"
+                                        type="password"
+                                        className="input"
+                                        value={form.password}
+                                        onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
+                                        minLength={8}
+                                    />
+                                </div>
+                            )}
+
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                <div>
+                                    <label htmlFor="phone" className="mb-2 block text-sm font-medium">Telefono</label>
+                                    <input
+                                        id="phone"
+                                        name="phone"
+                                        className="input"
+                                        value={form.phone}
+                                        onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label htmlFor="role" className="mb-2 block text-sm font-medium">Rol</label>
+                                    <select
+                                        id="role"
+                                        name="role"
+                                        className="input"
+                                        value={form.role}
+                                        onChange={(event) => setForm((current) => ({ ...current, role: event.target.value as UserRole }))}
+                                    >
+                                        <option value="admin">Administrador</option>
+                                        <option value="supervisor">Supervisor</option>
+                                        <option value="arquitecto">Arquitecto</option>
+                                        <option value="inspector">Inspector</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <button type="submit" disabled={isSubmitting} className="btn btn-primary w-full disabled:cursor-not-allowed disabled:opacity-70">
+                                {isSubmitting ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear usuario'}
+                            </button>
+                        </form>
                     </div>
-
-                    <form className="space-y-5" onSubmit={handleSubmit}>
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <div>
-                                <label htmlFor="firstName" className="mb-2 block text-sm font-medium">Nombre</label>
-                                <input
-                                    id="firstName"
-                                    name="firstName"
-                                    className="input"
-                                    value={form.firstName}
-                                    onChange={(event) => setForm((current) => ({ ...current, firstName: event.target.value }))}
-                                    minLength={2}
-                                />
-                            </div>
-
-                            <div>
-                                <label htmlFor="lastName" className="mb-2 block text-sm font-medium">Apellido</label>
-                                <input
-                                    id="lastName"
-                                    name="lastName"
-                                    className="input"
-                                    value={form.lastName}
-                                    onChange={(event) => setForm((current) => ({ ...current, lastName: event.target.value }))}
-                                    minLength={2}
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label htmlFor="email" className="mb-2 block text-sm font-medium">Correo electronico</label>
-                            <input
-                                id="email"
-                                name="email"
-                                type="email"
-                                className="input"
-                                value={form.email}
-                                disabled={isEditing}
-                                onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
-                            />
-                        </div>
-
-                        {!isEditing && (
-                            <div>
-                                <label htmlFor="password" className="mb-2 block text-sm font-medium">Contraseña</label>
-                                <input
-                                    id="password"
-                                    name="password"
-                                    type="password"
-                                    className="input"
-                                    value={form.password}
-                                    onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
-                                    minLength={8}
-                                />
-                            </div>
-                        )}
-
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <div>
-                                <label htmlFor="phone" className="mb-2 block text-sm font-medium">Telefono</label>
-                                <input
-                                    id="phone"
-                                    name="phone"
-                                    className="input"
-                                    value={form.phone}
-                                    onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))}
-                                />
-                            </div>
-
-                            <div>
-                                <label htmlFor="role" className="mb-2 block text-sm font-medium">Rol</label>
-                                <select
-                                    id="role"
-                                    name="role"
-                                    className="input"
-                                    value={form.role}
-                                    onChange={(event) => setForm((current) => ({ ...current, role: event.target.value as UserRole }))}
-                                >
-                                    <option value="admin">Administrador</option>
-                                    <option value="supervisor">Supervisor</option>
-                                    <option value="arquitecto">Arquitecto</option>
-                                    <option value="inspector">Inspector</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <button type="submit" disabled={isSubmitting} className="btn btn-primary w-full disabled:cursor-not-allowed disabled:opacity-70">
-                            {isSubmitting ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear usuario'}
-                        </button>
-                    </form>
                 </div>
-                )}
+            )}
             </div>
         </div>
     );

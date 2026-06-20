@@ -328,10 +328,12 @@ class UserService {
                 inactive: 0,
                 activos: 0,
                 admins: 0,
+                supervisores: 0,
                 arquitectos: 0,
                 inspectores: 0,
                 byRole: [
                     { role: 'admin', count: 0 },
+                    { role: 'supervisor', count: 0 },
                     { role: 'arquitecto', count: 0 },
                     { role: 'inspector', count: 0 }
                 ]
@@ -353,6 +355,10 @@ class UserService {
                     stats.admins += 1;
                 }
 
+                if (roleNames.has('supervisor')) {
+                    stats.supervisores += 1;
+                }
+
                 if (roleNames.has('arquitecto')) {
                     stats.arquitectos += 1;
                 }
@@ -364,6 +370,7 @@ class UserService {
 
             stats.byRole = [
                 { role: 'admin', count: stats.admins },
+                { role: 'supervisor', count: stats.supervisores },
                 { role: 'arquitecto', count: stats.arquitectos },
                 { role: 'inspector', count: stats.inspectores }
             ];
