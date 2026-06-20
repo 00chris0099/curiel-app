@@ -23,4 +23,4 @@ ENV PORT=4000
 
 EXPOSE 4000
 
-CMD ["sh", "-c", "npx prisma generate && node scripts/migrate-all.js && node src/server.js"]
+CMD ["sh", "-c", "npx prisma generate && node scripts/migrate-all.js && node scripts/seed-auth.js && node src/server.js"]
