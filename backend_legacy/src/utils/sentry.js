@@ -34,9 +34,6 @@ const initSentry = () => {
 };
 
 const sentryErrorHandler = () => {
-    if (process.env.SENTRY_DSN) {
-        return Sentry.Handlers.errorHandler();
-    }
     return (err, req, res, next) => next(err);
 };
 
