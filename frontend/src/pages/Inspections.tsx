@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { getApiErrorMessage } from '../api/axios';
 import { CustomIcon } from '../components/CustomIcon';
-import { Loader } from '../components/Loader';
+import { InspectionsSkeleton } from '../components/Skeleton';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import inspectionService from '../services/inspection.service';
 import { useAuthStore } from '../store/authStore';
@@ -86,7 +86,7 @@ export const Inspections = () => {
     });
 
     if (isLoading) {
-        return <Loader fullScreen />;
+        return <InspectionsSkeleton />;
     }
 
     return (

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { getApiErrorMessage } from '../api/axios';
 import { CustomIcon, type CustomIconName } from '../components/CustomIcon';
-import { Loader } from '../components/Loader';
+import { DashboardSkeleton } from '../components/Skeleton';
 import inspectionService from '../services/inspection.service';
 import { useAuthStore } from '../store/authStore';
 import type { InspectionStats } from '../types';
@@ -31,7 +31,7 @@ export const Dashboard = () => {
     };
 
     if (isLoading) {
-        return <Loader fullScreen />;
+        return <DashboardSkeleton />;
     }
 
     const statsCards: Array<{ title: string; value: number; icon: CustomIconName; tone: 'cream' | 'amber' | 'blue' | 'sage' | 'rose'; accent: string; darkAccent: string }> = [

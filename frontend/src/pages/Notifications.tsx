@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { getApiErrorMessage } from '../api/axios';
 import { CustomIcon } from '../components/CustomIcon';
-import { Loader } from '../components/Loader';
+import { NotificationsSkeleton } from '../components/Skeleton';
 import notificationService from '../services/notification.service';
 import type { Notification } from '../types';
 
@@ -53,7 +53,7 @@ export const Notifications = () => {
     };
 
     if (isLoading) {
-        return <Loader fullScreen />;
+        return <NotificationsSkeleton />;
     }
 
     return (

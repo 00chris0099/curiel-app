@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { getApiErrorMessage } from '../api/axios';
 import { CustomIcon } from '../components/CustomIcon';
-import { Loader } from '../components/Loader';
+import { ProfileSkeleton } from '../components/Skeleton';
 import { useAuthStore } from '../store/authStore';
 import { roleIconMap } from '../utils/iconSystem';
 
@@ -26,7 +26,7 @@ export const Profile = () => {
     }, [loadProfile]);
 
     if (isLoading) {
-        return <Loader fullScreen />;
+        return <ProfileSkeleton />;
     }
 
     const roleLabels: Record<string, string> = {
