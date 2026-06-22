@@ -263,12 +263,9 @@ export const Config = () => {
 
             {/* Create Modal */}
             {showCreateModal && (
-                <>
-                    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px]" onClick={() => setShowCreateModal(false)} />
-                    <div className="fixed inset-x-0 bottom-0 z-[60] max-h-[85vh] overflow-auto rounded-t-[28px] bg-white p-6 shadow-[0_-8px_40px_rgba(0,0,0,0.15)] sm:static sm:inset-auto sm:z-50 sm:mx-auto sm:w-full sm:max-w-md sm:rounded-[28px] sm:p-8 dark:bg-slate-900">
-                        <div className="flex justify-center sm:hidden mb-4">
-                            <div className="h-1 w-10 rounded-full bg-slate-300 dark:bg-slate-600" />
-                        </div>
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={() => setShowCreateModal(false)} />
+                    <div className="relative z-10 w-full max-w-md overflow-auto rounded-[28px] bg-white p-6 shadow-[0_24px_80px_rgba(0,0,0,0.25)] dark:bg-slate-900">
                         <h2 className="font-display text-xl font-bold text-slate-900 dark:text-slate-100">
                             Nueva {activeTab === 'secret_tokens' ? 'Secret Token' : 'API Key'}
                         </h2>
@@ -319,17 +316,14 @@ export const Config = () => {
                             </button>
                         </div>
                     </div>
-                </>
+                </div>
             )}
 
             {/* Key Display Modal */}
             {newKeyData && (
-                <>
-                    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px]" onClick={() => setNewKeyData(null)} />
-                    <div className="fixed inset-x-0 bottom-0 z-[60] max-h-[85vh] overflow-auto rounded-t-[28px] bg-white p-6 shadow-[0_-8px_40px_rgba(0,0,0,0.15)] sm:static sm:inset-auto sm:z-50 sm:mx-auto sm:w-full sm:max-w-lg sm:rounded-[28px] sm:p-8 dark:bg-slate-900">
-                        <div className="flex justify-center sm:hidden mb-4">
-                            <div className="h-1 w-10 rounded-full bg-slate-300 dark:bg-slate-600" />
-                        </div>
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={() => setNewKeyData(null)} />
+                    <div className="relative z-10 w-full max-w-lg overflow-auto rounded-[28px] bg-white p-6 shadow-[0_24px_80px_rgba(0,0,0,0.25)] dark:bg-slate-900">
                         <div className="flex items-center gap-3">
                             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 dark:bg-emerald-900/30">
                                 <CustomIcon name="check-circle" size="sm" tone="sage" variant="plain" />
@@ -363,7 +357,7 @@ export const Config = () => {
                             Entendido
                         </button>
                     </div>
-                </>
+                </div>
             )}
         </div>
     );
