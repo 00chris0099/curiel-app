@@ -20,6 +20,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         { name: 'Inspecciones', href: '/inspections', icon: 'clipboard-check', roles: ['admin', 'arquitecto', 'inspector', 'supervisor'] },
         { name: 'Clientes', href: '/clients', icon: 'users', roles: ['admin'] },
         { name: 'Usuarios', href: '/users', icon: 'users', roles: ['admin'] },
+        { name: 'Configuracion', href: '/config', icon: 'settings', roles: ['admin'] },
     ];
 
     const filteredNavigation = navigation.filter((item) => item.roles.includes(user?.role || ''));

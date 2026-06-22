@@ -65,3 +65,22 @@ model ChecklistItem {
   @@index([templateId])
   @@map("checklist_items")
 }
+
+model ApiKey {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String    @db.VarChar(255)
+  key         String    @unique @db.VarChar(255)
+  type        String    @default("api_key") @db.VarChar(50)
+  prefix      String?   @db.VarChar(10)
+  isActive    Boolean   @default(true) @map("is_active")
+  expiresAt   DateTime? @map("expires_at") @db.Timestamptz(6)
+  lastUsedAt  DateTime? @map("last_used_at") @db.Timestamptz(6)
+  createdById String    @map("created_by_id") @db.Uuid
+  description String?   @db.Text
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([key])
+  @@index([createdById])
+  @@map("api_keys")
+}

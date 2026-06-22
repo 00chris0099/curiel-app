@@ -28,6 +28,7 @@ const Alerts = lazy(() => import('./pages/Alerts').then(m => ({ default: m.Alert
 const Evaluations = lazy(() => import('./pages/Evaluations').then(m => ({ default: m.Evaluations })));
 const Suspensions = lazy(() => import('./pages/Suspensions').then(m => ({ default: m.Suspensions })));
 const SupervisorActions = lazy(() => import('./pages/SupervisorActions').then(m => ({ default: m.SupervisorActions })));
+const Config = lazy(() => import('./pages/Config').then(m => ({ default: m.Config })));
 
 const PageLoader = () => (
   <div className="flex min-h-screen items-center justify-center">
@@ -115,6 +116,7 @@ function App() {
           <Route path="/evaluations" element={<PrivateRoute allowedRoles={['supervisor', 'admin']}><DashboardLayout><Evaluations /></DashboardLayout></PrivateRoute>} />
           <Route path="/suspensions" element={<PrivateRoute allowedRoles={['supervisor', 'admin']}><DashboardLayout><Suspensions /></DashboardLayout></PrivateRoute>} />
           <Route path="/supervisor/actions" element={<PrivateRoute allowedRoles={['supervisor', 'admin']}><DashboardLayout><SupervisorActions /></DashboardLayout></PrivateRoute>} />
+          <Route path="/config" element={<PrivateRoute allowedRoles={['admin']}><DashboardLayout><Config /></DashboardLayout></PrivateRoute>} />
 
           {/* Redirecciones */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />

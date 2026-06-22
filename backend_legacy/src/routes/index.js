@@ -14,6 +14,7 @@ const clientRoutes = require('./clientRoutes');
 const alertRoutes = require('./alertRoutes');
 const suspensionRoutes = require('./suspensionRoutes');
 const evaluationRoutes = require('./evaluationRoutes');
+const apiKeyRoutes = require('./apiKeyRoutes');
 
 const router = express.Router();
 
@@ -91,5 +92,6 @@ router.use('/clients', clientRoutes);
 router.use('/alerts', alertRoutes);
 router.use('/suspensions', suspensionRoutes);
 router.use('/evaluations', evaluationRoutes);
+router.use('/config/api-keys', apiKeyRoutes);
 
 module.exports = router;
