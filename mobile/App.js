@@ -5,7 +5,7 @@ import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { OfflineProvider } from './src/context/OfflineContext';
 import { ActivityIndicator, View } from 'react-native';
 import ErrorBoundary from './src/components/ErrorBoundary';
-import VideoSplashScreen from './src/components/VideoSplashScreen';
+import { VideoSplashScreen } from './src/components/VideoSplashScreen';
 
 // Screens
 import LoginScreen from './src/screens/LoginScreen';

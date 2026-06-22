@@ -15,6 +15,7 @@ import { inspectionService } from '../services/api';
 import { inspectionsRepo } from '../database/inspections.repo';
 import { OfflineBadge } from '../components/OfflineBadge';
 import { SyncButton } from '../components/SyncButton';
+import { LoadingScreen } from '../components/VideoSplashScreen';
 
 const HomeScreen = ({ navigation }) => {
     const { user, logout } = useAuth();
@@ -131,11 +132,7 @@ const HomeScreen = ({ navigation }) => {
     );
 
     if (loading) {
-        return (
-            <View style={styles.centerContainer}>
-                <ActivityIndicator size="large" color="#1a237e" />
-            </View>
-        );
+        return <LoadingScreen />;
     }
 
     return (

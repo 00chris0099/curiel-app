@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import {
     View,
     Text,
@@ -12,13 +12,16 @@ import {
 const { width, height } = Dimensions.get('window');
 
 const CURIEL_BLUE = '#1a237e';
-const CURIEL_BLUE_LIGHT = '#294e6f';
 const GLOW_COLOR = 'rgba(41, 78, 111, 0.4)';
 
 const AnimatedImage = Animated.createAnimatedComponent(Image);
 
-const VideoSplashScreen = ({ onFinish }) => {
-    // --- Animated values ---
+/**
+ * Splash animado que tambien funciona como loading screen.
+ * - mode='splash': se ejecuta una vez y llama onFinish
+ * - mode='loading': se queda visible mientras children carga
+ */
+const LoadingSplash = ({ onFinish, mode = 'splash' }) => {
     const bgScale = useRef(new Animated.Value(1.08)).current;
     const bgOpacity = useRef(new Animated.Value(0)).current;
 
@@ -50,18 +53,26 @@ const VideoSplashScreen = ({ onFinish }) => {
     const exitOpacity = useRef(new Animated.Value(1)).current;
     const exitScale = useRef(new Animated.Value(1)).current;
 
-    const [ready, setReady] = useState(false);
+    const glowLoopRef = useRef(null);
+
+    const cleanup = useCallback(() => {
+        if (glowLoopRef.current) {
+            glowLoopRef.current.stop();
+            glowLoopRef.current = null;
+        }
+    }, []);
 
     useEffect(() => {
         runAnimation();
+        return cleanup;
     }, []);
 
     const runAnimation = () => {
-        // STAGE 1: Background (0 - 600ms)
+        // STAGE 1: Background fade + scale
         Animated.parallel([
             Animated.timing(bgOpacity, {
                 toValue: 1,
-                duration: 600,
+                duration: 500,
                 useNativeDriver: true,
             }),
             Animated.spring(bgScale, {
@@ -72,197 +83,201 @@ const VideoSplashScreen = ({ onFinish }) => {
             }),
         ]).start();
 
-        // STAGE 2: Logo entrance (300 - 900ms)
+        // STAGE 2: Logo entrance with spring bounce
         setTimeout(() => {
             Animated.parallel([
                 Animated.spring(logoScale, {
                     toValue: 1,
-                    friction: 5,
-                    tension: 60,
+                    friction: 4,
+                    tension: 50,
                     useNativeDriver: true,
                 }),
                 Animated.timing(logoOpacity, {
                     toValue: 1,
-                    duration: 400,
+                    duration: 300,
                     useNativeDriver: true,
                 }),
                 Animated.timing(logoRotate, {
                     toValue: 1,
-                    duration: 600,
+                    duration: 500,
                     easing: Easing.out(Easing.back(1.5)),
                     useNativeDriver: true,
                 }),
             ]).start();
-        }, 300);
+        }, 250);
 
-        // STAGE 2b: Expanding rings (400 - 1200ms)
+        // STAGE 2b: Ring 1 expands
         setTimeout(() => {
             Animated.parallel([
                 Animated.timing(ring1Scale, {
                     toValue: 2.5,
-                    duration: 900,
+                    duration: 800,
                     easing: Easing.out(Easing.cubic),
                     useNativeDriver: true,
                 }),
                 Animated.timing(ring1Opacity, {
                     toValue: 0.6,
-                    duration: 200,
+                    duration: 150,
                     useNativeDriver: true,
                 }),
             ]).start(() => {
                 Animated.timing(ring1Opacity, {
                     toValue: 0,
-                    duration: 400,
+                    duration: 350,
                     useNativeDriver: true,
                 }).start();
             });
-        }, 400);
+        }, 350);
 
+        // STAGE 2c: Ring 2 expands (staggered)
         setTimeout(() => {
             Animated.parallel([
                 Animated.timing(ring2Scale, {
                     toValue: 3,
-                    duration: 1000,
+                    duration: 900,
                     easing: Easing.out(Easing.cubic),
                     useNativeDriver: true,
                 }),
                 Animated.timing(ring2Opacity, {
                     toValue: 0.4,
-                    duration: 200,
+                    duration: 150,
                     useNativeDriver: true,
                 }),
             ]).start(() => {
                 Animated.timing(ring2Opacity, {
                     toValue: 0,
-                    duration: 400,
+                    duration: 350,
                     useNativeDriver: true,
                 }).start();
             });
-        }, 550);
+        }, 500);
 
-        // STAGE 2c: Glow pulse (500ms - continuous)
+        // STAGE 2d: Glow pulse loop
         setTimeout(() => {
-            Animated.loop(
+            glowLoopRef.current = Animated.loop(
                 Animated.sequence([
                     Animated.parallel([
                         Animated.timing(glowOpacity, {
                             toValue: 0.5,
-                            duration: 800,
+                            duration: 700,
                             useNativeDriver: true,
                         }),
                         Animated.timing(glowScale, {
                             toValue: 1.15,
-                            duration: 800,
+                            duration: 700,
                             useNativeDriver: true,
                         }),
                     ]),
                     Animated.parallel([
                         Animated.timing(glowOpacity, {
-                            toValue: 0.2,
-                            duration: 800,
+                            toValue: 0.15,
+                            duration: 700,
                             useNativeDriver: true,
                         }),
                         Animated.timing(glowScale, {
                             toValue: 0.85,
-                            duration: 800,
+                            duration: 700,
                             useNativeDriver: true,
                         }),
                     ]),
                 ])
-            ).start();
-        }, 500);
+            );
+            glowLoopRef.current.start();
+        }, 400);
 
-        // STAGE 3: Title "CURIEL" (800 - 1400ms)
+        // STAGE 3: Title "CURIEL" slides up
         setTimeout(() => {
             Animated.parallel([
                 Animated.timing(titleY, {
                     toValue: 0,
-                    duration: 600,
+                    duration: 500,
                     easing: Easing.out(Easing.back(1.2)),
                     useNativeDriver: true,
                 }),
                 Animated.timing(titleOpacity, {
                     toValue: 1,
-                    duration: 500,
+                    duration: 400,
                     useNativeDriver: true,
                 }),
                 Animated.timing(titleLetterSpacing, {
                     toValue: 14,
-                    duration: 800,
+                    duration: 700,
                     easing: Easing.out(Easing.cubic),
                     useNativeDriver: true,
                 }),
             ]).start();
-        }, 800);
+        }, 700);
 
-        // STAGE 4: Subtitle (1200 - 1700ms)
-        setTimeout(() => {
-            Animated.parallel([
-                Animated.timing(subtitleY, {
-                    toValue: 0,
-                    duration: 500,
-                    easing: Easing.out(Easing.cubic),
-                    useNativeDriver: true,
-                }),
-                Animated.timing(subtitleOpacity, {
-                    toValue: 0.7,
-                    duration: 500,
-                    useNativeDriver: true,
-                }),
-            ]).start();
-        }, 1200);
-
-        // STAGE 5: Decorative lines (1400 - 1900ms)
+        // STAGE 4: Decorative lines
         setTimeout(() => {
             Animated.parallel([
                 Animated.timing(lineLeftX, {
                     toValue: 0,
-                    duration: 500,
+                    duration: 400,
                     easing: Easing.out(Easing.cubic),
                     useNativeDriver: true,
                 }),
                 Animated.timing(lineRightX, {
                     toValue: 0,
-                    duration: 500,
+                    duration: 400,
                     easing: Easing.out(Easing.cubic),
                     useNativeDriver: true,
                 }),
                 Animated.timing(lineOpacity, {
                     toValue: 0.3,
+                    duration: 300,
+                    useNativeDriver: true,
+                }),
+            ]).start();
+        }, 1000);
+
+        // STAGE 5: Subtitle
+        setTimeout(() => {
+            Animated.parallel([
+                Animated.timing(subtitleY, {
+                    toValue: 0,
+                    duration: 400,
+                    easing: Easing.out(Easing.cubic),
+                    useNativeDriver: true,
+                }),
+                Animated.timing(subtitleOpacity, {
+                    toValue: 0.7,
                     duration: 400,
                     useNativeDriver: true,
                 }),
             ]).start();
-        }, 1400);
+        }, 1100);
 
-        // STAGE 5b: Dot grid (1600ms)
+        // STAGE 6: Dot grid
         setTimeout(() => {
             Animated.timing(dotGridOpacity, {
-                toValue: 0.08,
-                duration: 600,
+                toValue: 0.06,
+                duration: 500,
                 useNativeDriver: true,
             }).start();
-        }, 1600);
+        }, 1200);
 
-        // STAGE 6: Exit (3200 - 3800ms)
-        setTimeout(() => {
-            setReady(true);
-            Animated.parallel([
-                Animated.timing(exitOpacity, {
-                    toValue: 0,
-                    duration: 500,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(exitScale, {
-                    toValue: 1.05,
-                    duration: 500,
-                    easing: Easing.in(Easing.cubic),
-                    useNativeDriver: true,
-                }),
-            ]).start(() => {
-                onFinish();
-            });
-        }, 3200);
+        // STAGE 7: Exit (splash mode only)
+        if (mode === 'splash') {
+            setTimeout(() => {
+                Animated.parallel([
+                    Animated.timing(exitOpacity, {
+                        toValue: 0,
+                        duration: 450,
+                        useNativeDriver: true,
+                    }),
+                    Animated.timing(exitScale, {
+                        toValue: 1.04,
+                        duration: 450,
+                        easing: Easing.in(Easing.cubic),
+                        useNativeDriver: true,
+                    }),
+                ]).start(() => {
+                    cleanup();
+                    onFinish && onFinish();
+                });
+            }, 2800);
+        }
     };
 
     const spin = logoRotate.interpolate({
@@ -280,7 +295,6 @@ const VideoSplashScreen = ({ onFinish }) => {
                 },
             ]}
         >
-            {/* Background image */}
             <AnimatedImage
                 source={require('../../assets/splash.jpeg')}
                 style={[
@@ -293,10 +307,8 @@ const VideoSplashScreen = ({ onFinish }) => {
                 resizeMode="cover"
             />
 
-            {/* Dark gradient overlay */}
             <View style={styles.gradientOverlay} />
 
-            {/* Dot grid pattern */}
             <Animated.View style={[styles.dotGrid, { opacity: dotGridOpacity }]}>
                 {Array.from({ length: 12 }).map((_, row) =>
                     Array.from({ length: 7 }).map((_, col) => (
@@ -314,9 +326,7 @@ const VideoSplashScreen = ({ onFinish }) => {
                 )}
             </Animated.View>
 
-            {/* Center content */}
             <View style={styles.centerContent}>
-                {/* Expanding rings */}
                 <Animated.View
                     style={[
                         styles.ring,
@@ -336,7 +346,6 @@ const VideoSplashScreen = ({ onFinish }) => {
                     ]}
                 />
 
-                {/* Glow behind logo */}
                 <Animated.View
                     style={[
                         styles.glow,
@@ -347,7 +356,6 @@ const VideoSplashScreen = ({ onFinish }) => {
                     ]}
                 />
 
-                {/* Logo circle */}
                 <Animated.View
                     style={[
                         styles.logoContainer,
@@ -360,33 +368,29 @@ const VideoSplashScreen = ({ onFinish }) => {
                         },
                     ]}
                 >
-                    <View style={styles.logoCircle}>
-                        <View style={styles.logoInnerBorder} />
-                        <Animated.Text style={styles.logoText}>C</Animated.Text>
-                    </View>
+                    <Image
+                        source={require('../../assets/icon.jpeg')}
+                        style={styles.logoImage}
+                    />
                 </Animated.View>
 
-                {/* Title */}
                 <Animated.View
                     style={{
                         opacity: titleOpacity,
                         transform: [{ translateY: titleY }],
-                        marginTop: 36,
+                        marginTop: 32,
                     }}
                 >
                     <Animated.Text
                         style={[
                             styles.title,
-                            {
-                                letterSpacing: titleLetterSpacing,
-                            },
+                            { letterSpacing: titleLetterSpacing },
                         ]}
                     >
                         CURIEL
                     </Animated.Text>
                 </Animated.View>
 
-                {/* Decorative lines */}
                 <View style={styles.linesContainer}>
                     <Animated.View
                         style={[
@@ -400,10 +404,7 @@ const VideoSplashScreen = ({ onFinish }) => {
                     />
                     <Animated.View style={styles.lineDiamond}>
                         <Animated.View
-                            style={[
-                                styles.diamond,
-                                { opacity: lineOpacity },
-                            ]}
+                            style={[styles.diamond, { opacity: lineOpacity }]}
                         />
                     </Animated.View>
                     <Animated.View
@@ -418,7 +419,6 @@ const VideoSplashScreen = ({ onFinish }) => {
                     />
                 </View>
 
-                {/* Subtitle */}
                 <Animated.Text
                     style={[
                         styles.subtitle,
@@ -430,15 +430,26 @@ const VideoSplashScreen = ({ onFinish }) => {
                 >
                     Inspecciones Tecnicas
                 </Animated.Text>
+
+                {mode === 'loading' && (
+                    <Animated.View style={[styles.loadingDots, { opacity: subtitleOpacity }]}>
+                        <View style={[styles.loadingDot, styles.loadingDot1]} />
+                        <View style={[styles.loadingDot, styles.loadingDot2]} />
+                        <View style={[styles.loadingDot, styles.loadingDot3]} />
+                    </Animated.View>
+                )}
             </View>
 
-            {/* Bottom version */}
             <Animated.View style={[styles.bottomInfo, { opacity: subtitleOpacity }]}>
                 <Text style={styles.version}>v1.0.0</Text>
             </Animated.View>
         </Animated.View>
     );
 };
+
+export const VideoSplashScreen = (props) => <LoadingSplash {...props} mode="splash" />;
+export const LoadingScreen = (props) => <LoadingSplash {...props} mode="loading" />;
+export default LoadingSplash;
 
 const styles = StyleSheet.create({
     container: {
@@ -489,42 +500,24 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    logoCircle: {
+    logoImage: {
         width: 120,
         height: 120,
         borderRadius: 60,
-        backgroundColor: 'rgba(255, 255, 255, 0.12)',
-        justifyContent: 'center',
-        alignItems: 'center',
         borderWidth: 2,
         borderColor: 'rgba(255, 255, 255, 0.35)',
-    },
-    logoInnerBorder: {
-        position: 'absolute',
-        width: 108,
-        height: 108,
-        borderRadius: 54,
-        borderWidth: 0.5,
-        borderColor: 'rgba(255, 255, 255, 0.15)',
-    },
-    logoText: {
-        fontSize: 56,
-        fontWeight: '300',
-        color: '#fff',
-        fontFamily: 'System',
     },
     title: {
         fontSize: 32,
         fontWeight: '200',
         color: '#fff',
         letterSpacing: 14,
-        fontFamily: 'System',
     },
     linesContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: 16,
-        marginBottom: 16,
+        marginTop: 14,
+        marginBottom: 14,
         width: width * 0.5,
         justifyContent: 'center',
     },
@@ -533,12 +526,8 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255, 255, 255, 0.4)',
         flex: 1,
     },
-    lineLeft: {
-        marginRight: 10,
-    },
-    lineRight: {
-        marginLeft: 10,
-    },
+    lineLeft: { marginRight: 10 },
+    lineRight: { marginLeft: 10 },
     lineDiamond: {
         alignItems: 'center',
         justifyContent: 'center',
@@ -555,8 +544,21 @@ const styles = StyleSheet.create({
         color: 'rgba(255, 255, 255, 0.75)',
         letterSpacing: 4,
         textTransform: 'uppercase',
-        fontFamily: 'System',
     },
+    loadingDots: {
+        flexDirection: 'row',
+        marginTop: 24,
+        gap: 6,
+    },
+    loadingDot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    },
+    loadingDot1: { opacity: 1 },
+    loadingDot2: { opacity: 0.6 },
+    loadingDot3: { opacity: 0.3 },
     bottomInfo: {
         position: 'absolute',
         bottom: 60,
@@ -568,5 +570,3 @@ const styles = StyleSheet.create({
         letterSpacing: 2,
     },
 });
-
-export default VideoSplashScreen;

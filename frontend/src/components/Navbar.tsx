@@ -34,7 +34,10 @@ export const Navbar = ({ onMenuClick }: NavbarProps) => {
 
                     <div className="min-w-0">
                         <p className="section-eyebrow hidden text-[10px] sm:block">Sistema tecnico</p>
-                        <h1 className="truncate font-display text-xl text-slate-900 sm:text-2xl">CURIEL</h1>
+                        <div className="flex items-center gap-2">
+                            <img src="/icon.jpeg" alt="CURIEL" className="h-8 w-8 rounded-lg object-cover sm:h-10 sm:w-10" />
+                            <h1 className="truncate font-display text-xl text-slate-900 sm:text-2xl">CURIEL</h1>
+                        </div>
                     </div>
                 </div>
 

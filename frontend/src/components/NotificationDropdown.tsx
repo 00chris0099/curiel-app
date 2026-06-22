@@ -90,7 +90,7 @@ export const NotificationDropdown = () => {
             {isOpen && (
                 <>
                     <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
-                    <div className="absolute right-0 z-20 mt-3 w-[380px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_24px_60px_rgba(23,50,74,0.16)]">
+                    <div className="absolute right-0 z-20 mt-3 w-[calc(100vw-2rem)] max-w-[380px] overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_24px_60px_rgba(23,50,74,0.16)]">
                         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
                             <div className="flex items-center gap-3">
                                 <CustomIcon name="bell" size="sm" tone="cream" />
