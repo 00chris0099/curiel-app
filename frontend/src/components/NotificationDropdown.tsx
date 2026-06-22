@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { getApiErrorMessage } from '../api/axios';
@@ -14,6 +14,8 @@ export const NotificationDropdown = () => {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
+    const panelRef = useRef<HTMLDivElement>(null);
+    const buttonRef = useRef<HTMLButtonElement>(null);
 
     const loadNotifications = useCallback(async () => {
         setIsLoading(true);
@@ -22,7 +24,6 @@ export const NotificationDropdown = () => {
                 notificationService.getNotifications(1, 5),
                 notificationService.getUnreadCount(),
             ]);
-
             setNotifications(safeArray(listResponse.data));
             setUnreadCount(count);
         } catch (error: unknown) {
@@ -38,14 +39,30 @@ export const NotificationDropdown = () => {
         return () => window.clearInterval(intervalId);
     }, [loadNotifications]);
 
+    useEffect(() => {
+        if (!isOpen) return;
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') setIsOpen(false);
+        };
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen]);
+
     const latestNotifications = useMemo(() => safeArray(notifications), [notifications]);
 
-    const handleToggle = async () => {
-        const nextOpen = !isOpen;
-        setIsOpen(nextOpen);
-        if (nextOpen) {
-            await loadNotifications();
+    const handleToggle = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (isOpen) {
+            setIsOpen(false);
+        } else {
+            setIsOpen(true);
+            loadNotifications();
         }
+    };
+
+    const handleClose = (e?: React.MouseEvent) => {
+        e?.stopPropagation();
+        setIsOpen(false);
     };
 
     const handleMarkAsRead = async (notification: Notification) => {
@@ -75,6 +92,7 @@ export const NotificationDropdown = () => {
     return (
         <div className="relative">
             <button
+                ref={buttonRef}
                 className="relative rounded-2xl border border-slate-200 bg-white p-2.5 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700"
                 aria-label="Notificaciones"
                 onClick={handleToggle}
@@ -89,15 +107,28 @@ export const NotificationDropdown = () => {
 
             {isOpen && (
                 <>
-                    <div className="fixed inset-0 z-[60] bg-black/30 backdrop-blur-[2px] sm:bg-transparent sm:backdrop-blur-none" onClick={() => setIsOpen(false)} />
+                    {/* Backdrop — click closes */}
+                    <div
+                        className="fixed inset-0 z-[60]"
+                        onClick={handleClose}
+                    />
 
-                    {/* Mobile: bottom sheet. Desktop: dropdown */}
-                    <div className="fixed inset-x-0 bottom-0 z-[70] max-h-[85vh] flex flex-col rounded-t-[28px] bg-white shadow-[0_-8px_40px_rgba(0,0,0,0.15)] sm:static sm:inset-auto sm:bottom-auto sm:z-20 sm:mt-3 sm:max-h-none sm:w-[min(380px,calc(100vw-2rem))] sm:overflow-hidden sm:rounded-[28px] sm:border sm:border-slate-200 sm:shadow-[0_24px_60px_rgba(23,50,74,0.16)] dark:bg-slate-900 sm:dark:border-slate-700">
+                    {/* Panel */}
+                    <div
+                        ref={panelRef}
+                        onClick={(e) => e.stopPropagation()}
+                        className="
+                            fixed inset-x-0 bottom-0 z-[70] max-h-[85vh] flex flex-col rounded-t-[28px] bg-white shadow-[0_-8px_40px_rgba(0,0,0,0.15)]
+                            sm:static sm:inset-auto sm:bottom-auto sm:z-20 sm:mt-3 sm:max-h-none sm:w-[min(380px,calc(100vw-2rem))] sm:overflow-hidden sm:rounded-[28px] sm:border sm:border-slate-200 sm:shadow-[0_24px_60px_rgba(23,50,74,0.16)]
+                            dark:bg-slate-900 sm:dark:border-slate-700
+                        "
+                    >
                         {/* Mobile drag handle */}
                         <div className="flex justify-center pt-3 sm:hidden">
                             <div className="h-1 w-10 rounded-full bg-slate-300 dark:bg-slate-600" />
                         </div>
 
+                        {/* Header */}
                         <div className="flex items-center justify-between px-5 py-3 sm:border-b sm:border-slate-200 sm:py-4 dark:sm:border-slate-700">
                             <div className="flex items-center gap-3">
                                 <h3 className="font-semibold text-slate-900 dark:text-slate-100">Notificaciones</h3>
@@ -113,7 +144,11 @@ export const NotificationDropdown = () => {
                                         Marcar todo
                                     </button>
                                 )}
-                                <button type="button" onClick={() => setIsOpen(false)} className="min-w-8 flex items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 sm:hidden dark:hover:bg-slate-800">
+                                <button
+                                    type="button"
+                                    onClick={handleClose}
+                                    className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 sm:hidden dark:hover:bg-slate-800"
+                                >
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                         <line x1="18" y1="6" x2="6" y2="18" />
                                         <line x1="6" y1="6" x2="18" y2="18" />
@@ -122,6 +157,7 @@ export const NotificationDropdown = () => {
                             </div>
                         </div>
 
+                        {/* Notification list */}
                         <div className="flex-1 overflow-y-auto sm:max-h-[380px]">
                             {isLoading ? (
                                 <div className="space-y-0 px-3 py-2 sm:px-2">
@@ -163,6 +199,7 @@ export const NotificationDropdown = () => {
                             ))}
                         </div>
 
+                        {/* Footer — desktop only */}
                         <div className="hidden border-t border-slate-200 px-5 py-3 sm:block dark:border-slate-700">
                             <button
                                 type="button"
