@@ -35,8 +35,11 @@ const HomeScreen = ({ navigation }) => {
 
     const loadInspections = async () => {
         try {
-            // Always try local cache first
-            const localData = await inspectionsRepo.getAll();
+            // Always try local cache first, filtered by inspector if applicable
+            const inspectorFilter = user?.role === 'inspector' ? user.id : null;
+            const localData = inspectorFilter
+                ? await inspectionsRepo.getAllByInspector(inspectorFilter)
+                : await inspectionsRepo.getAll();
             if (localData.length > 0) {
                 setInspections(localData);
                 updateStats(localData);

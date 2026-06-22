@@ -234,15 +234,22 @@ export const InspectionExecution = () => {
         try {
             let remoteExecution: InspectionExecutionData | null = null;
 
-            try {
-                remoteExecution = await inspectionService.getExecution(id);
-                await saveExecutionSnapshot(id, remoteExecution);
-            } catch (remoteError) {
+            if (navigator.onLine) {
+                try {
+                    remoteExecution = await inspectionService.getExecution(id);
+                    await saveExecutionSnapshot(id, remoteExecution);
+                } catch (remoteError) {
+                    const snapshot = await getExecutionSnapshot(id);
+                    if (!snapshot?.data) {
+                        throw remoteError;
+                    }
+                    remoteExecution = snapshot.data;
+                }
+            } else {
                 const snapshot = await getExecutionSnapshot(id);
                 if (!snapshot?.data) {
-                    throw remoteError;
+                    throw new Error('No hay datos guardados offline para esta inspección');
                 }
-
                 remoteExecution = snapshot.data;
             }
 

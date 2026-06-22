@@ -51,6 +51,15 @@ export const inspectionsRepo = {
         return rows.map(fromRow);
     },
 
+    getAllByInspector: async (inspectorId) => {
+        const db = await getDB();
+        const rows = await db.getAllAsync(
+            `SELECT * FROM ${TABLE} WHERE inspectorId = ? ORDER BY scheduledDate DESC`,
+            [inspectorId]
+        );
+        return rows.map(fromRow);
+    },
+
     getById: async (id) => {
         const db = await getDB();
         const row = await db.getFirstAsync(`SELECT * FROM ${TABLE} WHERE id = ?`, [id]);

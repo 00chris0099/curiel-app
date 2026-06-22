@@ -58,6 +58,7 @@ type LocalIdMapping = {
 type CachedInspection = {
   id: string
   data: any
+  inspectorId?: string
   updatedAt: string
 }
 
@@ -77,6 +78,9 @@ interface OfflineDbSchema extends DBSchema {
   cached_inspections: {
     key: string
     value: CachedInspection
+    indexes: {
+      'by-inspector': string
+    }
   }
   cached_inspection_details: {
     key: string
@@ -105,10 +109,10 @@ interface OfflineDbSchema extends DBSchema {
 }
 
 const DB_NAME = 'curiel-offline-db'
-const DB_VERSION = 2
+const DB_VERSION = 3
 
 export const dbPromise = openDB<OfflineDbSchema>(DB_NAME, DB_VERSION, {
-  upgrade(db, oldVersion) {
+  upgrade(db, oldVersion, _newVersion, transaction) {
     if (oldVersion < 1) {
       if (!db.objectStoreNames.contains('executionDrafts')) {
         db.createObjectStore('executionDrafts', { keyPath: 'inspectionId' })
@@ -138,6 +142,15 @@ export const dbPromise = openDB<OfflineDbSchema>(DB_NAME, DB_VERSION, {
         db.createObjectStore('cached_execution_data', { keyPath: 'inspectionId' })
       }
     }
+
+    if (oldVersion < 3) {
+      if (db.objectStoreNames.contains('cached_inspections')) {
+        const store = transaction.objectStore('cached_inspections')
+        if (!store.indexNames.contains('by-inspector')) {
+          store.createIndex('by-inspector', 'inspectorId')
+        }
+      }
+    }
   },
 })
 
@@ -159,12 +172,20 @@ export const saveCachedInspections = async (inspections: any[]) => {
   const db = await dbPromise
   const updatedAt = new Date().toISOString()
   for (const inspection of inspections) {
-    await db.put('cached_inspections', { id: inspection.id, data: inspection, updatedAt })
+    await db.put('cached_inspections', {
+      id: inspection.id,
+      data: inspection,
+      inspectorId: inspection.inspectorId || '',
+      updatedAt,
+    })
   }
 }
 
-export const getCachedInspections = async () => {
+export const getCachedInspections = async (inspectorId?: string) => {
   const db = await dbPromise
+  if (inspectorId) {
+    return db.getAllFromIndex('cached_inspections', 'by-inspector', inspectorId)
+  }
   return db.getAll('cached_inspections')
 }
 

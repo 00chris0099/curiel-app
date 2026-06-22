@@ -34,9 +34,14 @@ export const Inspections = () => {
                 setInspections(response.data);
                 await saveCachedInspections(response.data);
             } catch (error: unknown) {
-                const cached = await getCachedInspections();
+                const inspectorFilter = user?.role === 'inspector' ? user.id : undefined;
+                const cached = await getCachedInspections(inspectorFilter);
                 if (cached && cached.length > 0) {
-                    setInspections(cached.map((c) => c.data));
+                    let filtered = cached.map((c) => c.data);
+                    if (statusFilter) {
+                        filtered = filtered.filter((i: Inspection) => i.status === statusFilter);
+                    }
+                    setInspections(filtered);
                     setIsOfflineData(true);
                     toast.success('Mostrando datos guardados offline');
                 } else {
@@ -47,9 +52,14 @@ export const Inspections = () => {
             }
         } else {
             try {
-                const cached = await getCachedInspections();
+                const inspectorFilter = user?.role === 'inspector' ? user.id : undefined;
+                const cached = await getCachedInspections(inspectorFilter);
                 if (cached && cached.length > 0) {
-                    setInspections(cached.map((c) => c.data));
+                    let filtered = cached.map((c) => c.data);
+                    if (statusFilter) {
+                        filtered = filtered.filter((i: Inspection) => i.status === statusFilter);
+                    }
+                    setInspections(filtered);
                     setIsOfflineData(true);
                 }
             } catch {
@@ -58,7 +68,7 @@ export const Inspections = () => {
                 setIsLoading(false);
             }
         }
-    }, [effectiveOnline, statusFilter]);
+    }, [effectiveOnline, statusFilter, user]);
 
     useEffect(() => {
         loadInspections();
