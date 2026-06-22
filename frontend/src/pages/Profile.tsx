@@ -87,8 +87,8 @@ export const Profile = () => {
                     </div>
                     <div className="flex-1">
                         <p className="section-eyebrow">Perfil profesional</p>
-                        <h1 className="mt-2 font-display text-3xl text-slate-900">{user?.fullName}</h1>
-                        <p className="mt-2 text-slate-600">{user?.email}</p>
+                        <h1 className="mt-2 font-display text-3xl text-slate-900 dark:text-slate-100">{user?.fullName}</h1>
+                        <p className="mt-2 text-slate-600 dark:text-slate-400">{user?.email}</p>
                         <div className="mt-4 flex flex-wrap items-center gap-3">
                             <span className={`badge ${user?.role ? roleColors[user.role] : ''}`}>
                                 <CustomIcon name={roleIconMap[user?.role || 'inspector'] ?? 'clipboard-check'} size="xs" tone="white" />
@@ -106,17 +106,17 @@ export const Profile = () => {
             <section className="card">
                 <div className="mb-5">
                     <p className="section-eyebrow">Ficha personal</p>
-                    <h2 className="mt-2 text-xl font-bold text-slate-900">Información de la cuenta</h2>
+                    <h2 className="mt-2 text-xl font-bold text-slate-900 dark:text-slate-100">Información de la cuenta</h2>
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     {profileRows.map((row) => (
-                        <div key={row.title} className="rounded-[24px] border border-slate-200 bg-[#fbfbfa] p-4">
+                        <div key={row.title} className="rounded-[24px] border border-slate-200 bg-[#fbfbfa] p-4 dark:border-slate-700 dark:bg-slate-800">
                             <div className="flex items-start gap-4">
                                 <CustomIcon name={row.icon} size="sm" tone={row.tone} />
                                 <div>
-                                    <p className="text-sm text-slate-500">{row.title}</p>
-                                    <p className="mt-1 font-semibold text-slate-900">{row.value}</p>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400">{row.title}</p>
+                                    <p className="mt-1 font-semibold text-slate-900 dark:text-slate-100">{row.value}</p>
                                 </div>
                             </div>
                         </div>
@@ -124,9 +124,9 @@ export const Profile = () => {
                 </div>
             </section>
 
-            <section className="card bg-[#fbfbfa]">
-                <p className="text-sm font-semibold text-slate-500">ID de usuario</p>
-                <p className="mt-2 break-all font-mono text-xs text-slate-500">{user?.id}</p>
+            <section className="card bg-[#fbfbfa] dark:bg-slate-800">
+                <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">ID de usuario</p>
+                <p className="mt-2 break-all font-mono text-xs text-slate-500 dark:text-slate-400">{user?.id}</p>
             </section>
         </div>
     );

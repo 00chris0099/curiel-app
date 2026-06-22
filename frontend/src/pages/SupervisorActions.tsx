@@ -136,26 +136,26 @@ export const SupervisorActions = () => {
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="font-display text-3xl font-bold text-slate-900">Acciones de Supervisor</h1>
-                <p className="mt-1 text-slate-500">Cancelar, eliminar o rechazar inspecciones</p>
+                <h1 className="font-display text-3xl font-bold text-slate-900 dark:text-slate-100">Acciones de Supervisor</h1>
+                <p className="mt-1 text-slate-500 dark:text-slate-400">Cancelar, eliminar o rechazar inspecciones</p>
             </div>
 
             {showForm && selectedInspection && (
-                <form onSubmit={handleSubmit} className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80 space-y-4">
-                    <h3 className="font-display text-lg font-bold text-slate-900">{actionTitle()}</h3>
-                    <p className="text-sm text-slate-500">Inspeccion: {selectedInspection.projectName} ({selectedInspection.status})</p>
+                <form onSubmit={handleSubmit} className="rounded-2xl bg-white dark:bg-slate-800 p-6 shadow-sm ring-1 ring-slate-200/80 dark:ring-slate-700 space-y-4">
+                    <h3 className="font-display text-lg font-bold text-slate-900 dark:text-slate-100">{actionTitle()}</h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Inspeccion: {selectedInspection.projectName} ({selectedInspection.status})</p>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Motivo *</label>
-                            <select value={form.reasonCode} onChange={(e) => setForm({ ...form, reasonCode: e.target.value })} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" required>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Motivo *</label>
+                            <select value={form.reasonCode} onChange={(e) => setForm({ ...form, reasonCode: e.target.value })} className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" required>
                                 <option value="">Seleccionar motivo</option>
                                 {getReasons().map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
                             </select>
                         </div>
                         {actionType === 'reject' && (
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Nivel de Gravedad</label>
-                                <select value={form.gravityLevel} onChange={(e) => setForm({ ...form, gravityLevel: Number(e.target.value) as GravityLevel })} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nivel de Gravedad</label>
+                                <select value={form.gravityLevel} onChange={(e) => setForm({ ...form, gravityLevel: Number(e.target.value) as GravityLevel })} className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
                                     <option value={1}>Nivel 1 - Bajo</option>
                                     <option value={2}>Nivel 2 - Medio</option>
                                     <option value={3}>Nivel 3 - Alto</option>
@@ -164,24 +164,24 @@ export const SupervisorActions = () => {
                         )}
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Descripcion * (min 20 caracteres)</label>
-                        <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" rows={3} required minLength={20} placeholder="Describe el motivo..." />
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Descripcion * (min 20 caracteres)</label>
+                        <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" rows={3} required minLength={20} placeholder="Describe el motivo..." />
                     </div>
                     <div className="flex justify-end gap-3">
-                        <button type="button" onClick={() => setShowForm(false)} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancelar</button>
+                        <button type="button" onClick={() => setShowForm(false)} className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50">Cancelar</button>
                         <button type="submit" disabled={isSubmitting} className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50">{isSubmitting ? 'Procesando...' : 'Confirmar'}</button>
                     </div>
                 </form>
             )}
 
-            <div className="rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/80 overflow-hidden">
+            <div className="rounded-2xl bg-white dark:bg-slate-800 shadow-sm ring-1 ring-slate-200/80 dark:ring-slate-700 overflow-hidden">
                 {inspections.length === 0 ? (
-                    <div className="p-8 text-center text-slate-500">No hay inspecciones</div>
+                    <div className="p-8 text-center text-slate-500 dark:text-slate-400">No hay inspecciones</div>
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium uppercase text-slate-500">
+                                <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 text-left text-xs font-medium uppercase text-slate-500 dark:text-slate-400">
                                     <th className="px-4 py-3">Proyecto</th>
                                     <th className="px-4 py-3">Estado</th>
                                     <th className="px-4 py-3">Inspector</th>
@@ -192,10 +192,10 @@ export const SupervisorActions = () => {
                             <tbody className="divide-y divide-slate-100">
                                 {inspections.map((insp) => (
                                     <tr key={insp.id} className="hover:bg-slate-50">
-                                        <td className="px-4 py-3 font-medium text-slate-900">{insp.projectName}</td>
+                                        <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{insp.projectName}</td>
                                         <td className="px-4 py-3">{statusBadge(insp.status)}</td>
-                                        <td className="px-4 py-3 text-slate-600">{insp.inspectorName ?? '-'}</td>
-                                        <td className="px-4 py-3 text-slate-500">{new Date(insp.scheduledDate).toLocaleDateString('es-PE')}</td>
+                                        <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{insp.inspectorName ?? '-'}</td>
+                                        <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{new Date(insp.scheduledDate).toLocaleDateString('es-PE')}</td>
                                         <td className="px-4 py-3">
                                             <div className="flex gap-2">
                                                 {insp.status !== 'finalizada' && insp.status !== 'cancelada' && (

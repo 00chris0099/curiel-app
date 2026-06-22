@@ -180,8 +180,8 @@ export const Clients = () => {
             {/* Header */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h1 className="font-display text-3xl font-bold text-slate-900">Clientes</h1>
-                    <p className="mt-1 text-sm text-slate-500">
+                    <h1 className="font-display text-3xl font-bold text-slate-900 dark:text-slate-100">Clientes</h1>
+                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                         {totalClients} clientes registrados
                     </p>
                 </div>
@@ -196,15 +196,15 @@ export const Clients = () => {
 
             {/* Create/Edit Form */}
             {isFormVisible && (
-                <div className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200/80">
-                    <h2 className="font-display text-xl font-bold text-slate-900">
+                <div className="rounded-[28px] bg-white dark:bg-slate-800 p-6 shadow-sm ring-1 ring-slate-200/80 dark:ring-slate-700/80">
+                    <h2 className="font-display text-xl font-bold text-slate-900 dark:text-slate-100">
                         {isEditing ? 'Editar Cliente' : 'Nuevo Cliente'}
                     </h2>
                     <form onSubmit={handleSubmit} className="mt-4 space-y-4">
                         <div className="grid gap-4 sm:grid-cols-2">
                             {/* Document Type */}
                             <div>
-                                <label className="block text-sm font-medium text-slate-700">
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                                     Tipo de documento
                                 </label>
                                 <select
@@ -212,7 +212,7 @@ export const Clients = () => {
                                     onChange={(e) =>
                                         setForm({ ...form, documentType: e.target.value as ClientDocumentType })
                                     }
-                                    className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-[#17324a] focus:outline-none focus:ring-2 focus:ring-[#17324a]/20"
+                                    className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-[#17324a] focus:outline-none focus:ring-2 focus:ring-[#17324a]/20"
                                 >
                                     <option value="dni">DNI</option>
                                     <option value="ruc">RUC</option>
@@ -222,7 +222,7 @@ export const Clients = () => {
 
                             {/* Document Number */}
                             <div>
-                                <label className="block text-sm font-medium text-slate-700">
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                                     Numero de documento *
                                 </label>
                                 <input
@@ -230,56 +230,56 @@ export const Clients = () => {
                                     required
                                     value={form.documentNumber}
                                     onChange={(e) => setForm({ ...form, documentNumber: e.target.value })}
-                                    className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-[#17324a] focus:outline-none focus:ring-2 focus:ring-[#17324a]/20"
+                                    className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-[#17324a] focus:outline-none focus:ring-2 focus:ring-[#17324a]/20"
                                     placeholder="Ej: 12345678"
                                 />
                             </div>
 
                             {/* First Name */}
                             <div>
-                                <label className="block text-sm font-medium text-slate-700">
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                                     Nombre
                                 </label>
                                 <input
                                     type="text"
                                     value={form.firstName}
                                     onChange={(e) => setForm({ ...form, firstName: e.target.value })}
-                                    className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-[#17324a] focus:outline-none focus:ring-2 focus:ring-[#17324a]/20"
+                                    className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-[#17324a] focus:outline-none focus:ring-2 focus:ring-[#17324a]/20"
                                     placeholder="Nombre"
                                 />
                             </div>
 
                             {/* Last Name */}
                             <div>
-                                <label className="block text-sm font-medium text-slate-700">
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                                     Apellido
                                 </label>
                                 <input
                                     type="text"
                                     value={form.lastName}
                                     onChange={(e) => setForm({ ...form, lastName: e.target.value })}
-                                    className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-[#17324a] focus:outline-none focus:ring-2 focus:ring-[#17324a]/20"
+                                    className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-[#17324a] focus:outline-none focus:ring-2 focus:ring-[#17324a]/20"
                                     placeholder="Apellido"
                                 />
                             </div>
 
                             {/* Razon Social */}
                             <div className="sm:col-span-2">
-                                <label className="block text-sm font-medium text-slate-700">
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                                     Razon Social
                                 </label>
                                 <input
                                     type="text"
                                     value={form.razonSocial}
                                     onChange={(e) => setForm({ ...form, razonSocial: e.target.value })}
-                                    className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-[#17324a] focus:outline-none focus:ring-2 focus:ring-[#17324a]/20"
+                                    className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-[#17324a] focus:outline-none focus:ring-2 focus:ring-[#17324a]/20"
                                     placeholder="Razon social (opcional si tiene nombre)"
                                 />
                             </div>
 
                             {/* Email */}
                             <div className="sm:col-span-2">
-                                <label className="block text-sm font-medium text-slate-700">
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                                     Email *
                                 </label>
                                 <input
@@ -287,35 +287,35 @@ export const Clients = () => {
                                     required
                                     value={form.email}
                                     onChange={(e) => setForm({ ...form, email: e.target.value })}
-                                    className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-[#17324a] focus:outline-none focus:ring-2 focus:ring-[#17324a]/20"
+                                    className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-[#17324a] focus:outline-none focus:ring-2 focus:ring-[#17324a]/20"
                                     placeholder="correo@ejemplo.com"
                                 />
                             </div>
 
                             {/* Phone */}
                             <div>
-                                <label className="block text-sm font-medium text-slate-700">
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                                     Telefono
                                 </label>
                                 <input
                                     type="text"
                                     value={form.phone}
                                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                                    className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-[#17324a] focus:outline-none focus:ring-2 focus:ring-[#17324a]/20"
+                                    className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-[#17324a] focus:outline-none focus:ring-2 focus:ring-[#17324a]/20"
                                     placeholder="Telefono"
                                 />
                             </div>
 
                             {/* Address */}
                             <div>
-                                <label className="block text-sm font-medium text-slate-700">
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                                     Direccion
                                 </label>
                                 <input
                                     type="text"
                                     value={form.address}
                                     onChange={(e) => setForm({ ...form, address: e.target.value })}
-                                    className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-[#17324a] focus:outline-none focus:ring-2 focus:ring-[#17324a]/20"
+                                    className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-[#17324a] focus:outline-none focus:ring-2 focus:ring-[#17324a]/20"
                                     placeholder="Direccion"
                                 />
                             </div>
@@ -330,11 +330,11 @@ export const Clients = () => {
                                             onChange={(e) => setForm({ ...form, isProtected: e.target.checked })}
                                             className="h-4 w-4 rounded border-slate-300 text-[#17324a] focus:ring-[#17324a]"
                                         />
-                                        <span className="text-sm font-medium text-slate-700">
+                                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
                                             Proteger de auto-eliminacion
                                         </span>
                                     </label>
-                                    <p className="mt-1 text-xs text-slate-500">
+                                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                                         Los clientes protegidos no se eliminan automaticamente a los 15 dias.
                                     </p>
                                 </div>
@@ -345,7 +345,7 @@ export const Clients = () => {
                             <button
                                 type="button"
                                 onClick={resetForm}
-                                className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                                            className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-5 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700"
                             >
                                 Cancelar
                             </button>
@@ -370,13 +370,13 @@ export const Clients = () => {
                         placeholder="Buscar por nombre, documento o email..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm text-slate-900 focus:border-[#17324a] focus:outline-none focus:ring-2 focus:ring-[#17324a]/20"
+                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 py-3 pl-10 pr-4 text-sm text-slate-900 dark:text-slate-100 focus:border-[#17324a] focus:outline-none focus:ring-2 focus:ring-[#17324a]/20"
                     />
                 </div>
                 <select
                     value={docTypeFilter}
                     onChange={(e) => setDocTypeFilter(e.target.value as ClientDocumentType | '')}
-                    className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-[#17324a] focus:outline-none focus:ring-2 focus:ring-[#17324a]/20"
+                    className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-700 dark:text-slate-300 focus:border-[#17324a] focus:outline-none focus:ring-2 focus:ring-[#17324a]/20"
                 >
                     <option value="">Todos los tipos</option>
                     <option value="dni">DNI</option>
@@ -386,11 +386,11 @@ export const Clients = () => {
             </div>
 
             {/* Clients Table */}
-            <div className="overflow-hidden rounded-[28px] bg-white shadow-sm ring-1 ring-slate-200/80">
+            <div className="overflow-hidden rounded-[28px] bg-white dark:bg-slate-800 shadow-sm ring-1 ring-slate-200/80 dark:ring-slate-700/80">
                 {clients.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16">
                         <CustomIcon name="users" size="lg" tone="mist" />
-                        <p className="mt-4 text-sm font-medium text-slate-500">
+                        <p className="mt-4 text-sm font-medium text-slate-500 dark:text-slate-400">
                             No se encontraron clientes
                         </p>
                     </div>
@@ -399,11 +399,11 @@ export const Clients = () => {
                         <table className="w-full text-left text-sm">
                             <thead>
                                 <tr className="border-b border-slate-100 bg-slate-50/50">
-                                    <th className="px-6 py-4 font-semibold text-slate-600">Cliente</th>
-                                    <th className="px-6 py-4 font-semibold text-slate-600">Documento</th>
-                                    <th className="px-6 py-4 font-semibold text-slate-600">Email</th>
-                                    <th className="px-6 py-4 font-semibold text-slate-600">Telefono</th>
-                                    <th className="px-6 py-4 font-semibold text-slate-600">Acciones</th>
+                                    <th className="px-6 py-4 font-semibold text-slate-600 dark:text-slate-400">Cliente</th>
+                                    <th className="px-6 py-4 font-semibold text-slate-600 dark:text-slate-400">Documento</th>
+                                    <th className="px-6 py-4 font-semibold text-slate-600 dark:text-slate-400">Email</th>
+                                    <th className="px-6 py-4 font-semibold text-slate-600 dark:text-slate-400">Telefono</th>
+                                    <th className="px-6 py-4 font-semibold text-slate-600 dark:text-slate-400">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
@@ -415,11 +415,11 @@ export const Clients = () => {
                                                     <CustomIcon name="users" size="sm" tone="cream" />
                                                 </div>
                                                 <div>
-                                                    <p className="font-semibold text-slate-900">
+                                                    <p className="font-semibold text-slate-900 dark:text-slate-100">
                                                         {getClientDisplayName(client)}
                                                     </p>
                                                     {client.razonSocial && client.firstName && (
-                                                        <p className="text-xs text-slate-500">
+                                                        <p className="text-xs text-slate-500 dark:text-slate-400">
                                                             {client.firstName} {client.lastName}
                                                         </p>
                                                     )}
@@ -430,10 +430,10 @@ export const Clients = () => {
                                             <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${documentTypeBadgeColors[client.documentType]}`}>
                                                 {documentTypeLabels[client.documentType]}
                                             </span>
-                                            <span className="ml-2 text-slate-700">{client.documentNumber}</span>
+                                            <span className="ml-2 text-slate-700 dark:text-slate-300">{client.documentNumber}</span>
                                         </td>
-                                        <td className="px-6 py-4 text-slate-600">{client.email}</td>
-                                        <td className="px-6 py-4 text-slate-600">{client.phone || '-'}</td>
+                                        <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{client.email}</td>
+                                        <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{client.phone || '-'}</td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2">
                                                 <button

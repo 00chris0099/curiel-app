@@ -110,10 +110,10 @@ export const SupervisorDashboard = () => {
             {/* Header */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h1 className="font-display text-3xl font-bold text-slate-900">
+                    <h1 className="font-display text-3xl font-bold text-slate-900 dark:text-slate-100">
                         Panel del Supervisor
                     </h1>
-                    <p className="mt-1 text-slate-500">
+                    <p className="mt-1 text-slate-500 dark:text-slate-400">
                         Monitoreo de calidad, evaluaciones y alertas
                     </p>
                 </div>
@@ -121,53 +121,53 @@ export const SupervisorDashboard = () => {
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80">
+                <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800 dark:ring-slate-700">
                     <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100">
                             <CustomIcon name="clipboard-check" className="h-5 w-5 text-blue-600" />
                         </div>
                         <div>
-                            <p className="text-sm text-slate-500">Inspecciones Activas</p>
-                            <p className="text-2xl font-bold text-slate-900">
+                            <p className="text-sm text-slate-500 dark:text-slate-400">Inspecciones Activas</p>
+                            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
                                 {dashboardKpis?.totalActiveInspections ?? 0}
                             </p>
                         </div>
                     </div>
                 </div>
-                <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80">
+                <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800 dark:ring-slate-700">
                     <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-100">
                             <CustomIcon name="warning-circle" className="h-5 w-5 text-red-600" />
                         </div>
                         <div>
-                            <p className="text-sm text-slate-500">Vencidas</p>
-                            <p className="text-2xl font-bold text-slate-900">
+                            <p className="text-sm text-slate-500 dark:text-slate-400">Vencidas</p>
+                            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
                                 {dashboardKpis?.overdueInspections ?? 0}
                             </p>
                         </div>
                     </div>
                 </div>
-                <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80">
+                <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800 dark:ring-slate-700">
                     <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-100">
                             <CustomIcon name="clipboard-check" className="h-5 w-5 text-green-600" />
                         </div>
                         <div>
-                            <p className="text-sm text-slate-500">Completadas (mes)</p>
-                            <p className="text-2xl font-bold text-slate-900">
+                            <p className="text-sm text-slate-500 dark:text-slate-400">Completadas (mes)</p>
+                            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
                                 {dashboardKpis?.completedThisMonth ?? 0}
                             </p>
                         </div>
                     </div>
                 </div>
-                <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80">
+                <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800 dark:ring-slate-700">
                     <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-yellow-100">
                             <CustomIcon name="warning-circle" className="h-5 w-5 text-yellow-600" />
                         </div>
                         <div>
-                            <p className="text-sm text-slate-500">Tasa Cancelacion</p>
-                            <p className="text-2xl font-bold text-slate-900">
+                            <p className="text-sm text-slate-500 dark:text-slate-400">Tasa Cancelacion</p>
+                            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
                                 {dashboardKpis?.cancellationRate ?? 0}%
                             </p>
                         </div>
@@ -177,36 +177,36 @@ export const SupervisorDashboard = () => {
 
             {/* Secondary KPIs */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80">
+                <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800 dark:ring-slate-700">
                     <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100">
                             <CustomIcon name="users" className="h-5 w-5 text-purple-600" />
                         </div>
                         <div>
-                            <p className="text-sm text-slate-500">Inspectores Activos</p>
-                            <p className="text-2xl font-bold text-slate-900">{dashboardKpis?.activeInspectors ?? 0}</p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">Inspectores Activos</p>
+                            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{dashboardKpis?.activeInspectors ?? 0}</p>
                         </div>
                     </div>
                 </div>
-                <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80">
+                <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800 dark:ring-slate-700">
                     <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100">
                             <CustomIcon name="users" className="h-5 w-5 text-indigo-600" />
                         </div>
                         <div>
-                            <p className="text-sm text-slate-500">Arquitectos Activos</p>
-                            <p className="text-2xl font-bold text-slate-900">{dashboardKpis?.activeArchitects ?? 0}</p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">Arquitectos Activos</p>
+                            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{dashboardKpis?.activeArchitects ?? 0}</p>
                         </div>
                     </div>
                 </div>
-                <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80">
+                <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800 dark:ring-slate-700">
                     <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-100">
                             <CustomIcon name="clipboard-check" className="h-5 w-5 text-teal-600" />
                         </div>
                         <div>
-                            <p className="text-sm text-slate-500">Tiempo Prom. Finalizacion</p>
-                            <p className="text-2xl font-bold text-slate-900">
+                            <p className="text-sm text-slate-500 dark:text-slate-400">Tiempo Prom. Finalizacion</p>
+                            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
                                 {dashboardKpis?.avgTimeGeneral ?? 0}h
                             </p>
                         </div>
@@ -216,8 +216,8 @@ export const SupervisorDashboard = () => {
 
             {/* Productividad Diaria */}
             {dashboardKpis?.dailyProductivity && dashboardKpis.dailyProductivity.length > 0 && (
-                <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80">
-                    <h2 className="font-display text-xl font-bold text-slate-900 mb-4">
+                <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800 dark:ring-slate-700">
+                    <h2 className="font-display text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">
                         Productividad Diaria (ultima semana)
                     </h2>
                     <div className="flex items-end gap-2 h-40">
@@ -226,14 +226,14 @@ export const SupervisorDashboard = () => {
                             const heightPercent = (day.count / maxCount) * 100;
                             return (
                                 <div key={day.date} className="flex flex-col items-center flex-1 gap-1">
-                                    <span className="text-xs font-semibold text-slate-700">{day.count}</span>
+                                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{day.count}</span>
                                     <div className="w-full flex justify-center">
                                         <div
                                             className="w-8 rounded-t-lg bg-primary-500 transition-all"
                                             style={{ height: `${Math.max(heightPercent, 4)}%` }}
                                         />
                                     </div>
-                                    <span className="text-[10px] text-slate-500">
+                                    <span className="text-[10px] text-slate-500 dark:text-slate-400">
                                         {new Date(day.date + 'T12:00:00').toLocaleDateString('es-PE', { weekday: 'short' })}
                                     </span>
                                 </div>
@@ -245,12 +245,12 @@ export const SupervisorDashboard = () => {
 
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
                 {/* Inspector Ranking */}
-                <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80">
-                    <h2 className="font-display text-xl font-bold text-slate-900 mb-4">
+                <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800 dark:ring-slate-700">
+                    <h2 className="font-display text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">
                         Ranking de Inspectores
                     </h2>
                     {inspectorRanking.length === 0 ? (
-                        <p className="text-slate-500 text-sm">Sin datos de ranking esta semana</p>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm">Sin datos de ranking esta semana</p>
                     ) : (
                         <div className="space-y-3">
                             {inspectorRanking.map((entry, idx) => (
@@ -259,8 +259,8 @@ export const SupervisorDashboard = () => {
                                         {idx + 1}
                                     </span>
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-semibold text-slate-900 truncate">{entry.fullName}</p>
-                                        <p className="text-xs text-slate-500">
+                                        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">{entry.fullName}</p>
+                                        <p className="text-xs text-slate-500 dark:text-slate-400">
                                             {entry.inspectionsCompleted ?? 0} inspecciones | {entry.punctualityRate ?? 0}% puntualidad
                                         </p>
                                     </div>
@@ -272,12 +272,12 @@ export const SupervisorDashboard = () => {
                 </div>
 
                 {/* Architect Ranking */}
-                <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80">
-                    <h2 className="font-display text-xl font-bold text-slate-900 mb-4">
+                <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800 dark:ring-slate-700">
+                    <h2 className="font-display text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">
                         Ranking de Arquitectos
                     </h2>
                     {architectRanking.length === 0 ? (
-                        <p className="text-slate-500 text-sm">Sin datos de ranking esta semana</p>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm">Sin datos de ranking esta semana</p>
                     ) : (
                         <div className="space-y-3">
                             {architectRanking.map((entry, idx) => (
@@ -286,8 +286,8 @@ export const SupervisorDashboard = () => {
                                         {idx + 1}
                                     </span>
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-semibold text-slate-900 truncate">{entry.fullName}</p>
-                                        <p className="text-xs text-slate-500">
+                                        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">{entry.fullName}</p>
+                                        <p className="text-xs text-slate-500 dark:text-slate-400">
                                             {entry.inspectionsCreated ?? 0} inspecciones | {entry.approvalRate ?? 0}% aprobacion
                                         </p>
                                     </div>
@@ -300,15 +300,15 @@ export const SupervisorDashboard = () => {
             </div>
 
             {/* Recent Alerts */}
-            <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80">
+            <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800 dark:ring-slate-700">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
-                    <h2 className="font-display text-xl font-bold text-slate-900">
+                    <h2 className="font-display text-xl font-bold text-slate-900 dark:text-slate-100">
                         Alertas Recientes
                     </h2>
                     <select
                         value={gravityFilter}
                         onChange={(e) => setGravityFilter(e.target.value ? Number(e.target.value) : '')}
-                        className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                     >
                         <option value="">Todos los niveles</option>
                         <option value={1}>Nivel 1 - Bajo</option>
@@ -317,12 +317,12 @@ export const SupervisorDashboard = () => {
                     </select>
                 </div>
                 {filteredAlerts.length === 0 ? (
-                    <p className="text-slate-500 text-sm">No hay alertas registradas</p>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm">No hay alertas registradas</p>
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="border-b border-slate-200 text-left text-xs font-medium uppercase text-slate-500">
+                                <tr className="border-b border-slate-200 dark:border-slate-700 text-left text-xs font-medium uppercase text-slate-500 dark:text-slate-400">
                                     <th className="pb-3 pr-4">Titulo</th>
                                     <th className="pb-3 pr-4">Gravedad</th>
                                     <th className="pb-3 pr-4">Estado</th>
@@ -330,14 +330,14 @@ export const SupervisorDashboard = () => {
                                     <th className="pb-3">Fecha</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100">
+                            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                                 {filteredAlerts.map((alert) => (
-                                    <tr key={alert.id} className="hover:bg-slate-50">
-                                        <td className="py-3 pr-4 font-medium text-slate-900">{alert.title}</td>
+                                    <tr key={alert.id} className="hover:bg-slate-50 dark:hover:bg-slate-700">
+                                        <td className="py-3 pr-4 font-medium text-slate-900 dark:text-slate-100">{alert.title}</td>
                                         <td className="py-3 pr-4">{gravityBadge(alert.gravityLevel)}</td>
                                         <td className="py-3 pr-4">{statusBadge(alert.status)}</td>
-                                        <td className="py-3 pr-4 text-slate-600">{alert.supervisor?.fullName ?? '-'}</td>
-                                        <td className="py-3 text-slate-500">{new Date(alert.createdAt).toLocaleDateString('es-PE')}</td>
+                                        <td className="py-3 pr-4 text-slate-600 dark:text-slate-400">{alert.supervisor?.fullName ?? '-'}</td>
+                                        <td className="py-3 text-slate-500 dark:text-slate-400">{new Date(alert.createdAt).toLocaleDateString('es-PE')}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -347,17 +347,17 @@ export const SupervisorDashboard = () => {
             </div>
 
             {/* Recent Evaluations */}
-            <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80">
-                <h2 className="font-display text-xl font-bold text-slate-900 mb-4">
+            <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800 dark:ring-slate-700">
+                <h2 className="font-display text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">
                     Evaluaciones Recientes
                 </h2>
                 {recentEvaluations.length === 0 ? (
-                    <p className="text-slate-500 text-sm">No hay evaluaciones registradas</p>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm">No hay evaluaciones registradas</p>
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="border-b border-slate-200 text-left text-xs font-medium uppercase text-slate-500">
+                                <tr className="border-b border-slate-200 dark:border-slate-700 text-left text-xs font-medium uppercase text-slate-500 dark:text-slate-400">
                                     <th className="pb-3 pr-4">Evaluado</th>
                                     <th className="pb-3 pr-4">Semana</th>
                                     <th className="pb-3 pr-4">Score</th>
@@ -365,11 +365,11 @@ export const SupervisorDashboard = () => {
                                     <th className="pb-3">Estado</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100">
+                            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                                 {recentEvaluations.map((ev) => (
-                                    <tr key={ev.id} className="hover:bg-slate-50">
-                                        <td className="py-3 pr-4 font-medium text-slate-900">{ev.evaluatedUser?.fullName ?? '-'}</td>
-                                        <td className="py-3 pr-4 text-slate-600">
+                                    <tr key={ev.id} className="hover:bg-slate-50 dark:hover:bg-slate-700">
+                                        <td className="py-3 pr-4 font-medium text-slate-900 dark:text-slate-100">{ev.evaluatedUser?.fullName ?? '-'}</td>
+                                        <td className="py-3 pr-4 text-slate-600 dark:text-slate-400">
                                             {ev.weekStart} - {ev.weekEnd}
                                         </td>
                                         <td className="py-3 pr-4">
@@ -377,7 +377,7 @@ export const SupervisorDashboard = () => {
                                                 {ev.compositeScore}
                                             </span>
                                         </td>
-                                        <td className="py-3 pr-4 text-slate-600">{ev.inspectionsCompleted}</td>
+                                        <td className="py-3 pr-4 text-slate-600 dark:text-slate-400">{ev.inspectionsCompleted}</td>
                                         <td className="py-3">{statusBadge(ev.status)}</td>
                                     </tr>
                                 ))}

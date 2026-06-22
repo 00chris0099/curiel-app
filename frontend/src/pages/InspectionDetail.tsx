@@ -204,8 +204,8 @@ export const InspectionDetail = () => {
                     <div className="mb-4 flex justify-center">
                         <CustomIcon name="database" size="lg" tone="mist" />
                     </div>
-                    <h3 className="text-lg font-semibold text-slate-900">No hay datos disponibles</h3>
-                    <p className="mt-2 text-slate-600">
+                    <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">No hay datos disponibles</h3>
+                    <p className="mt-2 text-slate-600 dark:text-slate-400">
                         {effectiveOnline
                             ? 'La inspección no existe o no tienes acceso.'
                             : 'No hay datos guardados offline para esta inspección. Abre esta inspección con internet al menos una vez.'}
@@ -232,7 +232,7 @@ export const InspectionDetail = () => {
                 <div className="flex items-start gap-4">
                     <button
                         onClick={() => navigate('/inspections')}
-                        className="rounded-[22px] border border-slate-200 bg-white p-2.5 transition-colors hover:bg-slate-50"
+                        className="rounded-[22px] border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 transition-colors hover:bg-slate-50"
                     >
                         <CustomIcon name="arrow-left" size="sm" tone="mist" />
                     </button>
@@ -246,14 +246,14 @@ export const InspectionDetail = () => {
                                 </span>
                             )}
                         </div>
-                        <h1 className="mt-2 font-display text-3xl text-slate-900">{inspection.projectName}</h1>
-                        <p className="mt-2 text-slate-600">{serviceLabel} · {inspection.clientName} · {locationLabel}</p>
-                        <div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-600">
-                            <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 ring-1 ring-slate-200">
+                        <h1 className="mt-2 font-display text-3xl text-slate-900 dark:text-slate-100">{inspection.projectName}</h1>
+                        <p className="mt-2 text-slate-600 dark:text-slate-400">{serviceLabel} · {inspection.clientName} · {locationLabel}</p>
+                        <div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-600 dark:text-slate-400">
+                            <span className="inline-flex items-center gap-2 rounded-full bg-white dark:bg-slate-800 px-3 py-1.5 ring-1 ring-slate-200 dark:ring-slate-700">
                                 <CustomIcon name="calendar" size="xs" tone="cream" />
                                 {new Date(inspection.scheduledDate).toLocaleString('es-ES')}
                             </span>
-                            <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 ring-1 ring-slate-200">
+                            <span className="inline-flex items-center gap-2 rounded-full bg-white dark:bg-slate-800 px-3 py-1.5 ring-1 ring-slate-200 dark:ring-slate-700">
                                 <CustomIcon name="map-pin" size="xs" tone="blue" />
                                 {locationLabel}
                             </span>
@@ -287,13 +287,13 @@ export const InspectionDetail = () => {
                     <div className="mb-5 flex items-center gap-3">
                         <CustomIcon name="clipboard-check" size="sm" tone="cream" />
                         <div>
-                            <h2 className="text-lg font-semibold text-slate-900">Información general</h2>
-                            <p className="text-sm text-slate-500">Estado, agenda e inspector responsable.</p>
+                            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Información general</h2>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">Estado, agenda e inspector responsable.</p>
                         </div>
                     </div>
                     <dl className="space-y-4">
-                        <div className="rounded-[22px] bg-[#fbfbfa] px-4 py-4 ring-1 ring-slate-200/70">
-                            <dt className="text-sm text-slate-500">Estado</dt>
+                        <div className="rounded-[22px] bg-[#fbfbfa] dark:bg-slate-800 px-4 py-4 ring-1 ring-slate-200/70 dark:ring-slate-700">
+                            <dt className="text-sm text-slate-500 dark:text-slate-400">Estado</dt>
                             <dd className="mt-2">
                                 <span className={`badge ${inspectionStatusBadgeClasses[inspection.status]}`}>
                                     <CustomIcon name={inspectionStatusIconMap[inspection.status]} size="xs" tone="white" />
@@ -301,13 +301,13 @@ export const InspectionDetail = () => {
                                 </span>
                             </dd>
                         </div>
-                        <div className="rounded-[22px] bg-[#fbfbfa] px-4 py-4 ring-1 ring-slate-200/70">
-                            <dt className="text-sm text-slate-500">Fecha programada</dt>
-                            <dd className="mt-2 font-semibold text-slate-900">{new Date(inspection.scheduledDate).toLocaleString('es-ES')}</dd>
+                        <div className="rounded-[22px] bg-[#fbfbfa] dark:bg-slate-800 px-4 py-4 ring-1 ring-slate-200/70 dark:ring-slate-700">
+                            <dt className="text-sm text-slate-500 dark:text-slate-400">Fecha programada</dt>
+                            <dd className="mt-2 font-semibold text-slate-900 dark:text-slate-100">{new Date(inspection.scheduledDate).toLocaleString('es-ES')}</dd>
                         </div>
-                        <div className="rounded-[22px] bg-[#fbfbfa] px-4 py-4 ring-1 ring-slate-200/70">
-                            <dt className="text-sm text-slate-500">Inspector</dt>
-                            <dd className="mt-2 font-semibold text-slate-900">{inspectorName}</dd>
+                        <div className="rounded-[22px] bg-[#fbfbfa] dark:bg-slate-800 px-4 py-4 ring-1 ring-slate-200/70 dark:ring-slate-700">
+                            <dt className="text-sm text-slate-500 dark:text-slate-400">Inspector</dt>
+                            <dd className="mt-2 font-semibold text-slate-900 dark:text-slate-100">{inspectorName}</dd>
                         </div>
                     </dl>
                 </div>
@@ -317,8 +317,8 @@ export const InspectionDetail = () => {
                         <div className="mb-5 flex items-center gap-3">
                             <CustomIcon name="settings" size="sm" tone="mist" />
                             <div>
-                                <h2 className="text-lg font-semibold text-slate-900">Cambiar estado</h2>
-                                <p className="text-sm text-slate-500">Acciones disponibles para esta inspección.</p>
+                                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Cambiar estado</h2>
+                                <p className="text-sm text-slate-500 dark:text-slate-400">Acciones disponibles para esta inspección.</p>
                             </div>
                         </div>
                         <div className="flex flex-wrap gap-3">
@@ -337,9 +337,9 @@ export const InspectionDetail = () => {
                 <div className="card">
                     <div className="mb-4 flex items-center gap-3">
                         <CustomIcon name="note-pencil" size="sm" tone="blue" />
-                        <h2 className="text-lg font-semibold text-slate-900">Notas de inspección</h2>
+                        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Notas de inspección</h2>
                     </div>
-                    <p className="whitespace-pre-wrap text-slate-700">{notes.plainNotes}</p>
+                    <p className="whitespace-pre-wrap text-slate-700 dark:text-slate-300">{notes.plainNotes}</p>
                 </div>
             )}
 
@@ -347,11 +347,11 @@ export const InspectionDetail = () => {
                 <div className="card">
                     <div className="mb-5 flex items-center gap-3">
                         <CustomIcon name="clock" size="sm" tone="cream" />
-                        <h2 className="text-lg font-semibold text-slate-900">Historial de estados</h2>
+                        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Historial de estados</h2>
                     </div>
                     <div className="space-y-4">
                         {statusHistory.map((entry, index) => (
-                            <div key={index} className="flex gap-4 border-b border-slate-200 pb-4 last:border-0">
+                            <div key={index} className="flex gap-4 border-b border-slate-200 dark:border-slate-700 pb-4 last:border-0">
                                 <CustomIcon name={inspectionStatusIconMap[entry.toStatus]} size="sm" tone="mist" />
                                 <div className="flex-1">
                                     <div className="flex flex-wrap items-center gap-2">
@@ -359,10 +359,10 @@ export const InspectionDetail = () => {
                                             <CustomIcon name={inspectionStatusIconMap[entry.toStatus]} size="xs" tone="white" />
                                             {inspectionStatusLabels[entry.toStatus]}
                                         </span>
-                                        <span className="text-sm text-slate-500">{new Date(entry.createdAt).toLocaleString('es-ES')}</span>
+                                        <span className="text-sm text-slate-500 dark:text-slate-400">{new Date(entry.createdAt).toLocaleString('es-ES')}</span>
                                     </div>
                                     {entry.reasonLabel && <p className="mt-1 text-sm text-slate-800">{entry.reasonLabel}</p>}
-                                    {entry.comment && <p className="mt-1 text-sm text-slate-600">{entry.comment}</p>}
+                                    {entry.comment && <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{entry.comment}</p>}
                                 </div>
                             </div>
                         ))}
@@ -375,12 +375,12 @@ export const InspectionDetail = () => {
                     <div className="card w-full max-w-md">
                         <div className="mb-5 flex items-center gap-3">
                             <CustomIcon name={inspectionStatusIconMap[statusAction.status] ?? 'clipboard-check'} size="sm" tone="cream" />
-                            <h3 className="text-lg font-semibold text-slate-900">{statusAction.label}</h3>
+                            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{statusAction.label}</h3>
                         </div>
                         <div className="space-y-4">
                             {statusAction.requiresReason && (
                                 <div>
-                                    <label className="mb-2 block text-sm font-medium text-slate-700">Motivo</label>
+                                    <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Motivo</label>
                                     <select
                                         value={statusModal.reasonCode}
                                         onChange={(e) => setStatusModal((prev) => ({ ...prev, reasonCode: e.target.value }))}
@@ -394,7 +394,7 @@ export const InspectionDetail = () => {
                                 </div>
                             )}
                             <div>
-                                <label className="mb-2 block text-sm font-medium text-slate-700">Comentario</label>
+                                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Comentario</label>
                                 <textarea
                                     value={statusModal.comment}
                                     onChange={(e) => setStatusModal((prev) => ({ ...prev, comment: e.target.value }))}
@@ -404,7 +404,7 @@ export const InspectionDetail = () => {
                             </div>
                             {statusAction.requiresSchedule && (
                                 <div>
-                                    <label className="mb-2 block text-sm font-medium text-slate-700">Nueva fecha</label>
+                                    <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Nueva fecha</label>
                                     <input
                                         type="datetime-local"
                                         value={statusModal.scheduledDate}
@@ -414,7 +414,7 @@ export const InspectionDetail = () => {
                                 </div>
                             )}
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-                                <label className="flex items-center gap-2 text-sm text-slate-700">
+                                <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
                                     <input
                                         type="checkbox"
                                         checked={statusModal.notifyClient}
@@ -422,7 +422,7 @@ export const InspectionDetail = () => {
                                     />
                                     Notificar cliente
                                 </label>
-                                <label className="flex items-center gap-2 text-sm text-slate-700">
+                                <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
                                     <input
                                         type="checkbox"
                                         checked={statusModal.notifyInspector}

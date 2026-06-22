@@ -61,8 +61,8 @@ export const Notifications = () => {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <p className="section-eyebrow">Centro de avisos</p>
-                    <h1 className="mt-2 font-display text-2xl text-slate-900 sm:text-3xl">Notificaciones</h1>
-                    <p className="mt-2 text-sm text-slate-600 sm:text-base">Revisa asignaciones, cambios de estado y avisos del sistema.</p>
+                    <h1 className="mt-2 font-display text-2xl text-slate-900 dark:text-slate-100 sm:text-3xl">Notificaciones</h1>
+                    <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 sm:text-base">Revisa asignaciones, cambios de estado y avisos del sistema.</p>
                 </div>
                 <button type="button" className="btn btn-secondary flex items-center gap-3 self-start" onClick={handleMarkAll}>
                     <CustomIcon name="check-circle" size="xs" tone="sage" />
@@ -72,7 +72,7 @@ export const Notifications = () => {
 
             <div className="card space-y-3 overflow-hidden">
                 {notifications.length === 0 ? (
-                    <div className="py-12 text-center text-slate-500">
+                    <div className="py-12 text-center text-slate-500 dark:text-slate-400">
                         <div className="mb-4 flex justify-center">
                             <CustomIcon name="bell" size="lg" tone="cream" />
                         </div>
@@ -83,14 +83,14 @@ export const Notifications = () => {
                         key={notification.id}
                         type="button"
                         onClick={() => handleMarkAsRead(notification)}
-                        className={`w-full rounded-2xl border px-4 py-4 text-left transition-colors hover:bg-white sm:rounded-[24px] sm:px-5 sm:py-5 ${notification.readAt ? 'border-slate-200 bg-[#fbfbfa]' : 'border-[#eadfc8] bg-[#f5efe1]/70'}`}
+                        className={`w-full rounded-2xl border px-4 py-4 text-left transition-colors hover:bg-white dark:border-slate-700 dark:hover:bg-slate-800 sm:rounded-[24px] sm:px-5 sm:py-5 ${notification.readAt ? 'border-slate-200 bg-[#fbfbfa] dark:bg-slate-800/50' : 'border-[#eadfc8] bg-[#f5efe1]/70 dark:border-amber-800/30 dark:bg-amber-900/20'}`}
                     >
                         <div className="flex gap-3">
                             <CustomIcon name={notification.readAt ? 'clipboard-check' : 'bell'} size="sm" tone={notification.readAt ? 'white' : 'cream'} />
                             <div className="min-w-0 flex-1">
-                                <p className="font-semibold text-slate-900">{notification.title}</p>
-                                <p className="mt-1 text-sm text-slate-600">{notification.message}</p>
-                                <p className="mt-2 text-xs text-slate-500">{new Date(notification.createdAt).toLocaleString('es-PE')}</p>
+                                <p className="font-semibold text-slate-900 dark:text-slate-100">{notification.title}</p>
+                                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{notification.message}</p>
+                                <p className="mt-2 text-xs text-slate-500 dark:text-slate-500">{new Date(notification.createdAt).toLocaleString('es-PE')}</p>
                             </div>
                             {!notification.readAt && <span className="mt-1 inline-flex h-2.5 w-2.5 flex-shrink-0 rounded-full bg-[#17324a]" />}
                         </div>

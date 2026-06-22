@@ -26,7 +26,7 @@ const ConnectionStatus = ({ pendingCount = 0, onSyncNow, isSyncing = false, show
             return {
                 label: 'Sin señal detectada',
                 compactLabel: 'Sin señal',
-                color: 'bg-red-50 text-red-800 border-red-100',
+                color: 'bg-red-50 text-red-800 border-red-100 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800/50',
                 icon: 'wifi-off',
                 tone: 'rose',
             };
@@ -35,7 +35,7 @@ const ConnectionStatus = ({ pendingCount = 0, onSyncNow, isSyncing = false, show
             return {
                 label: 'Trabajando sin conexión',
                 compactLabel: 'Offline',
-                color: 'bg-amber-50 text-amber-800 border-amber-100',
+                color: 'bg-amber-50 text-amber-800 border-amber-100 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800/50',
                 icon: 'warning-circle',
                 tone: 'amber',
             };
@@ -43,7 +43,7 @@ const ConnectionStatus = ({ pendingCount = 0, onSyncNow, isSyncing = false, show
         return {
             label: 'Online activo',
             compactLabel: 'Online',
-            color: 'bg-emerald-50 text-emerald-800 border-emerald-100',
+            color: 'bg-emerald-50 text-emerald-800 border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800/50',
             icon: 'wifi',
             tone: 'sage',
         };
@@ -79,7 +79,7 @@ const ConnectionStatus = ({ pendingCount = 0, onSyncNow, isSyncing = false, show
                 </div>
 
                 <div className={`flex items-center gap-2 ${isNavbarVariant ? 'ml-auto max-w-full flex-shrink-0' : 'flex-col sm:flex-row'}`}>
-                    <div className="flex flex-shrink-0 items-center gap-2 rounded-full bg-white/80 px-2 py-1 ring-1 ring-black/5 sm:gap-2.5">
+                    <div className="flex flex-shrink-0 items-center gap-2 rounded-full bg-white/80 px-2 py-1 ring-1 ring-black/5 dark:bg-slate-800/80 dark:ring-white/10 sm:gap-2.5">
                         <span className="hidden text-xs font-semibold sm:inline">ON</span>
                         <button
                             type="button"
@@ -136,7 +136,7 @@ const ConnectionStatus = ({ pendingCount = 0, onSyncNow, isSyncing = false, show
                     {!effectiveOnline && isOnline && !manualOnlineEnabled && (
                         <span className={`inline-flex items-center gap-2 opacity-80 ${isNavbarVariant ? 'hidden text-xs sm:inline-flex' : 'hidden text-sm sm:inline-flex'}`}>
                             <CustomIcon name="database" size="xs" tone="mist" />
-                            Usando datos offline
+                            <span className="dark:text-slate-300">Usando datos offline</span>
                         </span>
                     )}
                 </div>

@@ -17,17 +17,17 @@ export const ResetPassword = () => {
 
     if (!token) {
         return (
-            <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.95),_transparent_35%),linear-gradient(180deg,_#ffffff_0%,_#f5efe1_45%,_#eef3f7_100%)] px-4">
+            <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.95),_transparent_35%),linear-gradient(180deg,_#ffffff_0%,_#f5efe1_45%,_#eef3f7_100%)] px-4 dark:bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.95),_transparent_35%),linear-gradient(180deg,_#0f172a_0%,_#1e293b_45%,_#0f172a_100%)]">
                 <div className="mx-auto flex min-h-screen max-w-md items-center justify-center py-10">
                     <div className="card w-full space-y-6 text-center">
                         <div className="flex justify-center">
-                            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
+                            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
                                 <CustomIcon name="warning-circle" size="lg" tone="rose" />
                             </div>
                         </div>
                         <div>
-                            <h1 className="text-2xl font-bold text-slate-900">Token no valido</h1>
-                            <p className="mt-3 text-slate-600">
+                            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Token no valido</h1>
+                            <p className="mt-3 text-slate-600 dark:text-slate-400">
                                 El enlace de restablecimiento no es valido o ha expirado.
                             </p>
                         </div>
@@ -72,17 +72,17 @@ export const ResetPassword = () => {
 
     if (success) {
         return (
-            <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.95),_transparent_35%),linear-gradient(180deg,_#ffffff_0%,_#f5efe1_45%,_#eef3f7_100%)] px-4">
+            <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.95),_transparent_35%),linear-gradient(180deg,_#ffffff_0%,_#f5efe1_45%,_#eef3f7_100%)] px-4 dark:bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.95),_transparent_35%),linear-gradient(180deg,_#0f172a_0%,_#1e293b_45%,_#0f172a_100%)]">
                 <div className="mx-auto flex min-h-screen max-w-md items-center justify-center py-10">
                     <div className="card w-full space-y-6 text-center">
                         <div className="flex justify-center">
-                            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
+                            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30">
                                 <CustomIcon name="seal-check" size="lg" tone="sage" />
                             </div>
                         </div>
                         <div>
-                            <h1 className="text-2xl font-bold text-slate-900">Contrasena restablecida</h1>
-                            <p className="mt-3 text-slate-600">
+                            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Contrasena restablecida</h1>
+                            <p className="mt-3 text-slate-600 dark:text-slate-400">
                                 Tu contrasena ha sido actualizada. Ya puedes iniciar sesion con tu nueva contrasena.
                             </p>
                         </div>
@@ -99,22 +99,22 @@ export const ResetPassword = () => {
     }
 
     return (
-        <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.95),_transparent_35%),linear-gradient(180deg,_#ffffff_0%,_#f5efe1_45%,_#eef3f7_100%)] px-4">
+            <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.95),_transparent_35%),linear-gradient(180deg,_#ffffff_0%,_#f5efe1_45%,_#eef3f7_100%)] px-4 dark:bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.95),_transparent_35%),linear-gradient(180deg,_#0f172a_0%,_#1e293b_45%,_#0f172a_100%)]">
             <div className="mx-auto flex min-h-screen max-w-md items-center justify-center py-10">
                 <div className="card w-full space-y-6">
                     <div className="text-center">
                         <div className="mb-4 flex justify-center">
                             <CustomIcon name="warning-circle" size="lg" tone="amber" />
                         </div>
-                        <h1 className="text-2xl font-bold text-slate-900">Nueva contrasena</h1>
-                        <p className="mt-2 text-slate-600">
+                        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Nueva contrasena</h1>
+                        <p className="mt-2 text-slate-600 dark:text-slate-400">
                             Ingresa tu nueva contrasena.
                         </p>
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
-                            <label className="mb-2 block text-sm font-medium text-slate-700">Nueva contrasena</label>
+                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Nueva contrasena</label>
                             <input
                                 type="password"
                                 className="input"
@@ -126,7 +126,7 @@ export const ResetPassword = () => {
                         </div>
 
                         <div>
-                            <label className="mb-2 block text-sm font-medium text-slate-700">Confirmar contrasena</label>
+                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Confirmar contrasena</label>
                             <input
                                 type="password"
                                 className="input"
