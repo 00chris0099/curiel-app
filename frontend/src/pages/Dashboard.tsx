@@ -85,7 +85,7 @@ export const Dashboard = () => {
                 <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
                     <div className="max-w-2xl">
                         <p className="section-eyebrow">Panel de control</p>
-                        <h1 className="mt-3 font-display text-3xl text-slate-900 sm:text-4xl">Bienvenido, {user?.firstName}</h1>
+                        <h1 className="mt-3 font-display text-3xl text-slate-900 sm:text-4xl">Bienvenido, {user?.fullName}</h1>
                         <p className="mt-3 text-slate-600">
                             Supervisa operaciones, estado de inspecciones y actividad del equipo desde una vista clara y consistente.
                         </p>

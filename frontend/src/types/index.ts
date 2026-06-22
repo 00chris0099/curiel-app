@@ -10,9 +10,9 @@ export type UserRole = 'admin' | 'supervisor' | 'arquitecto' | 'inspector';
 export interface User {
     id: string;
     email: string;
-    firstName: string;
-    lastName: string;
-    fullName?: string;
+    fullName: string;
+    firstName?: string;
+    lastName?: string;
     name?: string;
     role: UserRole;
     roles?: UserRole[];

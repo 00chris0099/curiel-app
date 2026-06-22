@@ -36,7 +36,7 @@ export const useAuthStore = create<AuthState>((set) => ({
                 isAuthenticated: true,
                 isLoading: false,
             });
-            toast.success(`¡Bienvenido, ${response.data.user.firstName}!`);
+            toast.success(`¡Bienvenido, ${response.data.user.fullName}!`);
             return true;
         } catch (error: unknown) {
             set({ isLoading: false });

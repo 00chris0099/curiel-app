@@ -44,7 +44,7 @@ export const Profile = () => {
     const profileRows = [
         {
             title: 'Nombre completo',
-            value: `${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim(),
+            value: user?.fullName || '',
             icon: 'user-gear' as const,
             tone: 'cream' as const,
         },
@@ -83,11 +83,11 @@ export const Profile = () => {
             <section className="card overflow-hidden">
                 <div className="flex flex-col gap-6 md:flex-row md:items-center">
                     <div className="flex h-28 w-28 items-center justify-center rounded-[32px] bg-[#17324a] text-3xl font-bold text-white shadow-[0_20px_44px_rgba(23,50,74,0.2)]">
-                        {user?.firstName?.[0]}{user?.lastName?.[0]}
+                        {user?.fullName?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                     </div>
                     <div className="flex-1">
                         <p className="section-eyebrow">Perfil profesional</p>
-                        <h1 className="mt-2 font-display text-3xl text-slate-900">{user?.firstName} {user?.lastName}</h1>
+                        <h1 className="mt-2 font-display text-3xl text-slate-900">{user?.fullName}</h1>
                         <p className="mt-2 text-slate-600">{user?.email}</p>
                         <div className="mt-4 flex flex-wrap items-center gap-3">
                             <span className={`badge ${user?.role ? roleColors[user.role] : ''}`}>

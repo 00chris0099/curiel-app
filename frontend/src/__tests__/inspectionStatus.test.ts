@@ -14,6 +14,7 @@ import type { User, Inspection } from '../types';
 const makeUser = (overrides: Partial<User> = {}): User => ({
     id: 'user-1',
     email: 'test@test.com',
+    fullName: 'Test User',
     firstName: 'Test',
     lastName: 'User',
     role: 'inspector',

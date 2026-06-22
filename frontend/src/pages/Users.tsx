@@ -102,8 +102,8 @@ export const Users = () => {
         setEditingUser(selectedUser);
         setShowCreateForm(false);
         setForm({
-            firstName: selectedUser.firstName || '',
-            lastName: selectedUser.lastName || '',
+            firstName: selectedUser.fullName?.split(' ')[0] || '',
+            lastName: selectedUser.fullName?.split(' ').slice(1).join(' ') || '',
             email: selectedUser.email,
             phone: selectedUser.phone || '',
             role: selectedUser.role,
@@ -196,7 +196,7 @@ export const Users = () => {
         const nextStatus = !selectedUser.isActive;
         const actionLabel = nextStatus ? 'activar' : 'desactivar';
 
-        if (!window.confirm(`¿Seguro que deseas ${actionLabel} a ${selectedUser.firstName} ${selectedUser.lastName}?`)) {
+        if (!window.confirm(`¿Seguro que deseas ${actionLabel} a ${selectedUser.fullName}?`)) {
             return;
         }
 
@@ -215,7 +215,7 @@ export const Users = () => {
     };
 
     const handleDelete = async (selectedUser: User) => {
-        if (!window.confirm(`¿Seguro que deseas deshabilitar a ${selectedUser.firstName} ${selectedUser.lastName}?`)) {
+        if (!window.confirm(`¿Seguro que deseas deshabilitar a ${selectedUser.fullName}?`)) {
             return;
         }
 
@@ -234,7 +234,7 @@ export const Users = () => {
     };
 
     const handleTransferMaster = async (selectedUser: User) => {
-        if (!window.confirm(`¿Transferir el master admin a ${selectedUser.firstName} ${selectedUser.lastName}?`)) {
+        if (!window.confirm(`¿Transferir el master admin a ${selectedUser.fullName}?`)) {
             return;
         }
 
@@ -432,11 +432,11 @@ export const Users = () => {
                                                 <td className="px-6 py-4 align-top">
                                                     <div className="flex items-center gap-3">
                                                         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-100 font-semibold text-primary-700 dark:bg-primary-900/30 dark:text-primary-300">
-                                                            {listedUser.firstName?.[0] ?? '?'}{listedUser.lastName?.[0] ?? ''}
+                                                            {listedUser.fullName?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() ?? '?'}
                                                         </div>
                                                         <div className="min-w-0">
                                                             <div className="flex flex-wrap items-center gap-2">
-                                                                <p className="font-medium">{listedUser.firstName} {listedUser.lastName}</p>
+                                                                <p className="font-medium">{listedUser.fullName}</p>
                                                                 {listedUser.isMasterAdmin && (
                                                                     <span className="badge badge-warning flex items-center gap-2">
                                                                         <CustomIcon name="seal-check" size="xs" tone="white" />
@@ -479,7 +479,7 @@ export const Users = () => {
                                                             type="button"
                                                             onClick={() => handleEdit(listedUser)}
                                                             className="rounded-lg border border-gray-300 p-2 text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
-                                                            aria-label={`Editar ${listedUser.firstName} ${listedUser.lastName}`}
+                                                            aria-label={`Editar ${listedUser.fullName}`}
                                                         >
                                                             <CustomIcon name="pencil" size="xs" tone="mist" />
                                                         </button>
@@ -489,7 +489,7 @@ export const Users = () => {
                                                             onClick={() => handleToggleStatus(listedUser)}
                                                             disabled={Boolean(listedUser.isMasterAdmin && listedUser.isActive)}
                                                             className="rounded-lg border border-gray-300 p-2 text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
-                                                            aria-label={listedUser.isActive ? `Desactivar ${listedUser.firstName} ${listedUser.lastName}` : `Activar ${listedUser.firstName} ${listedUser.lastName}`}
+                                                            aria-label={listedUser.isActive ? `Desactivar ${listedUser.fullName}` : `Activar ${listedUser.fullName}`}
                                                         >
                                                             <CustomIcon name={listedUser.isActive ? 'x-circle' : 'check-circle'} size="xs" tone={listedUser.isActive ? 'rose' : 'sage'} />
                                                         </button>
@@ -499,7 +499,7 @@ export const Users = () => {
                                                             onClick={() => handleDelete(listedUser)}
                                                             disabled={Boolean(listedUser.isMasterAdmin)}
                                                             className="rounded-lg border border-red-300 p-2 text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-900/20"
-                                                            aria-label={`Eliminar ${listedUser.firstName} ${listedUser.lastName}`}
+                                                            aria-label={`Eliminar ${listedUser.fullName}`}
                                                         >
                                                             <CustomIcon name="trash" size="xs" tone="rose" />
                                                         </button>

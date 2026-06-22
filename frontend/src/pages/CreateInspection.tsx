@@ -1,11 +1,14 @@
-import { useState, useEffect, useCallback, type ChangeEvent, type FormEvent } from 'react';
+import { useState, useEffect, useCallback, useRef, type ChangeEvent, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { getApiErrorMessage } from '../api/axios';
 import { CustomIcon } from '../components/CustomIcon';
 import inspectionService from '../services/inspection.service';
 import userService from '../services/user.service';
+import clientService from '../services/client.service';
 import type {
+    Client,
+    ClientDocumentType,
     ContactChannel,
     CreateInspectionDto,
     DepartmentInspectionMetadata,
@@ -132,6 +135,24 @@ export const CreateInspection = () => {
     const [inspectors, setInspectors] = useState<User[]>([]);
     const [formData, setFormData] = useState<DepartmentInspectionFormState>(initialFormState);
 
+    const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+    const [clientSearchQuery, setClientSearchQuery] = useState('');
+    const [clientSearchResults, setClientSearchResults] = useState<Client[]>([]);
+    const [isSearchingClients, setIsSearchingClients] = useState(false);
+    const [showClientDropdown, setShowClientDropdown] = useState(false);
+    const [showQuickCreate, setShowQuickCreate] = useState(false);
+    const clientSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const [quickCreateForm, setQuickCreateForm] = useState({
+        documentType: 'dni' as ClientDocumentType,
+        documentNumber: '',
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+    });
+    const [isCreatingClient, setIsCreatingClient] = useState(false);
+
     const loadInspectors = useCallback(async () => {
         try {
             const data = await userService.getInspectors();
@@ -144,6 +165,91 @@ export const CreateInspection = () => {
     useEffect(() => {
         loadInspectors();
     }, [loadInspectors]);
+
+    const searchClients = useCallback(async (query: string) => {
+        if (query.trim().length < 2) {
+            setClientSearchResults([]);
+            setShowClientDropdown(false);
+            return;
+        }
+        setIsSearchingClients(true);
+        try {
+            const response = await clientService.search(query);
+            setClientSearchResults(response.data?.clients || []);
+            setShowClientDropdown(true);
+        } catch {
+            setClientSearchResults([]);
+        } finally {
+            setIsSearchingClients(false);
+        }
+    }, []);
+
+    const handleClientSearchChange = (event: ChangeEvent<HTMLInputElement>) => {
+        const value = event.target.value;
+        setClientSearchQuery(value);
+        setSelectedClientId(null);
+        if (clientSearchTimerRef.current) clearTimeout(clientSearchTimerRef.current);
+        clientSearchTimerRef.current = setTimeout(() => searchClients(value), 300);
+    };
+
+    const handleSelectClient = (client: Client) => {
+        const displayName = client.razonSocial || `${client.firstName || ''} ${client.lastName || ''}`.trim();
+        setSelectedClientId(client.id);
+        setClientSearchQuery(displayName);
+        setShowClientDropdown(false);
+        setFormData((current) => ({
+            ...current,
+            clientFullName: displayName,
+            clientPhone: client.phone || '',
+            clientEmail: client.email || '',
+        }));
+    };
+
+    const handleClearClient = () => {
+        setSelectedClientId(null);
+        setClientSearchQuery('');
+        setClientSearchResults([]);
+        setShowClientDropdown(false);
+        setFormData((current) => ({
+            ...current,
+            clientFullName: '',
+            clientPhone: '',
+            clientEmail: '',
+        }));
+    };
+
+    const handleQuickCreateChange = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const { name, value } = event.target;
+        setQuickCreateForm((current) => ({ ...current, [name]: value }));
+    };
+
+    const handleQuickCreateSubmit = async () => {
+        const { documentType, documentNumber, firstName, lastName, email, phone } = quickCreateForm;
+        if (!documentNumber.trim() || !firstName.trim() || !lastName.trim() || !email.trim()) {
+            toast.error('Documento, nombre, apellido y correo son obligatorios');
+            return;
+        }
+        setIsCreatingClient(true);
+        try {
+            const response = await clientService.create({
+                documentType,
+                documentNumber: documentNumber.trim(),
+                firstName: firstName.trim(),
+                lastName: lastName.trim(),
+                email: email.trim(),
+                phone: phone.trim() || undefined,
+            });
+            const newClient = response.data?.client;
+            if (newClient) handleSelectClient(newClient);
+            setShowQuickCreate(false);
+            setQuickCreateForm({ documentType: 'dni', documentNumber: '', firstName: '', lastName: '', email: '', phone: '' });
+            toast.success('Cliente creado exitosamente');
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, 'Error al crear cliente'));
+        } finally {
+            setIsCreatingClient(false);
+        }
+    };
 
     const handleChange = (
         event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -228,6 +334,7 @@ export const CreateInspection = () => {
                 scheduledDate: `${formData.scheduledDate}T${formData.scheduledTime}`,
                 inspectorId: formData.inspectorId,
                 notes: buildDepartmentInspectionNotes(metadata),
+                ...(selectedClientId ? { clientId: selectedClientId } : {}),
             };
 
             await inspectionService.createInspection(payload);
@@ -335,11 +442,170 @@ export const CreateInspection = () => {
                                     <h2 className="text-lg font-bold">2. Datos del cliente</h2>
                                 </div>
                                 <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                                    Completa la información de contacto con foco en atención rápida por canales digitales.
+                                    Busca un cliente existente o crea uno nuevo rápidamente.
                                 </p>
                             </div>
 
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                <div className="md:col-span-2 relative">
+                                    <label htmlFor="clientSearch" className="mb-2 block text-sm font-medium">
+                                        Buscar cliente <span className="text-red-500">*</span>
+                                    </label>
+                                    <div className="flex gap-2">
+                                        <div className="relative flex-1">
+                                            <input
+                                                id="clientSearch"
+                                                type="text"
+                                                value={clientSearchQuery}
+                                                onChange={handleClientSearchChange}
+                                                onFocus={() => clientSearchResults.length > 0 && setShowClientDropdown(true)}
+                                                onBlur={() => setTimeout(() => setShowClientDropdown(false), 200)}
+                                                className="input pr-10"
+                                                placeholder="Buscar por nombre, documento o correo..."
+                                            />
+                                            {isSearchingClients && (
+                                                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-primary-600" />
+                                                </div>
+                                            )}
+                                            {clientSearchQuery && !isSearchingClients && (
+                                                <button
+                                                    type="button"
+                                                    onClick={handleClearClient}
+                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                                >
+                                                    ✕
+                                                </button>
+                                            )}
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowQuickCreate(!showQuickCreate)}
+                                            className="shrink-0 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                                        >
+                                            + Nuevo
+                                        </button>
+                                    </div>
+                                    {showClientDropdown && clientSearchResults.length > 0 && (
+                                        <div className="absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                                            {clientSearchResults.map((client) => {
+                                                const displayName = client.razonSocial || `${client.firstName || ''} ${client.lastName || ''}`.trim();
+                                                return (
+                                                    <button
+                                                        key={client.id}
+                                                        type="button"
+                                                        onMouseDown={() => handleSelectClient(client)}
+                                                        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
+                                                    >
+                                                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs font-semibold text-primary-700 dark:bg-primary-900/30 dark:text-primary-300">
+                                                            {displayName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{displayName}</p>
+                                                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                                {client.documentType.toUpperCase()}: {client.documentNumber}
+                                                                {client.email ? ` · ${client.email}` : ''}
+                                                            </p>
+                                                        </div>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                    {selectedClientId && (
+                                        <p className="mt-1 text-xs text-green-600 dark:text-green-400">✓ Cliente seleccionado</p>
+                                    )}
+                                </div>
+
+                                {showQuickCreate && (
+                                    <div className="md:col-span-2 rounded-xl border border-dashed border-gray-300 bg-gray-50 p-4 dark:border-gray-600 dark:bg-gray-800/50">
+                                        <p className="mb-3 text-sm font-medium text-gray-700 dark:text-gray-300">Crear cliente rápido</p>
+                                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                            <div>
+                                                <label className="mb-1 block text-xs font-medium">Tipo de documento</label>
+                                                <select
+                                                    name="documentType"
+                                                    value={quickCreateForm.documentType}
+                                                    onChange={handleQuickCreateChange}
+                                                    className="input text-sm"
+                                                >
+                                                    <option value="dni">DNI</option>
+                                                    <option value="ruc">RUC</option>
+                                                    <option value="ce">CE</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="mb-1 block text-xs font-medium">Nº documento</label>
+                                                <input
+                                                    name="documentNumber"
+                                                    value={quickCreateForm.documentNumber}
+                                                    onChange={handleQuickCreateChange}
+                                                    className="input text-sm"
+                                                    placeholder="Ej: 12345678"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="mb-1 block text-xs font-medium">Nombre</label>
+                                                <input
+                                                    name="firstName"
+                                                    value={quickCreateForm.firstName}
+                                                    onChange={handleQuickCreateChange}
+                                                    className="input text-sm"
+                                                    placeholder="Nombre"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="mb-1 block text-xs font-medium">Apellido</label>
+                                                <input
+                                                    name="lastName"
+                                                    value={quickCreateForm.lastName}
+                                                    onChange={handleQuickCreateChange}
+                                                    className="input text-sm"
+                                                    placeholder="Apellido"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="mb-1 block text-xs font-medium">Correo</label>
+                                                <input
+                                                    name="email"
+                                                    type="email"
+                                                    value={quickCreateForm.email}
+                                                    onChange={handleQuickCreateChange}
+                                                    className="input text-sm"
+                                                    placeholder="correo@ejemplo.com"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="mb-1 block text-xs font-medium">Teléfono</label>
+                                                <input
+                                                    name="phone"
+                                                    value={quickCreateForm.phone}
+                                                    onChange={handleQuickCreateChange}
+                                                    className="input text-sm"
+                                                    placeholder="Opcional"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="mt-3 flex gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={handleQuickCreateSubmit}
+                                                disabled={isCreatingClient}
+                                                className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-700 disabled:opacity-50"
+                                            >
+                                                {isCreatingClient ? 'Creando...' : 'Crear y seleccionar'}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowQuickCreate(false)}
+                                                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300"
+                                            >
+                                                Cancelar
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="md:col-span-2">
                                     <label htmlFor="clientFullName" className="mb-2 block text-sm font-medium">
                                         Nombre completo <span className="text-red-500">*</span>
@@ -351,7 +617,8 @@ export const CreateInspection = () => {
                                         required
                                         value={formData.clientFullName}
                                         onChange={handleChange}
-                                        className="input"
+                                        readOnly={!!selectedClientId}
+                                        className={`input ${selectedClientId ? 'bg-gray-50 dark:bg-gray-800' : ''}`}
                                         placeholder="Ej: Andrea Salazar Paredes"
                                     />
                                 </div>
@@ -367,7 +634,8 @@ export const CreateInspection = () => {
                                         required
                                         value={formData.clientPhone}
                                         onChange={handleChange}
-                                        className="input"
+                                        readOnly={!!selectedClientId}
+                                        className={`input ${selectedClientId ? 'bg-gray-50 dark:bg-gray-800' : ''}`}
                                         placeholder="Ej: 987 654 321"
                                     />
                                 </div>
@@ -382,7 +650,8 @@ export const CreateInspection = () => {
                                         type="email"
                                         value={formData.clientEmail}
                                         onChange={handleChange}
-                                        className="input"
+                                        readOnly={!!selectedClientId}
+                                        className={`input ${selectedClientId ? 'bg-gray-50 dark:bg-gray-800' : ''}`}
                                         placeholder="cliente@correo.com"
                                     />
                                 </div>
@@ -730,7 +999,7 @@ export const CreateInspection = () => {
                                         <option value="">Selecciona un inspector</option>
                                         {inspectors.map((inspector) => (
                                             <option key={inspector.id} value={inspector.id}>
-                                                {inspector.firstName} {inspector.lastName} ({inspector.email})
+                                                {inspector.fullName} ({inspector.email})
                                             </option>
                                         ))}
                                     </select>
