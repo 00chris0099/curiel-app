@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
+import api from '../api/axios';
 
 /**
  * Prefetch datos criticos basado en la ruta actual
@@ -13,7 +14,7 @@ export const usePrefetchCriticalData = () => {
     useEffect(() => {
         if (!user) return;
 
-        const prefetchEndpoints = [];
+        const prefetchEndpoints: string[] = [];
 
         // Prefetch dashboard data si esta en login o home
         if (location.pathname === '/login' || location.pathname === '/') {
@@ -25,16 +26,13 @@ export const usePrefetchCriticalData = () => {
             prefetchEndpoints.push('/clients?limit=50');
         }
 
-        // Ejecutar prefetch en background
+        // Ejecutar prefetch en background usando la instancia axios con auth
         if (prefetchEndpoints.length > 0) {
             const controller = new AbortController();
 
             prefetchEndpoints.forEach(endpoint => {
-                fetch(`${import.meta.env.VITE_API_URL || ''}${endpoint}`, {
+                api.get(endpoint, {
                     signal: controller.signal,
-                    headers: {
-                        'Accept': 'application/json'
-                    }
                 }).catch(() => {
                     // Ignorar errores de prefetch
                 });

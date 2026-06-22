@@ -1,15 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View, Text, ScrollView, Switch, TouchableOpacity, StyleSheet, Alert
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
 import { useOffline } from '../context/OfflineContext';
+
+const SETTINGS_KEYS = {
+    AUTO_SYNC: '@curiel:settings:auto_sync',
+    AUTO_SAVE: '@curiel:settings:auto_save',
+};
 
 const SettingsScreen = ({ navigation }) => {
     const { user, logout } = useAuth();
     const { isOnline, pendingCount } = useOffline();
     const [autoSync, setAutoSync] = useState(true);
     const [autoSave, setAutoSave] = useState(true);
+
+    useEffect(() => {
+        loadSettings();
+    }, []);
+
+    const loadSettings = async () => {
+        try {
+            const syncVal = await AsyncStorage.getItem(SETTINGS_KEYS.AUTO_SYNC);
+            const saveVal = await AsyncStorage.getItem(SETTINGS_KEYS.AUTO_SAVE);
+            if (syncVal !== null) setAutoSync(syncVal === 'true');
+            if (saveVal !== null) setAutoSave(saveVal === 'true');
+        } catch {}
+    };
+
+    const toggleAutoSync = async (value) => {
+        setAutoSync(value);
+        try { await AsyncStorage.setItem(SETTINGS_KEYS.AUTO_SYNC, String(value)); } catch {}
+    };
+
+    const toggleAutoSave = async (value) => {
+        setAutoSave(value);
+        try { await AsyncStorage.setItem(SETTINGS_KEYS.AUTO_SAVE, String(value)); } catch {}
+    };
 
     const handleLogout = () => {
         Alert.alert(
@@ -68,7 +97,7 @@ const SettingsScreen = ({ navigation }) => {
                     <Text style={styles.switchLabel}>Sincronizacion automatica</Text>
                     <Switch
                         value={autoSync}
-                        onValueChange={setAutoSync}
+                        onValueChange={toggleAutoSync}
                         trackColor={{ false: '#ccc', true: '#1a237e' }}
                     />
                 </View>
@@ -76,7 +105,7 @@ const SettingsScreen = ({ navigation }) => {
                     <Text style={styles.switchLabel}>Auto-guardado</Text>
                     <Switch
                         value={autoSave}
-                        onValueChange={setAutoSave}
+                        onValueChange={toggleAutoSave}
                         trackColor={{ false: '#ccc', true: '#1a237e' }}
                     />
                 </View>

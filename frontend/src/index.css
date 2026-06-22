@@ -44,9 +44,9 @@
 
   .dark body {
     background:
-      radial-gradient(circle at top left, rgba(255, 255, 255, 0.96), transparent 36%),
-      linear-gradient(180deg, #ffffff 0%, var(--surface-app) 52%, #eef3f7 100%);
-    color: var(--ink-main);
+      radial-gradient(circle at top left, rgba(15, 23, 42, 0.96), transparent 36%),
+      linear-gradient(180deg, #0f172a 0%, #1e293b 52%, #0f172a 100%);
+    color: #e2e8f0;
   }
 
   h1,

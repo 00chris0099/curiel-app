@@ -275,16 +275,16 @@ Antes de empezar a codear nuevas features:
 - [ ] Login funcional ✅
 - [ ] Dashboard con stats ✅
 - [ ] Lista de inspecciones ✅
-- [ ] Crear inspección
-- [ ] Ver detalle de inspección
-- [ ] Realizar inspección (checklist)
-- [ ] Tomar fotos
-- [ ] Firmar digitalmente
-- [ ] Generar PDF
-- [ ] Enviar email automático
-- [ ] Audit logs completos ✅
+- [x] Crear inspección
+- [x] Ver detalle de inspección
+- [x] Realizar inspección (checklist)
+- [x] Tomar fotos
+- [x] Firmar digitalmente
+- [x] Generar PDF
+- [x] Enviar email automático
+- [x] Audit logs completos ✅
 
-**Progreso actual:** 60% ✅
+**Progreso actual:** Fases 0-10 completadas. Pendiente Fase 11 (docs + deploy).
 
 ---
 

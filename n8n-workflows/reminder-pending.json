@@ -35,7 +35,7 @@
         "fromEmail": "={{$env.SMTP_FROM_EMAIL || 'noreply@curiel.com'}}",
         "toEmail": "={{$env.ADMIN_EMAIL || 'admin@curiel.com'}}",
         "subject": "[CURIEL] Recordatorio: Inspecciones pendientes",
-        "html": "<h2>Inspecciones pendientes</h2><p>Hay inspecciones pendientes que requieren atencion:</p><ul>{{$json.data.data.forEach(function(insp) { return '<li><strong>' + insp.projectName + '</strong> - ' + insp.status + '</li>'; })}}</ul><p><a href='{{$env.FRONTEND_URL}}/inspections'>Ver todas</a></p>",
+        "html": "<h2>Inspecciones pendientes</h2><p>Hay inspecciones pendientes que requieren atencion:</p><ul>{{$json.data.data.map(function(insp) { return '<li><strong>' + insp.projectName + '</strong> - ' + insp.status + '</li>'; }).join('')}}</ul><p><a href='{{$env.FRONTEND_URL}}/inspections'>Ver todas</a></p>",
         "options": {}
       },
       "id": "send-reminder-email",

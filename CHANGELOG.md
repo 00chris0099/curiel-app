@@ -5,7 +5,7 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/).
 
 ---
 
-## [1.0.0] - 2024-XX-XX
+## [1.0.0] - 2026-06-22
 
 ### Fase 10 - Performance y Pulido
 

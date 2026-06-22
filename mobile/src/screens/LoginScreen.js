@@ -155,24 +155,6 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         fontWeight: '600'
-    },
-    helpContainer: {
-        backgroundColor: '#fff3cd',
-        borderRadius: 8,
-        padding: 16,
-        borderWidth: 1,
-        borderColor: '#ffc107'
-    },
-    helpTitle: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#856404',
-        marginBottom: 8
-    },
-    helpText: {
-        fontSize: 12,
-        color: '#856404',
-        marginBottom: 4
     }
 });
 

@@ -53,7 +53,7 @@
         "fromEmail": "={{$env.SMTP_FROM_EMAIL || 'noreply@curiel.com'}}",
         "toEmail": "={{$env.ADMIN_EMAIL || 'admin@curiel.com'}}",
         "subject": "[CURIEL] Inspecciones vencidas o en proceso prolongado",
-        "html": "<h2>Inspecciones vencidas</h2><p>Las siguientes inspecciones llevan mucho tiempo en proceso:</p><ul>{{$json.data.data.forEach(function(insp) { return '<li><strong>' + insp.projectName + '</strong> - ' + insp.scheduledDate + '</li>'; })}}</ul><p><a href='{{$env.FRONTEND_URL}}/inspections'>Revisar inspecciones</a></p>",
+        "html": "<h2>Inspecciones vencidas</h2><p>Las siguientes inspecciones llevan mucho tiempo en proceso:</p><ul>{{$json.data.data.map(function(insp) { return '<li><strong>' + insp.projectName + '</strong> - ' + insp.scheduledDate + '</li>'; }).join('')}}</ul><p><a href='{{$env.FRONTEND_URL}}/inspections'>Revisar inspecciones</a></p>",
         "options": {}
       },
       "id": "send-overdue-email",

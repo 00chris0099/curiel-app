@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useOffline } from '../context/OfflineContext';
 import { useAuth } from '../context/AuthContext';
-import { createInspection } from '../services/offlineQueue';
+import { offlineQueue } from '../services/offlineQueue';
 import config from '../config';
 
 const INSPECTION_TYPES = [
@@ -136,7 +136,7 @@ const CreateInspectionScreen = ({ navigation }) => {
                 notes: form.notes.trim() || undefined
             };
 
-            const result = await createInspection(payload, isOnline);
+            const result = await offlineQueue.createInspection(payload, isOnline);
 
             if (result) {
                 Alert.alert(

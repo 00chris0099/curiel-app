@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { OfflineProvider } from './src/context/OfflineContext';
 import { ActivityIndicator, View } from 'react-native';
 import ErrorBoundary from './src/components/ErrorBoundary';
+import VideoSplashScreen from './src/components/VideoSplashScreen';
 
 // Screens
 import LoginScreen from './src/screens/LoginScreen';
@@ -24,12 +25,15 @@ const Stack = createStackNavigator();
 
 const Navigation = () => {
     const { isAuthenticated, loading } = useAuth();
+    const [splashDone, setSplashDone] = useState(false);
 
-    if (loading) {
+    const handleSplashFinish = useCallback(() => {
+        setSplashDone(true);
+    }, []);
+
+    if (loading || !splashDone) {
         return (
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                <ActivityIndicator size="large" color="#1a237e" />
-            </View>
+            <VideoSplashScreen onFinish={handleSplashFinish} />
         );
     }
 

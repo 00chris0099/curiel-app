@@ -6,10 +6,16 @@ interface ThemeState {
     setTheme: (isDark: boolean) => void;
 }
 
-// Leer tema inicial de localStorage
+// Leer tema inicial de localStorage y aplicar al DOM
 const getInitialTheme = (): boolean => {
     const saved = localStorage.getItem('theme');
-    return saved === 'dark';
+    const isDark = saved === 'dark';
+    if (isDark) {
+        document.documentElement.classList.add('dark');
+    } else {
+        document.documentElement.classList.remove('dark');
+    }
+    return isDark;
 };
 
 export const useThemeStore = create<ThemeState>((set) => ({

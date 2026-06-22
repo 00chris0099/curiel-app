@@ -40,7 +40,7 @@ GRANT ALL PRIVILEGES ON DATABASE curiel_db TO curiel_user;
 
 ```powershell
 # Navegar a la carpeta del backend
-cd backend
+cd backend_legacy
 
 # Instalar dependencias
 npm install
@@ -317,9 +317,9 @@ eas submit
 
 ## 📚 Documentación Adicional
 
-- **API:** Ver `docs/API.md` para endpoints completos
-- **Deployment:** Ver `docs/DEPLOYMENT.md` para guía detallada
-- **Manual:**Ver `docs/USER_GUIDE.md` para manual de usuario
+- **API:** Ver `docs/API.md` para endpoints completos (proximamente)
+- **Deployment:** Ver `docs/DEPLOYMENT.md` para guia detallada (proximamente)
+- **Manual:** Ver `docs/USER_GUIDE.md` para manual de usuario (proximamente)
 
 ## 🆘 Soporte
 

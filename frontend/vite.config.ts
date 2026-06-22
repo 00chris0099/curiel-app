@@ -37,7 +37,7 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/aimachristian-curielbackend\.ajcxjb\.easypanel\.host\/api\/.*/i,
+            urlPattern: new RegExp(`^https?://${(process.env.VITE_API_URL || 'aimachristian-curielbackend.ajcxjb.easypanel.host').replace(/^https?:\/\//, '').replace(/\/api\/.*$/, '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\/api\\/.*/i`),
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',

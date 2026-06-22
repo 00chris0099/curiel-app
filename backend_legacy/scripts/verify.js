@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 /**
- * Script de verificación rápida del backend CURIEL
- * Verifica que todos los módulos estén correctamente configurados
+ * Script de verificacion rapida del backend CURIEL (Prisma)
+ * Verifica que todos los modulos esten correctamente configurados
  */
 
 const fs = require('fs');
@@ -21,11 +21,11 @@ const requiredDirs = [
     'src/config',
     'src/controllers',
     'src/middlewares',
-    'src/models',
     'src/routes',
     'src/services',
     'src/utils',
-    'src/validators'
+    'src/validators',
+    'src/modules'
 ];
 
 requiredDirs.forEach(dir => {
@@ -38,19 +38,18 @@ requiredDirs.forEach(dir => {
 });
 
 // ============================================
-// 2. Verificar archivos críticos
+// 2. Verificar archivos criticos
 // ============================================
-console.log('📄 Verificando archivos críticos...');
+console.log('📄 Verificando archivos criticos...');
 
 const requiredFiles = [
     'src/server.js',
     'src/config/index.js',
-    'src/config/database.js',
     'src/config/swagger.js',
-    'src/models/index.js',
     'src/routes/index.js',
     'package.json',
-    '.env'
+    '.env',
+    'prisma/prisma.js'
 ];
 
 requiredFiles.forEach(file => {
@@ -58,7 +57,7 @@ requiredFiles.forEach(file => {
     checks.push({
         name: `📄 ${file}`,
         status: exists,
-        required: file !== '.env' // .env es requerido pero avisa si no existe
+        required: file !== '.env'
     });
 });
 
@@ -71,8 +70,10 @@ const requiredControllers = [
     'authController.js',
     'userController.js',
     'inspectionController.js',
+    'inspectionExecutionController.js',
     'checklistController.js',
-    'photoController.js'
+    'photoController.js',
+    'notificationController.js'
 ];
 
 requiredControllers.forEach(controller => {
@@ -92,7 +93,9 @@ console.log('⚙️  Verificando services...');
 const requiredServices = [
     'userService.js',
     'inspectionService.js',
-    'checklistService.js'
+    'inspectionExecutionService.js',
+    'checklistService.js',
+    'notificationService.js'
 ];
 
 requiredServices.forEach(service => {
@@ -113,8 +116,10 @@ const requiredRoutes = [
     'authRoutes.js',
     'usersRoutes.js',
     'inspectionRoutes.js',
+    'inspectionExecutionRoutes.js',
     'checklistRoutes.js',
     'photoRoutes.js',
+    'notificationRoutes.js',
     'index.js'
 ];
 
@@ -135,7 +140,8 @@ console.log('✅ Verificando validators...');
 const requiredValidators = [
     'userValidator.js',
     'inspectionValidator.js',
-    'checklistValidator.js'
+    'checklistValidator.js',
+    'inspectionExecutionValidator.js'
 ];
 
 requiredValidators.forEach(validator => {
@@ -156,7 +162,8 @@ const requiredMiddlewares = [
     'auth.js',
     'auditLog.js',
     'errorHandler.js',
-    'upload.js'
+    'upload.js',
+    'validateJoi.js'
 ];
 
 requiredMiddlewares.forEach(middleware => {
@@ -169,7 +176,22 @@ requiredMiddlewares.forEach(middleware => {
 });
 
 // ============================================
-// 8. Verificar package.json dependencies
+// 8. Verificar Prisma schemas
+// ============================================
+console.log('🗄️  Verificando Prisma schemas...');
+
+const prismaDirs = ['auth', 'admin', 'inspecciones', 'checklists', 'notificaciones', 'archivos', 'alertas'];
+prismaDirs.forEach(dir => {
+    const exists = fs.existsSync(path.join(__dirname, `../src/modules/${dir}/prisma/schema.prisma`));
+    checks.push({
+        name: `🗄️  modules/${dir}/prisma/schema.prisma`,
+        status: exists,
+        required: true
+    });
+});
+
+// ============================================
+// 9. Verificar package.json dependencies
 // ============================================
 console.log('📦 Verificando dependencias...');
 
@@ -177,14 +199,14 @@ try {
     const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
     const requiredDeps = [
         'express',
-        'sequelize',
-        'pg',
+        '@prisma/client',
         'jsonwebtoken',
         'bcryptjs',
         'joi',
         'multer',
         'cloudinary',
-        'streamifier',
+        'puppeteer',
+        'nodemailer',
         'swagger-jsdoc',
         'swagger-ui-express',
         'helmet',
@@ -209,7 +231,7 @@ try {
 // MOSTRAR RESULTADOS
 // ============================================
 console.log('\n' + '='.repeat(60));
-console.log('📊 RESULTADOS DE VERIFICACIÓN');
+console.log('📊 RESULTADOS DE VERIFICACION');
 console.log('='.repeat(60) + '\n');
 
 let passed = 0;
@@ -237,10 +259,10 @@ console.log('='.repeat(60) + '\n');
 
 if (failed === 0) {
     console.log('🎉 ¡BACKEND COMPLETAMENTE CONFIGURADO!\n');
-    console.log('📝 Próximos pasos:\n');
+    console.log('📝 Proximos pasos:\n');
     console.log('1. Configurar .env con tus credenciales');
-    console.log('2. Crear la base de datos: createdb curiel_db');
-    console.log('3. Ejecutar seed: npm run seed');
+    console.log('2. Ejecutar migraciones: node scripts/migrate-all.js');
+    console.log('3. Cargar datos de prueba: node scripts/seed-all.js');
     console.log('4. Iniciar servidor: npm run dev');
     console.log('5. Abrir Swagger: http://localhost:4000/api/docs\n');
     process.exit(0);

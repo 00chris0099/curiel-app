@@ -136,7 +136,7 @@ CURIEL/
 |-----------|-----------|
 | Node.js + Express | Framework web |
 | PostgreSQL | Base de datos |
-| Sequelize | ORM |
+| Prisma | ORM |
 | JWT | Autenticacion |
 | Multer | Upload de archivos |
 | Cloudinary | Almacenamiento de imagenes |
@@ -386,7 +386,7 @@ API_URL: 'https://aimachristian-curielbackend.ajcxjb.easypanel.host'
 - `GET /api/v1/health` - Health check detallado
 - `GET /api/v1/metrics` - Metricas Prometheus
 
-Ver documentacion completa en `docs/API.md`
+Ver documentacion completa en `docs/API.md` (proximamente)
 
 ## CI/CD
 

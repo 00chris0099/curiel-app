@@ -37,7 +37,7 @@ CREATE DATABASE curiel_db;
 
 ```powershell
 # Ir a backend
-cd backend
+cd backend_legacy
 
 # Instalar
 npm install

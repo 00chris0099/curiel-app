@@ -1,7 +1,5 @@
 require('dotenv').config();
 const bcrypt = require('bcryptjs');
-const { sequelize } = require('../config/database');
-const { User } = require('../models');
 
 const EMAIL = process.argv[2] || 'admin@curiel.com';
 const NEW_PASSWORD = process.argv[3];
@@ -14,20 +12,31 @@ if (!NEW_PASSWORD) {
 
 const changePassword = async () => {
     try {
-        await sequelize.authenticate();
+        const { PrismaClient } = require('@prisma/client');
+        const prisma = new PrismaClient({
+            datasources: {
+                db: { url: process.env.DATABASE_URL_AUTH || process.env.DATABASE_URL }
+            }
+        });
+
+        await prisma.$connect();
         console.log('Conectado a la base de datos');
 
-        const user = await User.findOne({ where: { email: EMAIL } });
+        const user = await prisma.user.findUnique({ where: { email: EMAIL } });
         if (!user) {
             console.error(`Usuario no encontrado: ${EMAIL}`);
+            await prisma.$disconnect();
             process.exit(1);
         }
 
         const passwordHash = await bcrypt.hash(NEW_PASSWORD, 10);
-        user.passwordHash = passwordHash;
-        await user.save();
+        await prisma.user.update({
+            where: { email: EMAIL },
+            data: { passwordHash }
+        });
 
         console.log(`Contrasena actualizada para: ${EMAIL}`);
+        await prisma.$disconnect();
         process.exit(0);
     } catch (error) {
         console.error('Error:', error.message);

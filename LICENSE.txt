@@ -1,7 +1,7 @@
 PROPRIETARY SOFTWARE LICENSE
 CURIEL - Sistema de Inspecciones Tecnicas
 
-Copyright (c) 2024 CURIEL. Todos los derechos reservados.
+Copyright (c) 2026 CURIEL. Todos los derechos reservados.
 
 Esta licencia es proprietaria y confidencial. El uso, copia, distribucion,
 modificacion o cualquier otra forma de aprovechamiento de este software

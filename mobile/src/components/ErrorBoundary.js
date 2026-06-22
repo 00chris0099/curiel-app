@@ -21,9 +21,6 @@ class ErrorBoundary extends React.Component {
 
     handleGoHome = () => {
         this.setState({ hasError: false, error: null });
-        if (this.props.navigation) {
-            this.props.navigation.navigate('Home');
-        }
     };
 
     render() {
@@ -38,9 +35,6 @@ class ErrorBoundary extends React.Component {
                     <View style={styles.actions}>
                         <TouchableOpacity style={styles.retryBtn} onPress={this.handleRetry}>
                             <Text style={styles.retryBtnText}>Reintentar</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.homeBtn} onPress={this.handleGoHome}>
-                            <Text style={styles.homeBtnText}>Ir al Inicio</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -58,9 +52,7 @@ const styles = StyleSheet.create({
     message: { fontSize: 14, color: '#666', textAlign: 'center', marginBottom: 24 },
     actions: { flexDirection: 'row', gap: 12 },
     retryBtn: { backgroundColor: '#1a237e', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
-    retryBtnText: { color: '#fff', fontWeight: '600' },
-    homeBtn: { borderWidth: 1, borderColor: '#e0e0e0', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
-    homeBtnText: { color: '#666', fontWeight: '600' }
+    retryBtnText: { color: '#fff', fontWeight: '600' }
 });
 
 export default ErrorBoundary;
