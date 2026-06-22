@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const { prisma } = require('../lib/databases');
-const AppError = require('../utils/AppError');
+const { AppError } = require('../middlewares/errorHandler');
 
 const generateApiKey = (type = 'api_key') => {
     const prefix = type === 'secret_token' ? 'sk_live_' : 'curiel_';
