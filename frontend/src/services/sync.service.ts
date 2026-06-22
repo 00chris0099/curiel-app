@@ -109,6 +109,8 @@ const syncQueueItem = async (item: OfflineSyncItem) => {
   await removeSyncQueueItem(item.id)
 }
 
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
 const syncPendingInspectionChanges = async (
     inspectionId?: string,
     forceSync = true
@@ -127,7 +129,8 @@ const syncPendingInspectionChanges = async (
 
     const results: Array<{ id: string; success: boolean; message?: string }> = []
 
-    for (const item of sortedQueue) {
+    for (let i = 0; i < sortedQueue.length; i++) {
+        const item = sortedQueue[i]
         try {
             await syncQueueItem(item)
             results.push({ id: item.id, success: true })
@@ -135,6 +138,10 @@ const syncPendingInspectionChanges = async (
             const message = error instanceof Error ? error.message : 'Error al sincronizar'
             await updateSyncQueueItem(item.id, { syncStatus: 'failed', errorMessage: message })
             results.push({ id: item.id, success: false, message })
+        }
+
+        if (i < sortedQueue.length - 1) {
+            await delay(150)
         }
     }
 

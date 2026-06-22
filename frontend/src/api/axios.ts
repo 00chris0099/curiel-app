@@ -171,6 +171,12 @@ api.interceptors.response.use(
             error.isNetworkError = true;
         }
 
+        if (error.response && error.response.status === 429) {
+            const retryAfter = error.response.headers?.['retry-after'];
+            const minutes = retryAfter ? Math.ceil(Number(retryAfter) / 60) : 15;
+            error.message = `Límite de solicitudes alcanzado. Espera ${minutes} minuto${minutes > 1 ? 's' : ''} e intenta de nuevo.`;
+        }
+
         if (error.response && error.response.status >= 500) {
             Sentry.captureException(error);
         }
