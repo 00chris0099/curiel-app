@@ -40,10 +40,17 @@ if (config.server.env === 'development') {
     app.use(morgan('combined', { stream: logger.stream }));
 }
 
-// Rate limiting
+// Rate limiting — por usuario (token) o por IP como fallback
 const limiter = rateLimit({
     windowMs: config.rateLimit.windowMs,
     max: config.rateLimit.maxRequests,
+    keyGenerator: (req) => {
+        const authHeader = req.headers.authorization;
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            return authHeader.slice(7);
+        }
+        return req.ip;
+    },
     message: {
         success: false,
         message: 'Demasiadas solicitudes, intenta de nuevo mas tarde'
