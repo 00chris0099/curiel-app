@@ -515,6 +515,7 @@ class InspectionService {
                     id: inspection.id,
                     projectName: inspection.projectName,
                     clientName: inspection.clientName,
+                    clientEmail: inspection.clientEmail,
                     inspectorId: inspection.inspectorId,
                     status: inspection.status
                 }
