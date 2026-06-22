@@ -89,71 +89,90 @@ export const NotificationDropdown = () => {
 
             {isOpen && (
                 <>
-                    <div className="fixed inset-0 z-[60]" onClick={() => setIsOpen(false)} />
+                    <div className="fixed inset-0 z-[60] bg-black/30 backdrop-blur-[2px] sm:bg-transparent sm:backdrop-blur-none" onClick={() => setIsOpen(false)} />
 
-                    {/* Mobile: full-screen modal. Desktop: dropdown */}
-                    <div className="fixed inset-x-0 bottom-0 top-0 z-[70] flex flex-col bg-white dark:bg-slate-900 sm:static sm:inset-auto sm:bottom-auto sm:top-auto sm:z-20 sm:mt-3 sm:w-[min(380px,calc(100vw-2rem))] sm:overflow-hidden sm:rounded-[28px] sm:border sm:border-slate-200 sm:shadow-[0_24px_60px_rgba(23,50,74,0.16)] sm:dark:border-slate-700">
-                        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-700">
+                    {/* Mobile: bottom sheet. Desktop: dropdown */}
+                    <div className="fixed inset-x-0 bottom-0 z-[70] max-h-[85vh] flex flex-col rounded-t-[28px] bg-white shadow-[0_-8px_40px_rgba(0,0,0,0.15)] sm:static sm:inset-auto sm:bottom-auto sm:z-20 sm:mt-3 sm:max-h-none sm:w-[min(380px,calc(100vw-2rem))] sm:overflow-hidden sm:rounded-[28px] sm:border sm:border-slate-200 sm:shadow-[0_24px_60px_rgba(23,50,74,0.16)] dark:bg-slate-900 sm:dark:border-slate-700">
+                        {/* Mobile drag handle */}
+                        <div className="flex justify-center pt-3 sm:hidden">
+                            <div className="h-1 w-10 rounded-full bg-slate-300 dark:bg-slate-600" />
+                        </div>
+
+                        <div className="flex items-center justify-between px-5 py-3 sm:border-b sm:border-slate-200 sm:py-4 dark:sm:border-slate-700">
                             <div className="flex items-center gap-3">
-                                <CustomIcon name="bell" size="sm" tone="cream" variant="plain" />
-                                <div>
-                                    <h3 className="font-semibold text-slate-900 dark:text-slate-100">Notificaciones</h3>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400">{unreadCount} sin leer</p>
-                                </div>
+                                <h3 className="font-semibold text-slate-900 dark:text-slate-100">Notificaciones</h3>
+                                {unreadCount > 0 && (
+                                    <span className="rounded-full bg-[#17324a] px-2 py-0.5 text-[11px] font-semibold text-white dark:bg-primary-600">
+                                        {unreadCount}
+                                    </span>
+                                )}
                             </div>
                             <div className="flex items-center gap-2">
-                                <button type="button" onClick={handleMarkAll} className="text-sm font-semibold text-primary-700 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300">
-                                    Marcar todo
-                                </button>
-                                <button type="button" onClick={() => setIsOpen(false)} className="ml-2 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 sm:hidden dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                                    Cerrar
+                                {unreadCount > 0 && (
+                                    <button type="button" onClick={handleMarkAll} className="text-xs font-semibold text-primary-700 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300">
+                                        Marcar todo
+                                    </button>
+                                )}
+                                <button type="button" onClick={() => setIsOpen(false)} className="min-w-8 flex items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 sm:hidden dark:hover:bg-slate-800">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <line x1="18" y1="6" x2="6" y2="18" />
+                                        <line x1="6" y1="6" x2="18" y2="18" />
+                                    </svg>
                                 </button>
                             </div>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto bg-[#fbfbfa] dark:bg-slate-800 sm:max-h-[420px]">
+                        <div className="flex-1 overflow-y-auto sm:max-h-[380px]">
                             {isLoading ? (
-                                <div className="px-5 py-6 text-sm text-slate-500 dark:text-slate-400">Cargando notificaciones...</div>
+                                <div className="space-y-0 px-3 py-2 sm:px-2">
+                                    {Array.from({ length: 3 }).map((_, i) => (
+                                        <div key={i} className="flex items-start gap-3 rounded-2xl px-3 py-4">
+                                            <div className="h-10 w-10 shrink-0 animate-pulse rounded-2xl bg-slate-200 dark:bg-slate-700" />
+                                            <div className="flex-1 space-y-2">
+                                                <div className="h-4 w-2/3 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-700" />
+                                                <div className="h-3 w-full animate-pulse rounded-lg bg-slate-200 dark:bg-slate-700" />
+                                                <div className="h-3 w-1/3 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-700" />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             ) : latestNotifications.length === 0 ? (
-                                <div className="px-5 py-8 text-center text-sm text-slate-500 dark:text-slate-400">
-                                    <div className="mb-3 flex justify-center">
-                                        <CustomIcon name="bell" size="md" tone="mist" variant="plain" />
+                                <div className="px-5 py-10 text-center sm:py-8">
+                                    <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
+                                        <CustomIcon name="bell" size="sm" tone="mist" variant="plain" />
                                     </div>
-                                    No tienes notificaciones todavias.
+                                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Sin notificaciones</p>
                                 </div>
                             ) : latestNotifications.map((notification) => (
                                 <button
                                     key={notification.id}
                                     type="button"
                                     onClick={() => handleMarkAsRead(notification)}
-                                    className={`w-full border-b border-slate-200 px-5 py-4 text-left transition-colors hover:bg-white dark:border-slate-700 dark:hover:bg-slate-700 ${notification.readAt ? 'bg-transparent' : 'bg-[#f5efe1]/70 dark:bg-amber-900/20'}`}
+                                    className={`flex w-full items-start gap-3 px-4 py-3.5 text-left transition-colors hover:bg-slate-50 sm:mx-2 sm:my-0.5 sm:w-[calc(100%-16px)] sm:rounded-2xl dark:hover:bg-slate-800 ${notification.readAt ? '' : 'bg-[#f5efe1]/50 dark:bg-amber-900/15'}`}
                                 >
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div className="flex items-start gap-3">
-                                            <CustomIcon name={notification.readAt ? 'clipboard-check' : 'bell'} size="sm" tone={notification.readAt ? 'white' : 'cream'} variant="plain" />
-                                            <div>
-                                                <p className="font-semibold text-slate-900 dark:text-slate-100">{notification.title}</p>
-                                                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{notification.message}</p>
-                                                <p className="mt-2 text-xs text-slate-500 dark:text-slate-500">{new Date(notification.createdAt).toLocaleString('es-PE')}</p>
-                                            </div>
-                                        </div>
-                                        {!notification.readAt && <span className="mt-2 h-2.5 w-2.5 rounded-full bg-[#17324a]" />}
+                                    <div className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${notification.readAt ? 'bg-slate-100 dark:bg-slate-800' : 'bg-[#17324a]'}`}>
+                                        <CustomIcon name={notification.readAt ? 'clipboard-check' : 'bell'} size="xs" tone={notification.readAt ? 'mist' : 'cream'} variant="plain" />
                                     </div>
+                                    <div className="min-w-0 flex-1">
+                                        <p className={`text-sm ${notification.readAt ? 'font-medium text-slate-600 dark:text-slate-400' : 'font-semibold text-slate-900 dark:text-slate-100'}`}>{notification.title}</p>
+                                        <p className="mt-0.5 line-clamp-2 text-xs text-slate-500 dark:text-slate-500">{notification.message}</p>
+                                        <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-600">{new Date(notification.createdAt).toLocaleString('es-PE')}</p>
+                                    </div>
+                                    {!notification.readAt && <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-[#17324a] dark:bg-primary-500" />}
                                 </button>
                             ))}
                         </div>
 
-                        <div className="border-t border-slate-200 px-5 py-4 dark:border-slate-700">
+                        <div className="hidden border-t border-slate-200 px-5 py-3 sm:block dark:border-slate-700">
                             <button
                                 type="button"
                                 onClick={() => {
                                     navigate('/notifications');
                                     setIsOpen(false);
                                 }}
-                                className="flex items-center gap-3 text-sm font-semibold text-primary-700 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300"
+                                className="flex w-full items-center justify-center gap-2 rounded-2xl py-2.5 text-sm font-semibold text-primary-700 transition-colors hover:bg-slate-50 dark:text-primary-400 dark:hover:bg-slate-800"
                             >
-                                <CustomIcon name="check-circle" size="xs" tone="sage" variant="plain" />
-                                Ver todas
+                                Ver todas las notificaciones
                             </button>
                         </div>
                     </div>

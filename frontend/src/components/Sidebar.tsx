@@ -41,27 +41,21 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                     ${isOpen ? 'translate-x-0' : '-translate-x-full'}
                 `}
             >
-                <div className="flex items-center justify-between border-b border-slate-200 px-5 py-5 dark:border-slate-700 lg:hidden">
-                    <div>
-                        <p className="section-eyebrow">Panel</p>
-                        <h2 className="font-display text-2xl text-slate-900 dark:text-slate-100">CURIEL</h2>
-                    </div>
+                <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-700 lg:hidden">
+                    <img src="/icon.jpeg" alt="CURIEL" className="h-9 w-9 rounded-xl object-cover" />
                     <button
                         onClick={onClose}
-                        className="min-h-11 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                        className="min-h-11 min-w-11 flex items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                        aria-label="Cerrar menu"
                     >
-                        Cerrar
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
                     </button>
                 </div>
 
-                <div className="border-b border-slate-200 px-5 py-6 dark:border-slate-700">
-                    <div className="rounded-[28px] bg-white p-4 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800 dark:ring-slate-700/80">
-                        <p className="section-eyebrow">Navegacion</p>
-                        <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">Inspecciones, usuarios y operacion tecnica en una sola vista.</p>
-                    </div>
-                </div>
-
-                <nav className="flex-1 space-y-2 overflow-y-auto p-4">
+                <nav className="flex-1 space-y-1 overflow-y-auto p-3">
                     {filteredNavigation.map((item) => (
                         <NavLink
                             key={item.name}
@@ -83,18 +77,6 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                         </NavLink>
                     ))}
                 </nav>
-
-                <div className="mt-auto border-t border-slate-200 p-4 dark:border-slate-700">
-                    <div className="rounded-[24px] bg-white px-4 py-4 ring-1 ring-slate-200/80 dark:bg-slate-800 dark:ring-slate-700/80">
-                        <div className="flex items-center gap-3">
-                            <CustomIcon name="house" size="sm" tone="cream" />
-                            <div>
-                                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Sistema de inspecciones</p>
-                                <p className="text-xs text-slate-500 dark:text-slate-400">Version 1.0.0</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </aside>
         </>
     );
