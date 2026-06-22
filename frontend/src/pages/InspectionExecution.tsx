@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useState, memo, type ChangeEvent, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, memo, type ChangeEvent, type FormEvent } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { getApiErrorMessage } from '../api/axios';
-import { CustomIcon, type CustomIconName } from '../components/CustomIcon';
+import { CustomIcon } from '../components/CustomIcon';
 import { Loader } from '../components/Loader';
 import ConnectionStatus from '../components/ConnectionStatus';
 import { useOfflineSync } from '../hooks/useOfflineSync';
@@ -24,8 +24,6 @@ import type {
 } from '../types';
 import {
     getInspectionLocationLabel,
-    getInspectionServiceLabel,
-    parseDepartmentInspectionNotes,
 } from '../utils/inspectionMetadata';
 import {
     canApproveInspectionReport,
@@ -48,10 +46,8 @@ import {
 import {
     areaStatusIconMap,
     getAreaCategoryIcon,
-    inspectionStatusIconMap,
     observationSeverityIconMap,
     photoTypeIconMap,
-    reportStatusIconMap,
 } from '../utils/iconSystem';
 
 const areaStatusOptions: ExecutionAreaStatus[] = ['pendiente', 'en_revision', 'observado', 'aprobado'];
@@ -291,6 +287,14 @@ export const InspectionExecution = () => {
         loadExecution(routeSelectedAreaId);
     }, [loadExecution, routeSelectedAreaId]);
 
+    const prevIsOnlineRef = useRef(isOnline);
+    useEffect(() => {
+        if (isOnline && !prevIsOnlineRef.current) {
+            loadExecution(selectedAreaId);
+        }
+        prevIsOnlineRef.current = isOnline;
+    }, [isOnline, loadExecution, selectedAreaId]);
+
     const areas = useMemo(() => Array.isArray(execution?.areas) ? execution.areas : [], [execution?.areas]);
     const observations = useMemo(() => Array.isArray(execution?.observations) ? execution.observations : [], [execution?.observations]);
     const photos = useMemo(() => Array.isArray(execution?.photos) ? execution.photos : [], [execution?.photos]);
@@ -419,7 +423,6 @@ export const InspectionExecution = () => {
         }
         return acc;
     }, {}), [observations]);
-    const metadata = inspection ? parseDepartmentInspectionNotes(inspection.notes).metadata : null;
     const canApproveReport = canApproveInspectionReport(user || null);
     const canEditExecutionContent = canManageExecutionContent(inspection, user || null);
     const canDownloadExecutionReport = canGenerateInspectionReport(inspection, user || null);
@@ -455,9 +458,7 @@ export const InspectionExecution = () => {
         return Number((length * width).toFixed(2));
     }, [manualAreaForm.lengthM, manualAreaForm.widthM]);
 
-    const districtLabel = metadata?.district || inspection?.state || 'Lima';
     const locationLabel = inspection ? getInspectionLocationLabel(inspection) : 'Sin ubicación';
-    const serviceLabel = inspection ? getInspectionServiceLabel(inspection) : 'Inspección';
 
     const withBusyAction = async (action: string, callback: () => Promise<void>) => {
         setBusyAction(action);
@@ -763,6 +764,17 @@ export const InspectionExecution = () => {
 
     const handleCompleteInspection = async () => {
         if (!id) return;
+
+        const hasEdificio = photos.some((p) => p.type === 'edificio');
+        const hasPlano = photos.some((p) => p.type === 'plano');
+        if (!hasEdificio || !hasPlano) {
+            const faltantes = [];
+            if (!hasEdificio) faltantes.push('foto del edificio');
+            if (!hasPlano) faltantes.push('plano del departamento');
+            toast.error(`Debes subir: ${faltantes.join(' y ')}`);
+            return;
+        }
+
         const confirmed = window.confirm('¿Deseas finalizar esta inspección y enviarla a revisión?');
         if (!confirmed) return;
 
@@ -895,62 +907,66 @@ export const InspectionExecution = () => {
                     </button>
 
                     <div className="min-w-0 max-w-3xl">
-                        <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary-600 dark:text-primary-400 sm:text-sm">
-                            Módulo del inspector
-                        </p>
-                        <h1 className="mt-2 text-2xl font-bold leading-tight sm:text-3xl">{inspection.projectName}</h1>
-                        <p className="mt-2 text-sm leading-6 text-gray-600 dark:text-gray-400 sm:text-base">
-                            {serviceLabel} · {inspection.clientName} · {districtLabel}
-                        </p>
-                        <div className="mt-4 flex flex-wrap gap-3 text-sm text-gray-600 dark:text-gray-300">
-                            <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 shadow-sm ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700">
-                                <CustomIcon name="map-pin" size="xs" tone="blue" />
-                                {locationLabel}
-                            </span>
-                            <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 shadow-sm ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700">
-                                <CustomIcon name="calendar" size="xs" tone="cream" />
-                                {new Date(inspection.scheduledDate).toLocaleString('es-PE')}
-                            </span>
-                            <span className="badge badge-info">
-                                <CustomIcon name={inspectionStatusIconMap[inspection.status] ?? 'clipboard-check'} size="xs" tone="white" />
-                                Estado de visita: {inspectionStatusLabels[inspection.status] || inspection.status}
+                        <h1 className="text-xl font-bold leading-tight sm:text-2xl">{inspection.projectName}</h1>
+                        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                            <span>{inspection.clientName}</span>
+                            <span>·</span>
+                            <span>{locationLabel}</span>
+                            <span>·</span>
+                            <span>{new Date(inspection.scheduledDate).toLocaleString('es-PE')}</span>
+                            <span className={`badge badge-sm ${inspection.status === 'en_proceso' ? 'badge-success' : inspection.status === 'lista_revision' ? 'badge-warning' : 'badge-info'}`}>
+                                {inspectionStatusLabels[inspection.status] || inspection.status}
                             </span>
                         </div>
                     </div>
                 </div>
 
-                {canDownloadExecutionReport && (
-                    <button
-                        type="button"
-                        onClick={handleDownloadReport}
-                        disabled={isDownloadingReport}
-                        className="btn btn-secondary flex w-full items-center justify-center gap-2 sm:w-auto"
-                    >
-                        <CustomIcon name={isDownloadingReport ? 'sync' : 'file-pdf'} size="xs" tone="cream" spin={isDownloadingReport} />
-                        {isDownloadingReport ? 'Generando informe...' : 'Generar informe'}
-                    </button>
-                )}
+                <div className="flex flex-wrap gap-2">
+                    {canDownloadExecutionReport && (
+                        <button
+                            type="button"
+                            onClick={handleDownloadReport}
+                            disabled={isDownloadingReport}
+                            className="btn btn-secondary flex items-center justify-center gap-2"
+                        >
+                            <CustomIcon name={isDownloadingReport ? 'sync' : 'file-pdf'} size="xs" tone="cream" spin={isDownloadingReport} />
+                            {isDownloadingReport ? 'Generando...' : 'Generar informe'}
+                        </button>
+                    )}
 
-                {canCompleteExecution && (
-                    <button
-                        type="button"
-                        onClick={handleCompleteInspection}
-                        disabled={busyAction === 'complete-inspection'}
-                        className="btn btn-primary flex w-full items-center justify-center gap-2 sm:w-auto"
-                    >
-                        {busyAction === 'complete-inspection' ? <CustomIcon name="sync" size="xs" tone="white" spin /> : <CustomIcon name="seal-check" size="xs" tone="white" />}
-                        Enviar a revisión
-                    </button>
-                )}
+                    {canCompleteExecution && (
+                        <button
+                            type="button"
+                            onClick={handleCompleteInspection}
+                            disabled={busyAction === 'complete-inspection'}
+                            className="btn btn-primary flex items-center justify-center gap-2"
+                        >
+                            {busyAction === 'complete-inspection' ? <CustomIcon name="sync" size="xs" tone="white" spin /> : <CustomIcon name="seal-check" size="xs" tone="white" />}
+                            Enviar a revisión
+                        </button>
+                    )}
+                </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-3 2xl:grid-cols-6">
-                <StatCard icon="ruler" label="Área total" value={`${stats.totalAreaM2.toFixed(2)} m²`} accent="text-blue-600" tone="blue" />
-                <StatCard icon="rooms" label="Áreas registradas" value={stats.areasRegistered.toString()} accent="text-emerald-600" tone="sage" />
-                <StatCard icon="warning" label="Observaciones" value={stats.totalObservations.toString()} accent="text-amber-600" tone="amber" />
-                <StatCard icon="warning-circle" label="Críticas" value={stats.criticalObservations.toString()} accent="text-red-600" tone="rose" />
-                <StatCard icon="camera" label="Fotos subidas" value={stats.photosCount.toString()} accent="text-violet-600" tone="mist" />
-                <StatCard icon={reportStatusIconMap[stats.reportStatus] ?? 'file-pdf'} label="Informe" value={reportStatusLabels[stats.reportStatus] || 'Borrador'} accent="text-primary-600" tone="cream" />
+            <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-gray-100 bg-[#fbfbfa] px-4 py-2.5 text-xs text-gray-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400">
+                <span className="flex items-center gap-1.5">
+                    <CustomIcon name="ruler" size="xs" tone="blue" />
+                    <span className="font-semibold text-gray-900 dark:text-gray-100">{stats.totalAreaM2.toFixed(1)} m²</span>
+                </span>
+                <span className="text-gray-300">|</span>
+                <span>{stats.areasRegistered} áreas</span>
+                <span className="text-gray-300">|</span>
+                <span>{stats.totalObservations} obs.</span>
+                {stats.criticalObservations > 0 && (
+                    <>
+                        <span className="text-gray-300">|</span>
+                        <span className="font-semibold text-red-600">{stats.criticalObservations} críticas</span>
+                    </>
+                )}
+                <span className="text-gray-300">|</span>
+                <span>{stats.photosCount} fotos</span>
+                <span className="text-gray-300">|</span>
+                <span>Informe: {reportStatusLabels[stats.reportStatus] || 'Borrador'}</span>
             </div>
 
             <div className="card space-y-4 lg:hidden">
@@ -1438,18 +1454,6 @@ export const InspectionExecution = () => {
         </div>
     );
 };
-
-const StatCard = ({ icon, label, value, accent, tone }: { icon: CustomIconName; label: string; value: string; accent: string; tone: 'cream' | 'mist' | 'blue' | 'sage' | 'rose' | 'amber' }) => (
-    <div className="card">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-            <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-600 dark:text-gray-400 sm:text-sm sm:normal-case sm:tracking-normal">{label}</p>
-                <p className={`mt-2 break-words text-xl font-bold leading-tight sm:text-2xl ${accent}`}>{value}</p>
-            </div>
-            <CustomIcon name={icon} size="sm" tone={tone} />
-        </div>
-    </div>
-);
 
 const PhotoCard = memo(({ photo, syncStatus }: { photo: InspectionExecutionData['photos'][number]; syncStatus?: 'pending' | 'failed' | 'synced' }) => (
     <article className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800/80">
