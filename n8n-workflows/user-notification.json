@@ -1,5 +1,5 @@
 {
-  "name": "CURIEL - Cambio de Estado",
+  "name": "CURIEL - Cambio de Estado de Inspeccion",
   "nodes": [
     {
       "parameters": {
@@ -8,72 +8,241 @@
         "responseMode": "onReceived",
         "options": {}
       },
-      "id": "webhook-user-notification",
+      "id": "webhook-entry",
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
-      "typeVersion": 1,
-      "position": [250, 300]
+      "typeVersion": 2,
+      "position": [100, 400],
+      "webhookId": "user-notification"
     },
     {
       "parameters": {
-        "conditions": {
-          "string": [
-            {
-              "value1": "={{$json.headers['X-CURIEL-SECRET']}}",
-              "operation": "equals",
-              "value2": "={{$env.CURIEL_SECRET_TOKEN}}"
-            }
-          ]
-        }
+        "jsCode": "const body = $input.first().json.body;\nconst headers = $input.first().json.headers;\n\n// 1. Validate secret token\nconst secret = headers['x-curiel-secret'];\nif (!secret || secret !== $env.CURIEL_SECRET_TOKEN) {\n  return [{ json: { valid: false, error: 'INVALID_SECRET', message: 'Token de seguridad invalido' } }];\n}\n\n// 2. Validate payload structure\nconst required = ['type', 'inspectionId', 'inspectionStatus', 'recipient'];\nconst missing = required.filter(f => !body[f]);\nif (missing.length > 0) {\n  return [{ json: { valid: false, error: 'MISSING_FIELDS', message: `Campos requeridos faltantes: ${missing.join(', ')}` } }];\n}\n\nif (!body.recipient?.email || !body.recipient?.fullName) {\n  return [{ json: { valid: false, error: 'INVALID_RECIPIENT', message: 'Recipient debe tener email y fullName' } }];\n}\n\n// 3. Validate email format\nconst emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;\nif (!emailRegex.test(body.recipient.email)) {\n  return [{ json: { valid: false, error: 'INVALID_EMAIL', message: `Email invalido: ${body.recipient.email}` } }];\n}\n\n// 4. Normalize status\nconst validStatuses = ['pendiente', 'en_proceso', 'lista_revision', 'finalizada', 'cancelada', 'reprogramada'];\nif (!validStatuses.includes(body.inspectionStatus)) {\n  return [{ json: { valid: false, error: 'INVALID_STATUS', message: `Status invalido: ${body.inspectionStatus}` } }];\n}\n\n// 5. Check for duplicate webhook (idempotency)\nconst dedupKey = `${body.inspectionId}-${body.inspectionStatus}-${body.recipient.id}`;\n\nreturn [{ json: { ...body, valid: true, dedupKey } }];"
       },
-      "id": "validate-secret",
-      "name": "Validate Secret",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 1,
-      "position": [450, 300]
+      "id": "validate-payload",
+      "name": "Validate Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [320, 400]
     },
     {
       "parameters": {
-        "conditions": {
-          "string": [
-            {
-              "value1": "={{$json.body.event}}",
-              "operation": "contains",
-              "value2": "status_change"
-            }
-          ]
-        }
+        "jsCode": "const data = $input.first().json;\nif (data.valid === false) {\n  throw new Error(`Validation failed [${data.error}]: ${data.message}`);\n}\nreturn $input.all();"
       },
-      "id": "check-event-type",
-      "name": "Is Status Change",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 1,
-      "position": [650, 300]
+      "id": "gate-on-valid",
+      "name": "Gate: Valid?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [540, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const status = $input.first().json.inspectionStatus;\nconst statusConfig = {\n  pendiente: {\n    label: 'Pendiente',\n    color: '#f59e0b',\n    bgColor: '#fef3c7',\n    icon: '&#128337;',\n    inspectorMsg: 'Una inspeccion ha sido asignada y esta pendiente de inicio.',\n    clientMsg: 'Su inspeccion ha sido programada y esta pendiente.',\n    urgency: 'normal'\n  },\n  en_proceso: {\n    label: 'En proceso',\n    color: '#3b82f6',\n    bgColor: '#dbeafe',\n    icon: '&#9654;',\n    inspectorMsg: 'La inspeccion ha sido iniciada. Puede comenzar el trabajo de campo.',\n    clientMsg: 'Su inspeccion esta en proceso.',\n    urgency: 'normal'\n  },\n  lista_revision: {\n    label: 'Lista para revision',\n    color: '#8b5cf6',\n    bgColor: '#ede9fe',\n    icon: '&#128269;',\n    inspectorMsg: 'El informe esta listo para revision del supervisor.',\n    clientMsg: 'Su informe esta siendo revisado por nuestro equipo.',\n    urgency: 'high'\n  },\n  finalizada: {\n    label: 'Finalizada',\n    color: '#10b981',\n    bgColor: '#d1fae5',\n    icon: '&#9989;',\n    inspectorMsg: 'La inspeccion ha sido finalizada y aprobada.',\n    clientMsg: 'Su inspeccion ha sido completada exitosamente.',\n    urgency: 'normal'\n  },\n  cancelada: {\n    label: 'Cancelada',\n    color: '#ef4444',\n    bgColor: '#fee2e2',\n    icon: '&#10060;',\n    inspectorMsg: 'La inspeccion ha sido cancelada.',\n    clientMsg: 'Su inspeccion ha sido cancelada.',\n    urgency: 'high'\n  },\n  reprogramada: {\n    label: 'Reprogramada',\n    color: '#f97316',\n    bgColor: '#ffedd5',\n    icon: '&#128259;',\n    inspectorMsg: 'La inspeccion ha sido reprogramada. Verifique la nueva fecha.',\n    clientMsg: 'Su inspeccion ha sido reprogramada.',\n    urgency: 'high'\n  }\n};\nconst config = statusConfig[status] || statusConfig.pendiente;\nconst data = $input.first().json;\nconst inspectionId = data.inspectionId;\nconst frontendUrl = $env.FRONTEND_URL || 'https://aimachristian-curielapp.ajcxjb.easypanel.host';\nconst inspectionUrl = `${frontendUrl}/inspections/${inspectionId}`;\nconst reason = data.reasonLabel || data.reasonCode || '';\nconst comment = data.comment || '';\nlet reasonBlock = '';\nif (reason || comment) {\n  reasonBlock = `<div style='background:#f9fafb;border-left:4px solid ${config.color};padding:12px 16px;margin:16px 0;border-radius:0 8px 8px 0'><p style='color:#374151;font-size:14px;margin:0'>${reason ? `<strong>Motivo:</strong> ${reason}` : ''}${reason && comment ? '<br>' : ''}${comment ? `<strong>Comentario:</strong> ${comment}` : ''}</p></div>`;\n}\nreturn [{ json: { ...data, config, inspectionUrl, reasonBlock } }];"
+      },
+      "id": "build-status-context",
+      "name": "Build Status Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [760, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst status = data.inspectionStatus;\nconst config = data.config;\nconst inspectionId = data.inspectionId;\nconst recipient = data.recipient;\nconst inspectionUrl = data.inspectionUrl;\nconst reasonBlock = data.reasonBlock;\nconst year = new Date().getFullYear();\nconst html = `\n<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:0'>\n  <div style='background:${config.bgColor};border-radius:16px 16px 0 0;padding:32px;text-align:center'>\n    <span style='font-size:48px'>${config.icon}</span>\n    <h1 style='color:${config.color};font-size:24px;margin:12px 0 4px;font-family:Georgia,serif'>${config.label}</h1>\n    <p style='color:#6b7280;font-size:13px;margin:0'>Inspeccion #${inspectionId.substring(0, 8)}</p>\n  </div>\n  <div style='background:#ffffff;padding:32px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 16px 16px'>\n    <p style='color:#374151;font-size:15px;line-height:1.7;margin:0 0 16px'>Hola <strong>${recipient.fullName}</strong>,</p>\n    <p style='color:#374151;font-size:15px;line-height:1.7;margin:0 0 16px'>${data.notifyClient ? config.clientMsg : config.inspectorMsg}</p>\n    ${reasonBlock}\n    <div style='text-align:center;margin:28px 0'>\n      <a href='${inspectionUrl}' style='display:inline-block;background:#17324a;color:#ffffff;padding:14px 32px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:600'>Ver inspeccion</a>\n    </div>\n    <hr style='border:none;border-top:1px solid #e5e7eb;margin:24px 0'>\n    <p style='color:#9ca3af;font-size:12px;text-align:center;margin:0'>CURIEL Inspecciones &middot; Sistema tecnico de gestion</p>\n  </div>\n</div>`;\nreturn [{ json: { to: recipient.email, subject: `[CURIEL] ${config.label} - Inspeccion ${inspectionId.substring(0, 8)}`, html, status, config } }];"
+      },
+      "id": "build-inspector-email",
+      "name": "Build Inspector Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [980, 300]
     },
     {
       "parameters": {
         "fromEmail": "={{$env.SMTP_FROM_EMAIL || 'noreply@curiel.com'}}",
-        "toEmail": "={{$json.body.recipient.email}}",
-        "subject": "[CURIEL] {{$json.body.notification.title}}",
-        "html": "<h2>{{$json.body.notification.title}}</h2><p>{{$json.body.notification.message}}</p>",
-        "options": {}
+        "toEmail": "={{$json.to}}",
+        "subject": "={{$json.subject}}",
+        "html": "={{$json.html}}",
+        "options": {
+          "appendAttribution": false
+        }
       },
-      "id": "send-email-notification",
-      "name": "Send Email",
+      "id": "send-inspector-email",
+      "name": "Send Inspector Email",
       "type": "n8n-nodes-base.emailSend",
-      "typeVersion": 1,
-      "position": [850, 300]
+      "typeVersion": 2,
+      "position": [1200, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nreturn [{ json: { shouldNotifyClient: data.notifyClient === true, data } }];"
+      },
+      "id": "check-notify-client",
+      "name": "Notify Client?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 520]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $json.data;\nconst config = data.config;\nconst inspectionUrl = data.inspectionUrl;\nconst reasonBlock = data.reasonBlock;\nconst year = new Date().getFullYear();\nconst clientName = data.recipient.fullName.split(' ')[0] || data.recipient.fullName;\nconst html = `\n<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:0'>\n  <div style='background:${config.bgColor};border-radius:16px 16px 0 0;padding:32px;text-align:center'>\n    <span style='font-size:48px'>${config.icon}</span>\n    <h1 style='color:${config.color};font-size:22px;margin:12px 0 4px;font-family:Georgia,serif'>${config.label}</h1>\n  </div>\n  <div style='background:#ffffff;padding:32px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 16px 16px'>\n    <p style='color:#374151;font-size:15px;line-height:1.7;margin:0 0 16px'>Estimado(a) <strong>${clientName}</strong>,</p>\n    <p style='color:#374151;font-size:15px;line-height:1.7;margin:0 0 16px'>${config.clientMsg}</p>\n    ${reasonBlock}\n    <div style='background:#f0f9ff;border-radius:10px;padding:16px;margin:20px 0'>\n      <p style='color:#1e40af;font-size:13px;margin:0;text-align:center'>Si tiene alguna pregunta, contacte a su asesor o responda este correo.</p>\n    </div>\n    <hr style='border:none;border-top:1px solid #e5e7eb;margin:24px 0'>\n    <p style='color:#9ca3af;font-size:12px;text-align:center;margin:0'>CURIEL Inspecciones &middot; &copy; ${year}</p>\n  </div>\n</div>`;\nreturn [{ json: { to: data.recipient.email, subject: `[CURIEL] Actualizacion de su inspeccion`, html } }];"
+      },
+      "id": "build-client-email",
+      "name": "Build Client Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1420, 520]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{$env.SMTP_FROM_EMAIL || 'noreply@curiel.com'}}",
+        "toEmail": "={{$json.to}}",
+        "subject": "={{$json.subject}}",
+        "html": "={{$json.html}}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "send-client-email",
+      "name": "Send Client Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [1640, 520],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const status = $input.first().json.status;\nconst isUrgent = ['cancelada', 'reprogramada', 'lista_revision'].includes(status);\n\nif (!isUrgent) {\n  return [{ json: { shouldAlert: false } }];\n}\n\nreturn [{ json: { shouldAlert: true, status } }];"
+      },
+      "id": "check-urgent",
+      "name": "Is Urgent?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1420, 740]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst year = new Date().getFullYear();\nconst status = data.status;\nconst html = `\n<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:0'>\n  <div style='background:#fef2f2;border-radius:16px 16px 0 0;padding:24px;text-align:center'>\n    <span style='font-size:36px'>&#9888;&#65039;</span>\n    <h1 style='color:#dc2626;font-size:20px;margin:8px 0 0'>Alerta de Inspeccion</h1>\n  </div>\n  <div style='background:#ffffff;padding:24px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 16px 16px'>\n    <p style='color:#374151;font-size:14px;line-height:1.6'>Una inspeccion tiene un cambio de estado que requiere atencion: <strong>${status}</strong>.</p>\n    <p style='color:#6b7280;font-size:13px'>Verifique el panel de supervision para mas detalles.</p>\n    <hr style='border:none;border-top:1px solid #e5e7eb;margin:16px 0'>\n    <p style='color:#9ca3af;font-size:11px;text-align:center;margin:0'>Alerta automatica CURIEL &middot; ${year}</p>\n  </div>\n</div>`;\nreturn [{ json: { to: $env.ADMIN_EMAIL || 'admin@curiel.com', subject: `[CURIEL ALERTA] Inspeccion - ${status}`, html } }];"
+      },
+      "id": "build-admin-alert",
+      "name": "Build Admin Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1640, 740]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{$env.SMTP_FROM_EMAIL || 'noreply@curiel.com'}}",
+        "toEmail": "={{$json.to}}",
+        "subject": "={{$json.subject}}",
+        "html": "={{$json.html}}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "send-admin-alert",
+      "name": "Send Admin Alert",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [1860, 740],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const inspectorEmail = $('Send Inspector Email').first();\nconst clientEmail = $('Notify Client?').first().json.shouldAlert ? $('Send Client Email').first() : null;\nconst adminAlert = $('Is Urgent?').first().json.shouldAlert ? $('Send Admin Alert').first() : null;\n\nconst results = {\n  inspector: { sent: !inspectorEmail.json.error, error: inspectorEmail.json.error || null },\n  client: clientEmail ? { sent: !clientEmail.json.error, error: clientEmail.json.error || null } : { sent: false, skipped: true },\n  adminAlert: adminAlert ? { sent: !adminAlert.json.error, error: adminAlert.json.error || null } : { sent: false, skipped: true }\n};\n\nreturn [{ json: { success: true, summary: results, timestamp: new Date().toISOString() } }];"
+      },
+      "id": "build-summary",
+      "name": "Build Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2100, 500]
     }
   ],
   "connections": {
-    "Webhook": { "main": [[ { "node": "Validate Secret", "type": "main", "index": 0 } ]] },
-    "Validate Secret": {
+    "Webhook": {
       "main": [
-        [ { "node": "Is Status Change", "type": "main", "index": 0 } ],
+        [
+          { "node": "Validate Payload", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Validate Payload": {
+      "main": [
+        [
+          { "node": "Gate: Valid?", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Gate: Valid?": {
+      "main": [
+        [
+          { "node": "Build Status Context", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Build Status Context": {
+      "main": [
+        [
+          { "node": "Build Inspector Email", "type": "main", "index": 0 },
+          { "node": "Notify Client?", "type": "main", "index": 0 },
+          { "node": "Is Urgent?", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Build Inspector Email": {
+      "main": [
+        [
+          { "node": "Build Summary", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Notify Client?": {
+      "main": [
+        [
+          { "node": "Build Client Email", "type": "main", "index": 0 }
+        ],
         []
       ]
     },
-    "Is Status Change": { "main": [[ { "node": "Send Email", "type": "main", "index": 0 } ], []] }
+    "Build Client Email": {
+      "main": [
+        [
+          { "node": "Send Client Email", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Send Client Email": {
+      "main": [
+        [
+          { "node": "Build Summary", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Is Urgent?": {
+      "main": [
+        [
+          { "node": "Build Admin Alert", "type": "main", "index": 0 }
+        ],
+        []
+      ]
+    },
+    "Build Admin Alert": {
+      "main": [
+        [
+          { "node": "Send Admin Alert", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Send Admin Alert": {
+      "main": [
+        [
+          { "node": "Build Summary", "type": "main", "index": 0 }
+        ]
+      ]
+    }
   },
-  "settings": { "executionOrder": "v1" }
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
 }
