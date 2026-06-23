@@ -5,6 +5,7 @@ const logger = require('../utils/logger');
 const { prisma } = require('../lib/databases');
 const { AppError } = require('../middlewares/errorHandler');
 const { buildInspectionReportHtml } = require('../pdf/inspectionReportTemplate');
+const { uploadPdf } = require('../utils/cloudinaryStorage');
 
 const severityOrder = {
     critica: 0,
@@ -156,9 +157,24 @@ class InspectionReportService {
                 throw new AppError('El archivo generado no es un PDF válido', 500, 'INVALID_PDF_HEADER');
             }
 
+            const filename = this._buildFileName(inspection);
+            let cloudUrl = null;
+            let cloudExpiresAt = null;
+
+            try {
+                const cloudResult = await uploadPdf(pdfBuffer, filename.replace('.pdf', ''));
+                cloudUrl = cloudResult.url;
+                cloudExpiresAt = cloudResult.expiresAt;
+                logger.info('PDF subido a Cloudinary', { url: cloudUrl });
+            } catch (cloudError) {
+                logger.warn('Fallo subida a Cloudinary, PDF disponible solo localmente', { error: cloudError.message });
+            }
+
             return {
                 buffer: pdfBuffer,
-                filename: this._buildFileName(inspection)
+                filename,
+                cloudUrl,
+                cloudExpiresAt,
             };
         } catch (error) {
             logger.error('PUPPETEER_REPORT_ERROR', {

@@ -16,28 +16,20 @@
     },
     {
       "parameters": {
-        "conditions": {
-          "string": [
-            {
-              "value1": "={{$json.headers['X-CURIEL-SECRET']}}",
-              "operation": "equals",
-              "value2": "={{$env.CURIEL_SECRET_TOKEN}}"
-            }
-          ]
-        }
+        "jsCode": "const headers = $input.first().json.headers;\nconst secret = headers['x-curiel-secret'];\nconst body = $input.first().json.body;\n\nif (secret !== $env.CURIEL_SECRET_TOKEN) {\n  throw new Error('Invalid secret token');\n}\n\nreturn [{ json: body }];"
       },
       "id": "validate-secret",
       "name": "Validate Secret",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [450, 300]
     },
     {
       "parameters": {
         "fromEmail": "={{$env.SMTP_FROM_EMAIL || 'noreply@curiel.com'}}",
-        "toEmail": "={{$json.body.inspection.clientEmail || 'admin@curiel.com'}}",
-        "subject": "Inspeccion completada - {{$json.body.inspection.projectName}}",
-        "html": "<h2>Inspeccion completada</h2><p>La inspeccion <strong>{{$json.body.inspection.projectName}}</strong> ha sido completada exitosamente.</p><p>Cliente: {{$json.body.inspection.clientName}}</p><p>Estado: {{$json.body.inspection.status}}</p>",
+        "toEmail": "={{$json.inspection.clientEmail}}",
+        "subject": "Informe de inspeccion - {{$json.inspection.projectName}}",
+        "html": "<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:32px;background:#ffffff;border-radius:12px;border:1px solid #e5e7eb'><div style='text-align:center;margin-bottom:24px'><h1 style='color:#17324a;font-size:22px;margin:0'>CURIEL</h1><p style='color:#6b7280;font-size:13px;margin:4px 0 0'>Sistema de Inspecciones Tecnicas</p></div><div style='background:#f0fdf4;border-radius:10px;padding:16px;margin-bottom:24px;text-align:center'><span style='font-size:32px'>&#9989;</span><h2 style='color:#166534;font-size:18px;margin:8px 0 4px'>Inspeccion completada</h2><p style='color:#16a34a;font-size:13px;margin:0'>Tu informe esta listo para descargar</p></div><p style='color:#374151;font-size:15px;line-height:1.6'>Hola <strong>{{$json.inspection.clientName}}</strong>,</p><p style='color:#374151;font-size:15px;line-height:1.6'>La inspeccion del proyecto <strong>{{$json.inspection.projectName}}</strong> ha sido completada exitosamente. A continuacion encontraras el enlace para descargar tu informe.</p>{{$json.report ? '<div style=\"text-align:center;margin:28px 0\"><a href=\"' + $json.report.downloadUrl + '\" style=\"display:inline-block;background:#17324a;color:#ffffff;padding:14px 32px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:600\">Descargar informe PDF</a></div><p style=\"color:#9ca3af;font-size:12px;text-align:center\">Este enlace expira el ' + new Date($json.report.expiresAt).toLocaleDateString('es-PE') + '</p>' : '<div style=\"background:#fef3c7;border-radius:8px;padding:12px;margin:20px 0\"><p style=\"color:#92400e;font-size:13px;margin:0\">El informe PDF esta siendo generado. Recibiras otro correo cuando este disponible.</p></div>'}<hr style='border:none;border-top:1px solid #e5e7eb;margin:24px 0'><p style='color:#9ca3af;font-size:12px;text-align:center'>Este correo fue enviado automaticamente por CURIEL Inspecciones.</p></div>",
         "options": {}
       },
       "id": "send-email-client",
@@ -50,8 +42,8 @@
       "parameters": {
         "fromEmail": "={{$env.SMTP_FROM_EMAIL || 'noreply@curiel.com'}}",
         "toEmail": "={{$env.ADMIN_EMAIL || 'admin@curiel.com'}}",
-        "subject": "[CURIEL] Inspeccion completada - {{$json.body.inspection.projectName}}",
-        "html": "<h2>Nueva inspeccion completada</h2><p>Proyecto: {{$json.body.inspection.projectName}}</p><p>Cliente: {{$json.body.inspection.clientName}}</p><p>Inspector: {{$json.body.inspection.inspectorId}}</p>",
+        "subject": "[CURIEL] Inspeccion completada - {{$json.inspection.projectName}}",
+        "html": "<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:32px;background:#ffffff;border-radius:12px;border:1px solid #e5e7eb'><h2 style='color:#17324a;font-size:18px;margin:0 0 16px'>Nueva inspeccion completada</h2><table style='width:100%;font-size:14px;color:#374151;border-collapse:collapse'><tr><td style='padding:8px 0;color:#6b7280'>Proyecto</td><td style='padding:8px 0;font-weight:600'>{{$json.inspection.projectName}}</td></tr><tr><td style='padding:8px 0;color:#6b7280'>Cliente</td><td style='padding:8px 0;font-weight:600'>{{$json.inspection.clientName}}</td></tr><tr><td style='padding:8px 0;color:#6b7280'>Email cliente</td><td style='padding:8px 0'>{{$json.inspection.clientEmail}}</td></tr><tr><td style='padding:8px 0;color:#6b7280'>Estado</td><td style='padding:8px 0'>{{$json.inspection.status}}</td></tr>{{$json.report ? '<tr><td style=\"padding:8px 0;color:#6b7280\">Informe</td><td style=\"padding:8px 0\"><a href=\"' + $json.report.downloadUrl + '\" style=\"color:#17324a\">Descargar PDF</a></td></tr>' : ''}</table></div>",
         "options": {}
       },
       "id": "send-email-admin",
@@ -65,8 +57,7 @@
     "Webhook": { "main": [[ { "node": "Validate Secret", "type": "main", "index": 0 } ]] },
     "Validate Secret": {
       "main": [
-        [ { "node": "Email to Client", "type": "main", "index": 0 } ],
-        []
+        [ { "node": "Email to Client", "type": "main", "index": 0 } ]
       ]
     },
     "Email to Client": { "main": [[ { "node": "Email to Admin", "type": "main", "index": 0 } ]] }

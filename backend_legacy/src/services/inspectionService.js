@@ -2,6 +2,8 @@ const { prisma } = require('../lib/databases');
 const { AppError } = require('../middlewares/errorHandler');
 const { triggerN8nWebhook } = require('../utils/n8n');
 const notificationService = require('./notificationService');
+const inspectionReportService = require('./inspectionReportService');
+const logger = require('../utils/logger');
 
 const inspectionStatuses = ['pendiente', 'en_proceso', 'lista_revision', 'finalizada', 'cancelada', 'reprogramada'];
 
@@ -509,6 +511,19 @@ class InspectionService {
                 message: `El informe de la inspección ${inspectionLabel} fue aprobado.`
             });
 
+            let reportUrl = null;
+            let reportExpiresAt = null;
+
+            try {
+                const reportResult = await inspectionReportService.generateInspectionReport(
+                    inspection.id, inspection.inspectorId, 'admin', true
+                );
+                reportUrl = reportResult.cloudUrl;
+                reportExpiresAt = reportResult.cloudExpiresAt;
+            } catch (reportError) {
+                logger.warn('No se pudo generar el informe automatico', { error: reportError.message, inspectionId: inspection.id });
+            }
+
             triggerN8nWebhook('inspectionCompleted', {
                 event: 'inspection_finalized',
                 inspection: {
@@ -518,7 +533,11 @@ class InspectionService {
                     clientEmail: inspection.clientEmail,
                     inspectorId: inspection.inspectorId,
                     status: inspection.status
-                }
+                },
+                report: reportUrl ? {
+                    downloadUrl: reportUrl,
+                    expiresAt: reportExpiresAt,
+                } : null,
             });
         }
     }
