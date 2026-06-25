@@ -299,65 +299,35 @@ export const Users = () => {
                 </button>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-6">
-                <div className="card">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Total</p>
-                            <p className="text-3xl font-bold">{stats?.total ?? 0}</p>
-                        </div>
-                        <CustomIcon name="users" size="md" tone="blue" />
-                    </div>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-6">
+                <div className="rounded-2xl border border-slate-100 bg-white p-3 text-center dark:border-slate-700 dark:bg-slate-800">
+                    <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400">Total</p>
+                    <p className="mt-1 text-xl font-extrabold">{stats?.total ?? 0}</p>
                 </div>
 
-                <div className="card">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Activos</p>
-                            <p className="text-3xl font-bold text-green-600">{stats?.active ?? 0}</p>
-                        </div>
-                        <CustomIcon name="check-circle" size="md" tone="sage" />
-                    </div>
+                <div className="rounded-2xl border border-slate-100 bg-white p-3 text-center dark:border-slate-700 dark:bg-slate-800">
+                    <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400">Activos</p>
+                    <p className="mt-1 text-xl font-extrabold text-green-600">{stats?.active ?? 0}</p>
                 </div>
 
-                <div className="card">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Admins</p>
-                            <p className="text-3xl font-bold text-red-600">{roleCounts.admin}</p>
-                        </div>
-                        <CustomIcon name="settings" size="md" tone="rose" />
-                    </div>
+                <div className="rounded-2xl border border-slate-100 bg-white p-3 text-center dark:border-slate-700 dark:bg-slate-800">
+                    <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400">Admins</p>
+                    <p className="mt-1 text-xl font-extrabold text-red-600">{roleCounts.admin}</p>
                 </div>
 
-                <div className="card">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Supervisores</p>
-                            <p className="text-3xl font-bold text-yellow-600">{roleCounts.supervisor}</p>
-                        </div>
-                        <CustomIcon name="seal-check" size="md" tone="amber" />
-                    </div>
+                <div className="rounded-2xl border border-slate-100 bg-white p-3 text-center dark:border-slate-700 dark:bg-slate-800">
+                    <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400">Supervisores</p>
+                    <p className="mt-1 text-xl font-extrabold text-yellow-600">{roleCounts.supervisor}</p>
                 </div>
 
-                <div className="card">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Arquitectos</p>
-                            <p className="text-3xl font-bold text-blue-600">{roleCounts.arquitecto}</p>
-                        </div>
-                        <CustomIcon name="buildings" size="md" tone="mist" />
-                    </div>
+                <div className="rounded-2xl border border-slate-100 bg-white p-3 text-center dark:border-slate-700 dark:bg-slate-800">
+                    <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400">Arquitectos</p>
+                    <p className="mt-1 text-xl font-extrabold text-blue-600">{roleCounts.arquitecto}</p>
                 </div>
 
-                <div className="card">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Inspectores</p>
-                            <p className="text-3xl font-bold text-emerald-600">{roleCounts.inspector}</p>
-                        </div>
-                        <CustomIcon name="clipboard-check" size="md" tone="cream" />
-                    </div>
+                <div className="rounded-2xl border border-slate-100 bg-white p-3 text-center dark:border-slate-700 dark:bg-slate-800">
+                    <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400">Inspectores</p>
+                    <p className="mt-1 text-xl font-extrabold text-emerald-600">{roleCounts.inspector}</p>
                 </div>
             </div>
 

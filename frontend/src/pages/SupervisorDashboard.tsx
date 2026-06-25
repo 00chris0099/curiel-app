@@ -113,105 +113,50 @@ export const SupervisorDashboard = () => {
                     <h1 className="font-display text-3xl font-bold text-slate-900 dark:text-slate-100">
                         Panel del Supervisor
                     </h1>
-                    <p className="mt-1 text-slate-500 dark:text-slate-400">
-                        Monitoreo de calidad, evaluaciones y alertas
-                    </p>
                 </div>
             </div>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800 dark:ring-slate-700">
-                    <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100">
-                            <CustomIcon name="clipboard-check" className="h-5 w-5 text-blue-600" />
-                        </div>
-                        <div>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">Inspecciones Activas</p>
-                            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                                {dashboardKpis?.totalActiveInspections ?? 0}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800 dark:ring-slate-700">
-                    <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-100">
-                            <CustomIcon name="warning-circle" className="h-5 w-5 text-red-600" />
-                        </div>
-                        <div>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">Vencidas</p>
-                            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                                {dashboardKpis?.overdueInspections ?? 0}
-                            </p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4">
+                {([
+                    { label: 'Inspecciones Activas', value: dashboardKpis?.totalActiveInspections ?? 0, bg: 'bg-blue-100', icon: 'clipboard-check' as const, iconColor: 'text-blue-600' },
+                    { label: 'Vencidas', value: dashboardKpis?.overdueInspections ?? 0, bg: 'bg-red-100', icon: 'warning-circle' as const, iconColor: 'text-red-600' },
+                    { label: 'Completadas (mes)', value: dashboardKpis?.completedThisMonth ?? 0, bg: 'bg-green-100', icon: 'clipboard-check' as const, iconColor: 'text-green-600' },
+                    { label: 'Tasa Cancelacion', value: `${dashboardKpis?.cancellationRate ?? 0}%`, bg: 'bg-yellow-100', icon: 'warning-circle' as const, iconColor: 'text-yellow-600' },
+                ] as const).map((stat) => (
+                    <div key={stat.label} className="rounded-2xl border border-slate-100 bg-white p-3 text-center dark:border-slate-700 dark:bg-slate-800 sm:p-5 sm:text-left">
+                        <div className="flex flex-col items-center gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+                            <div className={`hidden h-8 w-8 items-center justify-center rounded-lg sm:flex ${stat.bg}`}>
+                                <CustomIcon name={stat.icon} className={`h-4 w-4 ${stat.iconColor}`} />
+                            </div>
+                            <div>
+                                <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">{stat.label}</p>
+                                <p className="text-xl font-extrabold text-slate-900 sm:text-2xl dark:text-slate-100">{stat.value}</p>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800 dark:ring-slate-700">
-                    <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-100">
-                            <CustomIcon name="clipboard-check" className="h-5 w-5 text-green-600" />
-                        </div>
-                        <div>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">Completadas (mes)</p>
-                            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                                {dashboardKpis?.completedThisMonth ?? 0}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800 dark:ring-slate-700">
-                    <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-yellow-100">
-                            <CustomIcon name="warning-circle" className="h-5 w-5 text-yellow-600" />
-                        </div>
-                        <div>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">Tasa Cancelacion</p>
-                            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                                {dashboardKpis?.cancellationRate ?? 0}%
-                            </p>
-                        </div>
-                    </div>
-                </div>
+                ))}
             </div>
 
             {/* Secondary KPIs */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800 dark:ring-slate-700">
-                    <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100">
-                            <CustomIcon name="users" className="h-5 w-5 text-purple-600" />
-                        </div>
-                        <div>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">Inspectores Activos</p>
-                            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{dashboardKpis?.activeInspectors ?? 0}</p>
-                        </div>
-                    </div>
-                </div>
-                <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800 dark:ring-slate-700">
-                    <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100">
-                            <CustomIcon name="users" className="h-5 w-5 text-indigo-600" />
-                        </div>
-                        <div>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">Arquitectos Activos</p>
-                            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{dashboardKpis?.activeArchitects ?? 0}</p>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-3">
+                {([
+                    { label: 'Inspectores', value: dashboardKpis?.activeInspectors ?? 0, bg: 'bg-purple-100', icon: 'users' as const, iconColor: 'text-purple-600' },
+                    { label: 'Arquitectos', value: dashboardKpis?.activeArchitects ?? 0, bg: 'bg-indigo-100', icon: 'users' as const, iconColor: 'text-indigo-600' },
+                    { label: 'Tiempo Prom.', value: `${dashboardKpis?.avgTimeGeneral ?? 0}h`, bg: 'bg-teal-100', icon: 'clipboard-check' as const, iconColor: 'text-teal-600' },
+                ] as const).map((stat) => (
+                    <div key={stat.label} className="rounded-2xl border border-slate-100 bg-white p-3 text-center dark:border-slate-700 dark:bg-slate-800 sm:p-5 sm:text-left">
+                        <div className="flex flex-col items-center gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+                            <div className={`hidden h-8 w-8 items-center justify-center rounded-lg sm:flex ${stat.bg}`}>
+                                <CustomIcon name={stat.icon} className={`h-4 w-4 ${stat.iconColor}`} />
+                            </div>
+                            <div>
+                                <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">{stat.label}</p>
+                                <p className="text-xl font-extrabold text-slate-900 sm:text-2xl dark:text-slate-100">{stat.value}</p>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800 dark:ring-slate-700">
-                    <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-100">
-                            <CustomIcon name="clipboard-check" className="h-5 w-5 text-teal-600" />
-                        </div>
-                        <div>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">Tiempo Prom. Finalizacion</p>
-                            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                                {dashboardKpis?.avgTimeGeneral ?? 0}h
-                            </p>
-                        </div>
-                    </div>
-                </div>
+                ))}
             </div>
 
             {/* Productividad Diaria */}

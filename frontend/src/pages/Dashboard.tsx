@@ -102,22 +102,15 @@ export const Dashboard = () => {
                 </div>
             </section>
 
-            {/* Metrics — compact on mobile, normal on desktop */}
+            {/* Metrics */}
             <section>
                 <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 sm:text-sm">Metricas</p>
 
-                <div className="grid grid-cols-5 gap-2 sm:grid-cols-5 sm:gap-4 lg:grid-cols-5">
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-5">
                     {statsCards.map((stat) => (
-                        <div key={stat.title} className="rounded-2xl border border-slate-100 bg-white p-2.5 text-center sm:rounded-[24px] sm:border-slate-200 sm:p-5 sm:text-left dark:border-slate-700 dark:bg-slate-800 sm:dark:border-slate-700">
-                            <div className="flex flex-col items-center gap-1.5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-                                <div>
-                                    <p className="text-[10px] font-medium text-slate-500 sm:text-sm dark:text-slate-400">{stat.title}</p>
-                                    <p className={`mt-1 text-lg font-extrabold sm:mt-3 sm:text-3xl ${stat.accent} ${stat.darkAccent}`}>{stat.value}</p>
-                                </div>
-                                <div className="hidden sm:block">
-                                    <CustomIcon name={stat.icon} tone={stat.tone} size="md" />
-                                </div>
-                            </div>
+                        <div key={stat.title} className="rounded-2xl border border-slate-100 bg-white p-3 text-center sm:rounded-[24px] sm:border-slate-200 sm:p-5 sm:text-left dark:border-slate-700 dark:bg-slate-800">
+                            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">{stat.title}</p>
+                            <p className={`mt-1 text-xl font-extrabold sm:mt-3 sm:text-3xl ${stat.accent} ${stat.darkAccent}`}>{stat.value}</p>
                         </div>
                     ))}
                 </div>
