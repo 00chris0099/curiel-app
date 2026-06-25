@@ -35,24 +35,22 @@ export const Dashboard = () => {
     }
 
     const statsCards: Array<{ title: string; value: number; icon: CustomIconName; tone: 'cream' | 'amber' | 'blue' | 'sage' | 'rose'; accent: string; darkAccent: string }> = [
-        { title: 'Total inspecciones', value: stats?.total || 0, icon: 'clipboard-check', tone: 'blue', accent: 'text-sky-700', darkAccent: 'dark:text-sky-400' },
+        { title: 'Total', value: stats?.total || 0, icon: 'clipboard-check', tone: 'blue', accent: 'text-sky-700', darkAccent: 'dark:text-sky-400' },
         { title: 'Pendientes', value: stats?.pendiente || 0, icon: 'clock', tone: 'amber', accent: 'text-amber-700', darkAccent: 'dark:text-amber-400' },
         { title: 'En proceso', value: stats?.en_proceso || 0, icon: 'play', tone: 'cream', accent: 'text-slate-700', darkAccent: 'dark:text-slate-300' },
         { title: 'Finalizadas', value: stats?.finalizada || 0, icon: 'seal-check', tone: 'sage', accent: 'text-emerald-700', darkAccent: 'dark:text-emerald-400' },
         { title: 'Canceladas', value: stats?.cancelada || 0, icon: 'x-circle', tone: 'rose', accent: 'text-rose-700', darkAccent: 'dark:text-rose-400' },
     ];
 
-    const quickActions: Array<{ title: string; description: string; href: string; icon: CustomIconName; tone: 'cream' | 'mist' | 'blue' | 'sage' }> = [
+    const quickActions: Array<{ title: string; href: string; icon: CustomIconName; tone: 'cream' | 'mist' | 'blue' | 'sage' }> = [
         {
             title: 'Ver inspecciones',
-            description: 'Consulta agenda, estados y avance operativo.',
             href: '/inspections',
             icon: 'folder-open',
             tone: 'cream',
         },
         {
             title: 'Mi perfil',
-            description: 'Revisa datos personales y rol asignado.',
             href: '/profile',
             icon: 'user-gear',
             tone: 'mist',
@@ -62,7 +60,6 @@ export const Dashboard = () => {
     if (canCreateInspection(user)) {
         quickActions.unshift({
             title: 'Nueva inspeccion',
-            description: 'Registra un nuevo servicio tecnico en Lima.',
             href: '/inspections/create',
             icon: 'plus',
             tone: 'blue',
@@ -72,7 +69,6 @@ export const Dashboard = () => {
     if (canManageUsers(user)) {
         quickActions.push({
             title: 'Gestionar usuarios',
-            description: 'Administra cuentas, roles y accesos internos.',
             href: '/users',
             icon: 'users',
             tone: 'sage',
@@ -81,17 +77,16 @@ export const Dashboard = () => {
 
     return (
         <div className="space-y-6 pb-10">
+            {/* Welcome */}
             <section className="card overflow-hidden">
-                <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div className="max-w-2xl">
-                        <p className="section-eyebrow">Panel de control</p>
-                        <h1 className="mt-3 font-display text-3xl text-slate-900 dark:text-slate-100 sm:text-4xl">Bienvenido, {user?.fullName}</h1>
-                        <p className="mt-3 text-slate-600 dark:text-slate-400">
-                            Supervisa operaciones, estado de inspecciones y actividad del equipo desde una vista clara y consistente.
-                        </p>
-                        <div className="mt-5 inline-flex items-center gap-3 rounded-full bg-[#f5efe1] px-4 py-2 text-sm font-semibold text-slate-700 ring-1 ring-slate-200/80 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700/80">
+                        <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100 sm:text-3xl lg:text-4xl">
+                            Bienvenido, {user?.fullName}
+                        </h1>
+                        <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-[#f5efe1] px-3 py-1.5 text-xs font-semibold text-slate-700 ring-1 ring-slate-200/80 sm:gap-3 sm:px-4 sm:py-2 sm:text-sm dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700/80">
                             <CustomIcon name="dashboard" size="xs" tone="white" />
-                            Rol activo: <span className="capitalize text-slate-900 dark:text-slate-100">{user?.role}</span>
+                            Rol: <span className="capitalize text-slate-900 dark:text-slate-100">{user?.role}</span>
                         </div>
                     </div>
 
@@ -107,44 +102,40 @@ export const Dashboard = () => {
                 </div>
             </section>
 
+            {/* Metrics — compact on mobile, normal on desktop */}
             <section>
-                <div className="mb-4 flex items-center justify-between">
-                    <div>
-                        <p className="section-eyebrow">Metricas</p>
-                        <h2 className="mt-2 text-xl font-bold text-slate-900 dark:text-slate-100">Resumen operativo</h2>
-                    </div>
-                </div>
+                <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 sm:text-sm">Metricas</p>
 
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
+                <div className="grid grid-cols-5 gap-2 sm:grid-cols-5 sm:gap-4 lg:grid-cols-5">
                     {statsCards.map((stat) => (
-                        <div key={stat.title} className="card">
-                            <div className="flex items-start justify-between gap-4">
+                        <div key={stat.title} className="rounded-2xl border border-slate-100 bg-white p-2.5 text-center sm:rounded-[24px] sm:border-slate-200 sm:p-5 sm:text-left dark:border-slate-700 dark:bg-slate-800 sm:dark:border-slate-700">
+                            <div className="flex flex-col items-center gap-1.5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                                 <div>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400">{stat.title}</p>
-                                    <p className={`mt-3 text-3xl font-extrabold ${stat.accent} ${stat.darkAccent}`}>{stat.value}</p>
+                                    <p className="text-[10px] font-medium text-slate-500 sm:text-sm dark:text-slate-400">{stat.title}</p>
+                                    <p className={`mt-1 text-lg font-extrabold sm:mt-3 sm:text-3xl ${stat.accent} ${stat.darkAccent}`}>{stat.value}</p>
                                 </div>
-                                <CustomIcon name={stat.icon} tone={stat.tone} size="md" />
+                                <div className="hidden sm:block">
+                                    <CustomIcon name={stat.icon} tone={stat.tone} size="md" />
+                                </div>
                             </div>
                         </div>
                     ))}
                 </div>
             </section>
 
+            {/* Quick Actions — 2x2 grid on mobile, 4 cols on desktop */}
             <section>
-                <div className="mb-4">
-                    <p className="section-eyebrow">Acciones</p>
-                    <h2 className="mt-2 text-xl font-bold text-slate-900 dark:text-slate-100">Atajos del equipo</h2>
-                </div>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 sm:text-sm">Atajos del equipo</p>
+
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-2 sm:gap-4 md:grid-cols-4 xl:grid-cols-4">
                     {quickActions.map((action) => (
                         <button
                             key={action.title}
                             onClick={() => navigate(action.href)}
-                            className="card text-left transition-transform hover:-translate-y-0.5"
+                            className="rounded-2xl border border-slate-100 bg-white p-3 text-left transition-transform hover:-translate-y-0.5 sm:rounded-[24px] sm:border-slate-200 sm:p-5 dark:border-slate-700 dark:bg-slate-800"
                         >
-                            <CustomIcon name={action.icon} tone={action.tone} size="md" />
-                            <h3 className="mt-5 text-lg font-semibold text-slate-900 dark:text-slate-100">{action.title}</h3>
-                            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">{action.description}</p>
+                            <CustomIcon name={action.icon} tone={action.tone} size="sm" />
+                            <h3 className="mt-2.5 text-sm font-semibold text-slate-900 sm:mt-5 sm:text-lg dark:text-slate-100">{action.title}</h3>
                         </button>
                     ))}
                 </div>
