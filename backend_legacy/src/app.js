@@ -38,15 +38,15 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Compresion
 app.use(compression());
 
+// Morgan custom token for request ID
+morgan.token('requestId', (req) => req.requestId || '-');
+
 // Logging
 if (config.server.env === 'development') {
-    app.use(morgan(':method :url :status :res[content-length] - :response-time ms [:requestId]', {
-        morgan: (req, _res, next) => { next(); }
-    }));
+    app.use(morgan(':method :url :status :res[content-length] - :response-time ms [:requestId]'));
 } else if (config.server.env !== 'test') {
     app.use(morgan(':method :url :status :res[content-length] - :response-time ms [:requestId]', {
         stream: logger.stream,
-        morgan: (req, _res, next) => { next(); }
     }));
 }
 
