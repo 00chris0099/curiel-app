@@ -123,7 +123,8 @@ class InspectionService {
         const {
             projectName, clientName, clientEmail, clientPhone,
             address, city, state, zipCode, inspectionType,
-            scheduledDate, inspectorId, notes, latitude, longitude
+            scheduledDate, inspectorId, notes, latitude, longitude,
+            clientId
         } = inspectionData;
 
         const inspector = await prisma.auth.user.findUnique({
@@ -160,6 +161,7 @@ class InspectionService {
                 notes,
                 latitude,
                 longitude,
+                clientId: clientId || null,
                 status: 'pendiente'
             }
         });
@@ -455,61 +457,101 @@ class InspectionService {
         const inspectionLabel = inspection.projectName || 'inspección';
 
         if (history.fromStatus === 'pendiente' && history.toStatus === 'en_proceso') {
-            await notificationService.createForRoles(['admin', 'arquitecto'], {
+            await notificationService.createAndNotifyForRoles(['admin', 'arquitecto', 'supervisor'], {
                 inspectionId: inspection.id,
                 type: 'inspection_started',
                 title: 'Inspección iniciada',
-                message: `El inspector inició la inspección del departamento ${inspectionLabel} en ${district}.`
+                message: `El inspector inició la inspección del departamento ${inspectionLabel} en ${district}.`,
+                category: 'inspection',
+                sendEmail: true
             }, [inspection.inspectorId]);
         }
 
         if (history.toStatus === 'lista_revision') {
-            await notificationService.createForRoles(['admin', 'arquitecto'], {
+            await notificationService.createAndNotifyForRoles(['admin', 'arquitecto', 'supervisor'], {
                 inspectionId: inspection.id,
                 type: 'inspection_ready_for_review',
                 title: 'Inspección lista para revisión',
-                message: `El informe de la inspección ${inspectionLabel} está listo para revisión.`
+                message: `El informe de la inspección ${inspectionLabel} está listo para revisión.`,
+                category: 'inspection',
+                sendEmail: true
             }, [inspection.inspectorId]);
         }
 
         if (history.toStatus === 'cancelada' && notifyInspector && inspection.inspectorId) {
-            await notificationService.createForUser(inspection.inspectorId, {
+            await notificationService.createAndNotify(inspection.inspectorId, {
                 inspectionId: inspection.id,
                 type: 'inspection_cancelled',
                 title: 'Inspección cancelada',
                 message: history.reasonLabel
                     ? `La inspección ${inspectionLabel} fue cancelada. Motivo: ${history.reasonLabel}.`
-                    : `La inspección ${inspectionLabel} fue cancelada.`
+                    : `La inspección ${inspectionLabel} fue cancelada.`,
+                category: 'inspection',
+                priority: 'high',
+                sendEmail: true
             });
+
+            await notificationService.createAndNotifyForRoles(['admin', 'arquitecto', 'supervisor'], {
+                inspectionId: inspection.id,
+                type: 'inspection_cancelled',
+                title: 'Inspección cancelada',
+                message: `La inspección ${inspectionLabel} fue cancelada.`,
+                category: 'inspection',
+                priority: 'high'
+            }, [inspection.inspectorId]);
         }
 
         if (history.toStatus === 'reprogramada' && inspection.inspectorId) {
-            await notificationService.createForUser(inspection.inspectorId, {
+            await notificationService.createAndNotify(inspection.inspectorId, {
                 inspectionId: inspection.id,
                 type: 'inspection_rescheduled',
                 title: 'Inspección reprogramada',
-                message: `La inspección ${inspectionLabel} fue reprogramada${history.reasonLabel ? `: ${history.reasonLabel}` : ''}.`
+                message: `La inspección ${inspectionLabel} fue reprogramada${history.reasonLabel ? `: ${history.reasonLabel}` : ''}.`,
+                category: 'inspection',
+                priority: 'high',
+                sendEmail: true
             });
+
+            await notificationService.createAndNotifyForRoles(['admin', 'arquitecto', 'supervisor'], {
+                inspectionId: inspection.id,
+                type: 'inspection_rescheduled',
+                title: 'Inspección reprogramada',
+                message: `La inspección ${inspectionLabel} fue reprogramada.`,
+                category: 'inspection'
+            }, [inspection.inspectorId]);
         }
 
         if (history.fromStatus === 'lista_revision' && history.toStatus === 'en_proceso' && inspection.inspectorId) {
-            await notificationService.createForUser(inspection.inspectorId, {
+            await notificationService.createAndNotify(inspection.inspectorId, {
                 inspectionId: inspection.id,
                 type: 'inspection_returned_for_correction',
                 title: 'Correcciones solicitadas',
                 message: history.comment
                     ? `La inspección ${inspectionLabel} volvió a corrección. ${history.comment}`
-                    : `La inspección ${inspectionLabel} volvió a corrección${history.reasonLabel ? `: ${history.reasonLabel}` : ''}.`
+                    : `La inspección ${inspectionLabel} volvió a corrección${history.reasonLabel ? `: ${history.reasonLabel}` : ''}.`,
+                category: 'inspection',
+                priority: 'high',
+                sendEmail: true
             });
         }
 
         if (history.toStatus === 'finalizada' && inspection.inspectorId) {
-            await notificationService.createForUser(inspection.inspectorId, {
+            await notificationService.createAndNotify(inspection.inspectorId, {
                 inspectionId: inspection.id,
                 type: 'inspection_finalized',
                 title: 'Inspección finalizada',
-                message: `El informe de la inspección ${inspectionLabel} fue aprobado.`
+                message: `El informe de la inspección ${inspectionLabel} fue aprobado.`,
+                category: 'inspection',
+                sendEmail: true
             });
+
+            await notificationService.createAndNotifyForRoles(['admin', 'arquitecto', 'supervisor'], {
+                inspectionId: inspection.id,
+                type: 'inspection_finalized',
+                title: 'Inspección finalizada',
+                message: `La inspección ${inspectionLabel} fue finalizada y aprobada.`,
+                category: 'inspection'
+            }, [inspection.inspectorId]);
 
             let reportUrl = null;
             let reportExpiresAt = null;
@@ -540,6 +582,40 @@ class InspectionService {
                 } : null,
             });
         }
+    }
+
+    async getUpcomingInspections(minutes = 35) {
+        const now = new Date();
+        const future = new Date(now.getTime() + minutes * 60 * 1000);
+
+        return prisma.inspecciones.inspection.findMany({
+            where: {
+                status: { in: ['pendiente', 'en_proceso'] },
+                scheduledDate: {
+                    gte: now,
+                    lte: future
+                }
+            },
+            include: {
+                statusHistory: {
+                    orderBy: { createdAt: 'desc' },
+                    take: 1
+                }
+            },
+            orderBy: { scheduledDate: 'asc' }
+        });
+    }
+
+    async getOverdueInspections() {
+        const now = new Date();
+
+        return prisma.inspecciones.inspection.findMany({
+            where: {
+                status: { in: ['pendiente', 'en_proceso'] },
+                scheduledDate: { lt: now }
+            },
+            orderBy: { scheduledDate: 'asc' }
+        });
     }
 }
 

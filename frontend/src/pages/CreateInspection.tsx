@@ -55,6 +55,7 @@ export const CreateInspection = () => {
         lastName: '',
         email: '',
         phone: '',
+        address: '',
     });
     const [isCreatingClient, setIsCreatingClient] = useState(false);
 
@@ -107,6 +108,7 @@ export const CreateInspection = () => {
             clientFullName: displayName,
             clientPhone: client.phone || '',
             clientEmail: client.email || '',
+            exactAddress: client.address || current.exactAddress,
         }));
     };
 
@@ -129,7 +131,7 @@ export const CreateInspection = () => {
     };
 
     const handleQuickCreateSubmit = async () => {
-        const { documentType, documentNumber, firstName, lastName, email, phone } = quickCreateForm;
+        const { documentType, documentNumber, firstName, lastName, email, phone, address } = quickCreateForm;
         if (!documentNumber.trim() || !firstName.trim() || !lastName.trim() || !email.trim()) {
             toast.error('Documento, nombre, apellido y correo son obligatorios');
             return;
@@ -143,11 +145,12 @@ export const CreateInspection = () => {
                 lastName: lastName.trim(),
                 email: email.trim(),
                 phone: phone.trim() || undefined,
+                address: address.trim() || undefined,
             });
             const newClient = response.data?.client;
             if (newClient) handleSelectClient(newClient);
             setShowQuickCreate(false);
-            setQuickCreateForm({ documentType: 'dni', documentNumber: '', firstName: '', lastName: '', email: '', phone: '' });
+            setQuickCreateForm({ documentType: 'dni', documentNumber: '', firstName: '', lastName: '', email: '', phone: '', address: '' });
             toast.success('Cliente creado exitosamente');
         } catch (error: unknown) {
             toast.error(getApiErrorMessage(error, 'Error al crear cliente'));
@@ -481,13 +484,23 @@ export const CreateInspection = () => {
                                                 />
                                             </div>
                                             <div>
-                                                <label className="mb-1 block text-xs font-medium">Teléfono</label>
+                                                <label className="mb-1 block text-xs font-medium">Telefono</label>
                                                 <input
                                                     name="phone"
                                                     value={quickCreateForm.phone}
                                                     onChange={handleQuickCreateChange}
                                                     className="input text-sm"
                                                     placeholder="Opcional"
+                                                />
+                                            </div>
+                                            <div className="sm:col-span-2">
+                                                <label className="mb-1 block text-xs font-medium">Direccion</label>
+                                                <input
+                                                    name="address"
+                                                    value={quickCreateForm.address}
+                                                    onChange={handleQuickCreateChange}
+                                                    className="input text-sm"
+                                                    placeholder="Direccion del cliente"
                                                 />
                                             </div>
                                         </div>
