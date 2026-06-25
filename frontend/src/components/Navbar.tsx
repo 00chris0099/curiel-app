@@ -57,6 +57,8 @@ export const Navbar = ({ onMenuClick }: NavbarProps) => {
                         <button
                             onClick={() => setShowUserMenu(!showUserMenu)}
                             className="flex min-h-11 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-2 py-2 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 active:scale-[0.98] dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 sm:gap-3 sm:px-2.5"
+                            aria-label="Menu de usuario"
+                            aria-expanded={showUserMenu}
                         >
                             <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[#17324a] text-sm font-semibold text-white sm:h-10 sm:w-10">
                                 {user?.fullName?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}

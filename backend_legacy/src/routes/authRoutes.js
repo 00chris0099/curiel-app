@@ -1,9 +1,17 @@
 const express = require('express');
-const { body } = require('express-validator');
 const authController = require('../controllers/authController');
 const { authenticate, authorize } = require('../middlewares/auth');
-const validateRequest = require('../middlewares/validateRequest');
+const validateJoi = require('../middlewares/validateJoi');
 const { auditLog } = require('../middlewares/auditLog');
+const {
+    loginSchema,
+    registerSchema,
+    updateProfileSchema,
+    changePasswordSchema,
+    refreshTokenSchema,
+    forgotPasswordSchema,
+    resetPasswordSchema,
+} = require('../validators/authValidator');
 
 const router = express.Router();
 
@@ -14,11 +22,7 @@ const router = express.Router();
  */
 router.post(
     '/login',
-    [
-        body('email').isEmail().withMessage('Email inválido'),
-        body('password').notEmpty().withMessage('Contraseña requerida'),
-        validateRequest
-    ],
+    validateJoi(loginSchema),
     authController.login
 );
 
@@ -31,18 +35,7 @@ router.post(
     '/register',
     authenticate,
     authorize('admin'),
-    [
-        body('email').isEmail().withMessage('Email inválido'),
-        body('password')
-            .isLength({ min: 6 })
-            .withMessage('La contraseña debe tener al menos 6 caracteres'),
-        body('firstName').notEmpty().withMessage('Nombre requerido'),
-        body('lastName').notEmpty().withMessage('Apellido requerido'),
-        body('role')
-            .isIn(['admin', 'arquitecto', 'inspector', 'supervisor'])
-            .withMessage('Rol invalido'),
-        validateRequest
-    ],
+    validateJoi(registerSchema),
     auditLog('register', 'User'),
     authController.register
 );
@@ -62,11 +55,7 @@ router.get('/me', authenticate, authController.getMe);
 router.put(
     '/me',
     authenticate,
-    [
-        body('firstName').optional().notEmpty().withMessage('Nombre no puede estar vacío'),
-        body('lastName').optional().notEmpty().withMessage('Apellido no puede estar vacío'),
-        validateRequest
-    ],
+    validateJoi(updateProfileSchema),
     auditLog('update_profile', 'User'),
     authController.updateProfile
 );
@@ -79,13 +68,7 @@ router.put(
 router.put(
     '/change-password',
     authenticate,
-    [
-        body('currentPassword').notEmpty().withMessage('Contrasena actual requerida'),
-        body('newPassword')
-            .isLength({ min: 6 })
-            .withMessage('La nueva contrasena debe tener al menos 6 caracteres'),
-        validateRequest
-    ],
+    validateJoi(changePasswordSchema),
     auditLog('change_password', 'User'),
     authController.changePassword
 );
@@ -97,10 +80,7 @@ router.put(
  */
 router.post(
     '/refresh',
-    [
-        body('refreshToken').notEmpty().withMessage('Refresh token requerido'),
-        validateRequest
-    ],
+    validateJoi(refreshTokenSchema),
     authController.refreshToken
 );
 
@@ -122,10 +102,7 @@ router.post(
  */
 router.post(
     '/forgot-password',
-    [
-        body('email').isEmail().withMessage('Email inválido'),
-        validateRequest
-    ],
+    validateJoi(forgotPasswordSchema),
     authController.forgotPassword
 );
 
@@ -136,13 +113,7 @@ router.post(
  */
 router.post(
     '/reset-password',
-    [
-        body('token').notEmpty().withMessage('Token requerido'),
-        body('newPassword')
-            .isLength({ min: 6 })
-            .withMessage('La contrasena debe tener al menos 6 caracteres'),
-        validateRequest
-    ],
+    validateJoi(resetPasswordSchema),
     authController.resetPassword
 );
 

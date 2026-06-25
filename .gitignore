@@ -24,14 +24,14 @@ yarn.lock
 !mobile/package-lock.json
 
 # ============ BACKEND ============
-backend/.env
-backend/node_modules/
-backend/uploads/*
-!backend/uploads/.gitkeep
-backend/storage/reports/*
-!backend/storage/reports/.gitkeep
-backend/dist/
-backend/build/
+backend_legacy/.env
+backend_legacy/node_modules/
+backend_legacy/uploads/*
+!backend_legacy/uploads/.gitkeep
+backend_legacy/storage/reports/*
+!backend_legacy/storage/reports/.gitkeep
+backend_legacy/dist/
+backend_legacy/build/
 
 # ============ MOBILE ============
 mobile/node_modules/

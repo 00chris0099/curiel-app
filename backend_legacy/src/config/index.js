@@ -138,5 +138,8 @@ module.exports = {
   urls: {
     frontend: process.env.FRONTEND_URL || 'http://localhost:3000',
     backend: process.env.BACKEND_URL || 'http://localhost:4000'
-  }
+  },
+
+  // Internal API Key (para n8n cron jobs)
+  internalApiKey: process.env.INTERNAL_API_KEY || null
 };

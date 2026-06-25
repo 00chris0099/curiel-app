@@ -10,6 +10,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { Login } from './pages/Login';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { ResetPassword } from './pages/ResetPassword';
+import { NotFound } from './pages/NotFound';
 import { usePrefetchCriticalData } from './hooks/usePrefetchCriticalData';
 
 const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
@@ -100,27 +101,27 @@ function App() {
           <Route path="/reset-password" element={<ResetPassword />} />
 
           {/* Rutas protegidas */}
-          <Route path="/dashboard" element={<PrivateRoute><DashboardLayout><Dashboard /></DashboardLayout></PrivateRoute>} />
-          <Route path="/profile" element={<PrivateRoute><DashboardLayout><Profile /></DashboardLayout></PrivateRoute>} />
-          <Route path="/notifications" element={<PrivateRoute><DashboardLayout><Notifications /></DashboardLayout></PrivateRoute>} />
-          <Route path="/users" element={<PrivateRoute allowedRoles={['admin']}><DashboardLayout><Users /></DashboardLayout></PrivateRoute>} />
-          <Route path="/clients" element={<PrivateRoute allowedRoles={['admin']}><DashboardLayout><Clients /></DashboardLayout></PrivateRoute>} />
-          <Route path="/clients/:id" element={<PrivateRoute allowedRoles={['admin']}><DashboardLayout><ClientDetail /></DashboardLayout></PrivateRoute>} />
-          <Route path="/inspections" element={<PrivateRoute><DashboardLayout><Inspections /></DashboardLayout></PrivateRoute>} />
-          <Route path="/inspections/:id" element={<PrivateRoute><DashboardLayout><InspectionDetail /></DashboardLayout></PrivateRoute>} />
+          <Route path="/dashboard" element={<PrivateRoute><DashboardLayout><ErrorBoundary><Dashboard /></ErrorBoundary></DashboardLayout></PrivateRoute>} />
+          <Route path="/profile" element={<PrivateRoute><DashboardLayout><ErrorBoundary><Profile /></ErrorBoundary></DashboardLayout></PrivateRoute>} />
+          <Route path="/notifications" element={<PrivateRoute><DashboardLayout><ErrorBoundary><Notifications /></ErrorBoundary></DashboardLayout></PrivateRoute>} />
+          <Route path="/users" element={<PrivateRoute allowedRoles={['admin']}><DashboardLayout><ErrorBoundary><Users /></ErrorBoundary></DashboardLayout></PrivateRoute>} />
+          <Route path="/clients" element={<PrivateRoute allowedRoles={['admin']}><DashboardLayout><ErrorBoundary><Clients /></ErrorBoundary></DashboardLayout></PrivateRoute>} />
+          <Route path="/clients/:id" element={<PrivateRoute allowedRoles={['admin']}><DashboardLayout><ErrorBoundary><ClientDetail /></ErrorBoundary></DashboardLayout></PrivateRoute>} />
+          <Route path="/inspections" element={<PrivateRoute><DashboardLayout><ErrorBoundary><Inspections /></ErrorBoundary></DashboardLayout></PrivateRoute>} />
+          <Route path="/inspections/:id" element={<PrivateRoute><DashboardLayout><ErrorBoundary><InspectionDetail /></ErrorBoundary></DashboardLayout></PrivateRoute>} />
           <Route path="/inspections/:id/execute" element={<PrivateRoute allowedRoles={['admin', 'arquitecto', 'supervisor', 'inspector']}><DashboardLayout><ErrorBoundary backHref="/inspections"><InspectionExecution /></ErrorBoundary></DashboardLayout></PrivateRoute>} />
           <Route path="/inspections/:id/execute/areas/:areaId" element={<PrivateRoute allowedRoles={['admin', 'arquitecto', 'supervisor', 'inspector']}><DashboardLayout><ErrorBoundary backHref="/inspections"><InspectionAreaDetail /></ErrorBoundary></DashboardLayout></PrivateRoute>} />
-          <Route path="/inspections/create" element={<PrivateRoute allowedRoles={['admin', 'arquitecto', 'supervisor']}><DashboardLayout><CreateInspection /></DashboardLayout></PrivateRoute>} />
-          <Route path="/supervisor" element={<PrivateRoute allowedRoles={['supervisor', 'admin']}><DashboardLayout><SupervisorDashboard /></DashboardLayout></PrivateRoute>} />
-          <Route path="/alerts" element={<PrivateRoute allowedRoles={['supervisor', 'admin']}><DashboardLayout><Alerts /></DashboardLayout></PrivateRoute>} />
-          <Route path="/evaluations" element={<PrivateRoute allowedRoles={['supervisor', 'admin']}><DashboardLayout><Evaluations /></DashboardLayout></PrivateRoute>} />
-          <Route path="/suspensions" element={<PrivateRoute allowedRoles={['supervisor', 'admin']}><DashboardLayout><Suspensions /></DashboardLayout></PrivateRoute>} />
-          <Route path="/supervisor/actions" element={<PrivateRoute allowedRoles={['supervisor', 'admin']}><DashboardLayout><SupervisorActions /></DashboardLayout></PrivateRoute>} />
-          <Route path="/config" element={<PrivateRoute allowedRoles={['admin']}><DashboardLayout><Config /></DashboardLayout></PrivateRoute>} />
+          <Route path="/inspections/create" element={<PrivateRoute allowedRoles={['admin', 'arquitecto', 'supervisor']}><DashboardLayout><ErrorBoundary><CreateInspection /></ErrorBoundary></DashboardLayout></PrivateRoute>} />
+          <Route path="/supervisor" element={<PrivateRoute allowedRoles={['supervisor', 'admin']}><DashboardLayout><ErrorBoundary><SupervisorDashboard /></ErrorBoundary></DashboardLayout></PrivateRoute>} />
+          <Route path="/alerts" element={<PrivateRoute allowedRoles={['supervisor', 'admin']}><DashboardLayout><ErrorBoundary><Alerts /></ErrorBoundary></DashboardLayout></PrivateRoute>} />
+          <Route path="/evaluations" element={<PrivateRoute allowedRoles={['supervisor', 'admin']}><DashboardLayout><ErrorBoundary><Evaluations /></ErrorBoundary></DashboardLayout></PrivateRoute>} />
+          <Route path="/suspensions" element={<PrivateRoute allowedRoles={['supervisor', 'admin']}><DashboardLayout><ErrorBoundary><Suspensions /></ErrorBoundary></DashboardLayout></PrivateRoute>} />
+          <Route path="/supervisor/actions" element={<PrivateRoute allowedRoles={['supervisor', 'admin']}><DashboardLayout><ErrorBoundary><SupervisorActions /></ErrorBoundary></DashboardLayout></PrivateRoute>} />
+          <Route path="/config" element={<PrivateRoute allowedRoles={['admin']}><DashboardLayout><ErrorBoundary><Config /></ErrorBoundary></DashboardLayout></PrivateRoute>} />
 
           {/* Redirecciones */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
     </BrowserRouter>

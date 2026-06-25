@@ -6,8 +6,7 @@ import { CustomIcon } from '../components/CustomIcon';
 import { NotificationsSkeleton } from '../components/Skeleton';
 import notificationService from '../services/notification.service';
 import type { Notification } from '../types';
-
-const safeArray = <T,>(value: T[] | undefined | null) => Array.isArray(value) ? value : [];
+import { safeArray } from '../utils/offlineDb';
 
 export const Notifications = () => {
     const navigate = useNavigate();

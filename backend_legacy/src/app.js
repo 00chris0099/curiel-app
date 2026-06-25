@@ -5,6 +5,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
+const jwt = require('jsonwebtoken');
 
 const config = require('./config');
 const routes = require('./routes');
@@ -12,6 +13,7 @@ const { errorHandler, notFound } = require('./middlewares/errorHandler');
 const logger = require('./utils/logger');
 const { sentryErrorHandler } = require('./utils/sentry');
 const { httpRequestDuration, httpRequestTotal } = require('./utils/metrics');
+const requestId = require('./middlewares/requestId');
 
 const app = express();
 
@@ -19,6 +21,9 @@ app.set('trust proxy', 1);
 
 // Seguridad
 app.use(helmet());
+
+// Request ID — genera UUID unico por request para tracing
+app.use(requestId);
 
 // CORS
 app.use(cors({
@@ -35,19 +40,29 @@ app.use(compression());
 
 // Logging
 if (config.server.env === 'development') {
-    app.use(morgan('dev'));
+    app.use(morgan(':method :url :status :res[content-length] - :response-time ms [:requestId]', {
+        morgan: (req, _res, next) => { next(); }
+    }));
 } else if (config.server.env !== 'test') {
-    app.use(morgan('combined', { stream: logger.stream }));
+    app.use(morgan(':method :url :status :res[content-length] - :response-time ms [:requestId]', {
+        stream: logger.stream,
+        morgan: (req, _res, next) => { next(); }
+    }));
 }
 
-// Rate limiting — por usuario (token) o por IP como fallback
+// Rate limiting — por usuario (ID decodificado) o por IP como fallback
 const limiter = rateLimit({
     windowMs: config.rateLimit.windowMs,
     max: config.rateLimit.maxRequests,
     keyGenerator: (req) => {
         const authHeader = req.headers.authorization;
         if (authHeader && authHeader.startsWith('Bearer ')) {
-            return authHeader.slice(7);
+            try {
+                const payload = jwt.decode(authHeader.slice(7));
+                if (payload && payload.id) return `user:${payload.id}`;
+            } catch {
+                // fall through to IP
+            }
         }
         return req.ip;
     },

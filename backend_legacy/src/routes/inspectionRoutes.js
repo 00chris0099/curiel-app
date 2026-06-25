@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { authenticate, authorize } = require('../middlewares/auth');
+const { internalAuth } = require('../middlewares/internalAuth');
 const validateJoi = require('../middlewares/validateJoi');
 const {
     createInspectionSchema,
@@ -17,7 +18,8 @@ const inspectionController = require('../controllers/inspectionController');
 const inspectionExecutionRoutes = require('./inspectionExecutionRoutes');
 const inspectionReportController = require('../controllers/inspectionReportController');
 
-// Todas las rutas requieren autenticacion
+// Internal API key (n8n cron jobs) o JWT auth
+router.use(internalAuth);
 router.use(authenticate);
 
 // GET /api/v1/inspections/stats - Estadisticas

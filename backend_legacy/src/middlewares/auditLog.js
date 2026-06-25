@@ -1,5 +1,7 @@
 const { prisma } = require('../lib/databases');
 const logger = require('../utils/logger');
+const { triggerN8nWebhook } = require('../utils/n8n');
+const config = require('../config');
 
 const auditLog = (action, entityType = null) => {
     return async (req, res, next) => {
@@ -51,6 +53,17 @@ const createAuditLog = async (userId, action, entityType, entityId, changes = nu
                 changes
             }
         });
+
+        // Forward critical actions to n8n for external audit trail + alerting
+        if (config.n8n.auditLog) {
+            triggerN8nWebhook('auditLog', {
+                userId,
+                action,
+                entityType,
+                entityId,
+                changes
+            }).catch(() => {});
+        }
     } catch (error) {
         logger.error('Error al crear audit log (manual)', { error: error.message });
     }

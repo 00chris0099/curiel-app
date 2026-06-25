@@ -11,7 +11,7 @@ import type { Inspection, UpdateInspectionStatusDto } from '../types';
 import { inspectionStatusIconMap } from '../utils/iconSystem';
 import { canAccessInspectionExecution, canGenerateInspectionReport } from '../utils/inspectionPermissions';
 import { getInspectionLocationLabel, getInspectionServiceLabel, getInspectorName, parseDepartmentInspectionNotes } from '../utils/inspectionMetadata';
-import { saveCachedInspectionDetail, getCachedInspectionDetail } from '../utils/offlineDb';
+import { safeArray, saveCachedInspectionDetail, getCachedInspectionDetail } from '../utils/offlineDb';
 import {
     buildStatusUpdatePayload,
     getAllowedStatusActions,
@@ -36,10 +36,6 @@ const emptyStatusModalState: StatusModalState = {
     notifyInspector: false,
     scheduledDate: '',
 };
-
-function safeArray<T>(value: T[] | null | undefined) {
-    return Array.isArray(value) ? value : [];
-}
 
 export const InspectionDetail = () => {
     const { id } = useParams<{ id: string }>();

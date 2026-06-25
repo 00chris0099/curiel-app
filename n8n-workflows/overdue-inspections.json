@@ -10,7 +10,7 @@
       "id": "schedule-weekly",
       "name": "Weekly Monday 9am",
       "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1,
+      "typeVersion": 1.2,
       "position": [250, 300]
     },
     {
@@ -19,12 +19,21 @@
         "url": "={{$env.BACKEND_URL}}/api/v1/inspections?status=en_proceso&limit=100",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Internal-API-Key",
+              "value": "={{$env.INTERNAL_API_KEY}}"
+            }
+          ]
+        },
         "options": {}
       },
       "id": "get-in-process",
       "name": "Get In-Process Inspections",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 1,
+      "typeVersion": 4.2,
       "position": [500, 300],
       "credentials": {
         "httpHeaderAuth": { "id": "curiel-api", "name": "CURIEL API" }
@@ -32,41 +41,44 @@
     },
     {
       "parameters": {
-        "conditions": {
-          "number": [
-            {
-              "value1": "={{$json.data.data.length}}",
-              "operation": "largerEqual",
-              "value2": 1
-            }
-          ]
-        }
+        "jsCode": "const data = $input.first().json.data?.data || $input.first().json.data || [];\nif (!Array.isArray(data) || data.length === 0) {\n  return [];\n}\nreturn [{ json: { inspections: data, count: data.length } }];"
       },
       "id": "check-has-overdue",
       "name": "Has Overdue?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const inspections = $input.first().json.inspections;\nconst rows = inspections.map(i => {\n  const scheduled = i.scheduledDate ? new Date(i.scheduledDate).toLocaleDateString('es-PE') : 'Sin fecha';\n  const inspector = i.inspectorName || i.inspector?.fullName || 'Sin asignar';\n  const project = i.projectName || i.name || 'Sin nombre';\n  return '<tr><td style=\"padding:10px 12px;border-bottom:1px solid #f3f4f6;font-weight:600;color:#374151\">' + project + '</td><td style=\"padding:10px 12px;border-bottom:1px solid #f3f4f6;color:#6b7280\">' + inspector + '</td><td style=\"padding:10px 12px;border-bottom:1px solid #f3f4f6;color:#6b7280\">' + scheduled + '</td></tr>';\n}).join('');\n\nreturn [{ json: { ...$input.first().json, rows } }];"
+      },
+      "id": "build-email-content",
+      "name": "Build Email Content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
     },
     {
       "parameters": {
         "fromEmail": "={{$env.SMTP_FROM_EMAIL || 'noreply@curiel.com'}}",
         "toEmail": "={{$env.ADMIN_EMAIL || 'admin@curiel.com'}}",
-        "subject": "[CURIEL] Inspecciones vencidas o en proceso prolongado",
-        "html": "<h2>Inspecciones vencidas</h2><p>Las siguientes inspecciones llevan mucho tiempo en proceso:</p><ul>{{$json.data.data.map(function(insp) { return '<li><strong>' + insp.projectName + '</strong> - ' + insp.scheduledDate + '</li>'; }).join('')}}</ul><p><a href='{{$env.FRONTEND_URL}}/inspections'>Revisar inspecciones</a></p>",
+        "subject": "[CURIEL] {{$json.count}} inspeccion(es) vencida(s) o en proceso prolongado",
+        "html": "<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:32px;background:#ffffff;border-radius:12px;border:1px solid #e5e7eb'><div style='text-align:center;margin-bottom:24px'><h1 style='color:#17324a;font-size:22px;margin:0'>CURIEL</h1><p style='color:#6b7280;font-size:13px;margin:4px 0 0'>Sistema de Inspecciones Tecnicas</p></div><div style='background:#fef3c7;border-radius:10px;padding:16px;margin-bottom:24px;text-align:center'><span style='font-size:32px'>&#9888;&#65039;</span><h2 style='color:#92400e;font-size:18px;margin:8px 0 4px'>Inspecciones vencidas</h2><p style='color:#b45309;font-size:13px;margin:0'>Se encontraron {{$json.count}} inspeccion(es) que requieren atencion</p></div><table style='width:100%;border-collapse:collapse;margin:20px 0'><thead><tr style='background:#f9fafb'><th style='padding:10px 12px;text-align:left;color:#6b7280;font-size:13px;font-weight:600'>Proyecto</th><th style='padding:10px 12px;text-align:left;color:#6b7280;font-size:13px;font-weight:600'>Inspector</th><th style='padding:10px 12px;text-align:left;color:#6b7280;font-size:13px;font-weight:600'>Fecha programada</th></tr></thead><tbody>{{$json.rows}}</tbody></table><div style='text-align:center;margin:28px 0'><a href='{{$env.FRONTEND_URL || 'https://curiel.vercel.app'}}/inspections' style='display:inline-block;background:#17324a;color:#ffffff;padding:14px 32px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:600'>Revisar inspecciones</a></div><hr style='border:none;border-top:1px solid #e5e7eb;margin:24px 0'><p style='color:#9ca3af;font-size:12px;text-align:center'>Este correo fue enviado automaticamente por CURIEL Inspecciones.</p></div>",
         "options": {}
       },
       "id": "send-overdue-email",
       "name": "Send Overdue Email",
       "type": "n8n-nodes-base.emailSend",
-      "typeVersion": 1,
-      "position": [950, 300]
+      "typeVersion": 2.1,
+      "position": [1150, 300]
     }
   ],
   "connections": {
     "Weekly Monday 9am": { "main": [[ { "node": "Get In-Process Inspections", "type": "main", "index": 0 } ]] },
     "Get In-Process Inspections": { "main": [[ { "node": "Has Overdue?", "type": "main", "index": 0 } ]] },
-    "Has Overdue?": { "main": [[ { "node": "Send Overdue Email", "type": "main", "index": 0 } ], []] }
+    "Has Overdue?": { "main": [[ { "node": "Build Email Content", "type": "main", "index": 0 } ], []] },
+    "Build Email Content": { "main": [[ { "node": "Send Overdue Email", "type": "main", "index": 0 } ]] }
   },
   "settings": { "executionOrder": "v1" }
 }

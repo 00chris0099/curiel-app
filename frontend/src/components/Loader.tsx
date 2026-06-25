@@ -11,7 +11,7 @@ export const Loader = ({ size = 40, className = '', fullScreen = false }: Loader
 
     if (fullScreen) {
         return (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/70 backdrop-blur-sm dark:bg-slate-900/70">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/70 backdrop-blur-sm dark:bg-slate-900/70" role="status" aria-label="Cargando">
                 <div className="rounded-[28px] border border-slate-200 bg-white p-8 shadow-[0_24px_60px_rgba(23,50,74,0.12)] dark:border-slate-700 dark:bg-slate-800 dark:shadow-[0_24px_60px_rgba(0,0,0,0.3)]">
                     <CustomIcon name="sync" spin size={iconSize} tone="cream" className={className} />
                 </div>
@@ -20,7 +20,7 @@ export const Loader = ({ size = 40, className = '', fullScreen = false }: Loader
     }
 
     return (
-        <div className="flex items-center justify-center p-8">
+        <div className="flex items-center justify-center p-8" role="status" aria-label="Cargando">
             <CustomIcon name="sync" spin size={iconSize} tone="cream" className={className} />
         </div>
     );

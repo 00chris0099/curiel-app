@@ -6,29 +6,12 @@ import { CustomIcon } from '../components/CustomIcon';
 import { getApiErrorMessage } from '../api/axios';
 import clientService from '../services/client.service';
 import type { Client, Inspection, InspectionStatus } from '../types';
+import { inspectionStatusLabels, inspectionStatusBadgeClasses } from '../utils/inspectionStatus';
 
 const documentTypeLabels: Record<string, string> = {
     dni: 'DNI',
     ruc: 'RUC',
     ce: 'CE',
-};
-
-const statusLabels: Record<InspectionStatus, string> = {
-    pendiente: 'Pendiente',
-    en_proceso: 'En Proceso',
-    lista_revision: 'Lista Revision',
-    finalizada: 'Finalizada',
-    cancelada: 'Cancelada',
-    reprogramada: 'Reprogramada',
-};
-
-const statusBadgeColors: Record<InspectionStatus, string> = {
-    pendiente: 'bg-yellow-100 text-yellow-800',
-    en_proceso: 'bg-blue-100 text-blue-800',
-    lista_revision: 'bg-purple-100 text-purple-800',
-    finalizada: 'bg-green-100 text-green-800',
-    cancelada: 'bg-red-100 text-red-800',
-    reprogramada: 'bg-orange-100 text-orange-800',
 };
 
 export const ClientDetail = () => {
@@ -191,8 +174,8 @@ export const ClientDetail = () => {
                                         </td>
                                         <td className="px-4 py-3 text-slate-600">{inspection.inspectionType}</td>
                                         <td className="px-4 py-3">
-                                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusBadgeColors[inspection.status]}`}>
-                                                {statusLabels[inspection.status]}
+                                            <span className={`badge ${inspectionStatusBadgeClasses[inspection.status]}`}>
+                                                {inspectionStatusLabels[inspection.status]}
                                             </span>
                                         </td>
                                         <td className="px-4 py-3 text-slate-600">

@@ -12,14 +12,15 @@ Este directorio contiene los workflows de n8n para automatizar procesos en CURIE
 | 2 | `inspection-assigned.json` | Webhook POST | Email al inspector al ser asignado |
 | 3 | `user-notification.json` | Webhook POST | Email al cambiar estado de usuario |
 | 4 | `evaluation-notification.json` | Webhook POST | Email al evaluado con score semanal |
+| 5 | `audit-log.json` | Webhook POST | Alerta admin en acciones de alto riesgo (delete, etc.) |
 
 ### Cron Jobs (automaticos)
 
 | # | Archivo | Schedule | Descripcion |
 |---|---------|----------|-------------|
-| 5 | `reminder-pending.json` | 8am weekdays | Email a admin con inspecciones pendientes |
-| 6 | `overdue-inspections.json` | 9am Monday | Email a admin con inspecciones vencidas |
-| 7 | `database-backup.json` | 3am daily | Backup automatico de PostgreSQL via pg_dump |
+| 6 | `reminder-pending.json` | 8am weekdays | Email a admin con inspecciones pendientes |
+| 7 | `overdue-inspections.json` | 9am Monday | Email a admin con inspecciones vencidas |
+| 8 | `database-backup.json` | 3am daily | Backup automatico de PostgreSQL via pg_dump |
 
 ### Seguridad
 

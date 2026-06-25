@@ -22,7 +22,7 @@ export const usePrefetchCriticalData = () => {
         }
 
         // Prefetch inspecciones si va a crear una
-        if (location.pathname === '/inspections/new') {
+        if (location.pathname === '/inspections/create') {
             prefetchEndpoints.push('/clients?limit=50');
         }
 

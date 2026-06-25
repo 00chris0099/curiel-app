@@ -5,9 +5,10 @@ module.exports = {
     clearMocks: true,
     testTimeout: 15000,
     transform: {
-        '^.+\\.js$': 'babel-jest',
+        '^.+\\.[jt]sx?$': 'babel-jest',
     },
     transformIgnorePatterns: [
         'node_modules/(?!(@react-native|react-native|@expo)/)',
     ],
+    moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
 };

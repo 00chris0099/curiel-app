@@ -11,48 +11,66 @@
       "id": "webhook-evaluation",
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
-      "typeVersion": 1,
-      "position": [250, 300]
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "evaluation-notification"
     },
     {
       "parameters": {
-        "conditions": {
-          "string": [
-            {
-              "value1": "={{$json.headers['X-CURIEL-SECRET']}}",
-              "operation": "equals",
-              "value2": "={{$env.CURIEL_SECRET_TOKEN}}"
-            }
-          ]
-        }
+        "jsCode": "const headers = $input.first().json.headers;\nconst secret = headers['x-curiel-secret'];\nconst body = $input.first().json.body;\n\nif (secret !== $env.CURIEL_SECRET_TOKEN) {\n  throw new Error('Invalid secret token');\n}\n\nif (!body || !body.evaluation) {\n  throw new Error('Missing evaluation data');\n}\n\nconst ev = body.evaluation;\nif (!ev.evaluatedEmail || !ev.compositeScore || !ev.weekStart || !ev.weekEnd) {\n  throw new Error('Missing required evaluation fields: evaluatedEmail, compositeScore, weekStart, weekEnd');\n}\n\nreturn [{ json: { ...body, validated: true } }];"
       },
       "id": "validate-secret",
       "name": "Validate Secret",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [450, 300]
     },
     {
       "parameters": {
+        "jsCode": "const ev = $input.first().json.evaluation;\nconst score = parseFloat(ev.compositeScore);\n\nlet scoreColor = '#17324a';\nlet scoreLabel = 'Excelente';\nlet scoreEmoji = '\\u{1F31F}';\n\nif (score < 4) {\n  scoreColor = '#dc2626';\n  scoreLabel = 'Requiere mejora';\n  scoreEmoji = '\\u{26A0}\\u{FE0F}';\n} else if (score < 6) {\n  scoreColor = '#d97706';\n  scoreLabel = 'Aceptable';\n  scoreEmoji = '\\u{1F4A1}';\n} else if (score < 8) {\n  scoreColor = '#2563eb';\n  scoreLabel = 'Buen desempeno';\n  scoreEmoji = '\\u{1F4AA}';\n}\n\nconst detailRows = (ev.details || []).map(d => {\n  const val = parseFloat(d.score);\n  const max = parseFloat(d.maxScore) || 10;\n  const pct = Math.round((val / max) * 100);\n  let barColor = '#17324a';\n  if (pct < 40) barColor = '#dc2626';\n  else if (pct < 70) barColor = '#d97706';\n  else if (pct >= 80) barColor = '#16a34a';\n  return '<tr><td style=\"padding:10px 12px;border-bottom:1px solid #f3f4f6;color:#374151;font-size:14px\">' + (d.category || 'Sin categoria') + '</td><td style=\"padding:10px 12px;border-bottom:1px solid #f3f4f6;text-align:center;font-weight:600;color:#374151;font-size:14px\">' + val + '/' + max + '</td><td style=\"padding:10px 12px;border-bottom:1px solid #f3f4f6;width:40%\"><div style=\"background:#e5e7eb;border-radius:6px;height:8px;overflow:hidden\"><div style=\"background:' + barColor + ';width:' + pct + '%;height:8px;border-radius:6px\"></div></div></td></tr>';\n}).join('');\n\nreturn [{ json: { ...$input.first().json, scoreColor, scoreLabel, scoreEmoji, detailRows } }];"
+      },
+      "id": "build-context",
+      "name": "Build Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
         "fromEmail": "={{$env.SMTP_FROM_EMAIL || 'noreply@curiel.com'}}",
-        "toEmail": "={{$json.body.evaluation.evaluatedEmail || 'admin@curiel.com'}}",
-        "subject": "[CURIEL] Tu evaluacion semanal - Score: {{$json.body.evaluation.compositeScore}}/10",
-        "html": "<h2>Evaluacion Semanal</h2><p>Tu calificacion para la semana {{$json.body.evaluation.weekStart}} - {{$json.body.evaluation.weekEnd}} es:</p><h1 style='font-size:48px;text-align:center;color:#17324a;'>{{$json.body.evaluation.compositeScore}}/10</h1><p><a href='{{$env.FRONTEND_URL}}/dashboard'>Ver mi desempeno</a></p>",
+        "toEmail": "={{$json.evaluation.evaluatedEmail}}",
+        "subject": "[CURIEL] Tu evaluacion semanal - Score: {{$json.evaluation.compositeScore}}/10",
+        "html": "<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:32px;background:#ffffff;border-radius:12px;border:1px solid #e5e7eb'><div style='text-align:center;margin-bottom:24px'><h1 style='color:#17324a;font-size:22px;margin:0'>CURIEL</h1><p style='color:#6b7280;font-size:13px;margin:4px 0 0'>Sistema de Inspecciones Tecnicas</p></div><div style='background:{{$json.scoreColor}}15;border-radius:10px;padding:20px;margin-bottom:24px;text-align:center'><span style='font-size:36px'>{{$json.scoreEmoji}}</span><h2 style='color:{{$json.scoreColor}};font-size:28px;margin:8px 0 4px'>{{$json.evaluation.compositeScore}}/10</h2><p style='color:{{$json.scoreColor}};font-size:14px;font-weight:600;margin:0'>{{$json.scoreLabel}}</p></div><p style='color:#374151;font-size:15px;line-height:1.6'>Hola <strong>{{$json.evaluation.evaluatedName || 'Inspector'}}</strong>,</p><p style='color:#374151;font-size:15px;line-height:1.6'>Tu evaluacion para la semana <strong>{{$json.evaluation.weekStart}} - {{$json.evaluation.weekEnd}}</strong> ha sido registrada.</p>{{$json.detailRows ? '<table style=\"width:100%;border-collapse:collapse;margin:20px 0\"><thead><tr style=\"background:#f9fafb\"><th style=\"padding:10px 12px;text-align:left;color:#6b7280;font-size:13px;font-weight:600\">Categoria</th><th style=\"padding:10px 12px;text-align:center;color:#6b7280;font-size:13px;font-weight:600\">Score</th><th style=\"padding:10px 12px;color:#6b7280;font-size:13px;font-weight:600\">Progreso</th></tr></thead><tbody>' + $json.detailRows + '</tbody></table>' : ''}<div style='text-align:center;margin:28px 0'><a href=\"{{$env.FRONTEND_URL || 'https://curiel.vercel.app'}}/dashboard\" style=\"display:inline-block;background:#17324a;color:#ffffff;padding:14px 32px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:600\">Ver mi desempeno</a></div><hr style='border:none;border-top:1px solid #e5e7eb;margin:24px 0'><p style='color:#9ca3af;font-size:12px;text-align:center'>Este correo fue enviado automaticamente por CURIEL Inspecciones.</p></div>",
         "options": {}
       },
-      "id": "send-evaluation-email",
-      "name": "Send Evaluation Email",
+      "id": "send-email-inspector",
+      "name": "Email to Inspector",
       "type": "n8n-nodes-base.emailSend",
-      "typeVersion": 1,
-      "position": [650, 300]
+      "typeVersion": 2.1,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{$env.SMTP_FROM_EMAIL || 'noreply@curiel.com'}}",
+        "toEmail": "={{$env.ADMIN_EMAIL || 'admin@curiel.com'}}",
+        "subject": "[CURIEL] Evaluacion semanal - {{$json.evaluation.evaluatedName || 'Inspector'}} - Score: {{$json.evaluation.compositeScore}}/10",
+        "html": "<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:32px;background:#ffffff;border-radius:12px;border:1px solid #e5e7eb'><h2 style='color:#17324a;font-size:18px;margin:0 0 16px'>Nueva evaluacion semanal registrada</h2><table style='width:100%;font-size:14px;color:#374151;border-collapse:collapse'><tr><td style='padding:8px 0;color:#6b7280'>Inspector</td><td style='padding:8px 0;font-weight:600'>{{$json.evaluation.evaluatedName || 'N/A'}}</td></tr><tr><td style='padding:8px 0;color:#6b7280'>Email</td><td style='padding:8px 0'>{{$json.evaluation.evaluatedEmail}}</td></tr><tr><td style='padding:8px 0;color:#6b7280'>Periodo</td><td style='padding:8px 0;font-weight:600'>{{$json.evaluation.weekStart}} - {{$json.evaluation.weekEnd}}</td></tr><tr><td style='padding:8px 0;color:#6b7280'>Calificacion</td><td style='padding:8px 0;font-weight:700;color:{{$json.scoreColor}};font-size:16px'>{{$json.evaluation.compositeScore}}/10 <span style='font-size:13px;font-weight:400'>(${$json.scoreLabel})</span></td></tr></table><div style='text-align:center;margin:24px 0'><a href='{{$env.FRONTEND_URL || 'https://curiel.vercel.app'}}/evaluations' style='display:inline-block;background:#17324a;color:#ffffff;padding:12px 28px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600'>Ver evaluaciones</a></div></div>",
+        "options": {}
+      },
+      "id": "send-email-admin",
+      "name": "Email to Admin",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [850, 400]
     }
   ],
   "connections": {
     "Webhook": { "main": [[ { "node": "Validate Secret", "type": "main", "index": 0 } ]] },
-    "Validate Secret": {
+    "Validate Secret": { "main": [[ { "node": "Build Context", "type": "main", "index": 0 } ]] },
+    "Build Context": {
       "main": [
-        [ { "node": "Send Evaluation Email", "type": "main", "index": 0 } ],
-        []
+        [ { "node": "Email to Inspector", "type": "main", "index": 0 } ],
+        [ { "node": "Email to Admin", "type": "main", "index": 0 } ]
       ]
     }
   },

@@ -57,6 +57,9 @@ export const Clients = () => {
     const [docTypeFilter, setDocTypeFilter] = useState<ClientDocumentType | ''>('');
     const [form, setForm] = useState<ClientFormState>(emptyForm);
     const [totalClients, setTotalClients] = useState(0);
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const pageSize = 20;
 
     const isEditing = Boolean(editingClient);
     const isFormVisible = showCreateForm || isEditing;
@@ -66,20 +69,26 @@ export const Clients = () => {
             const response = await clientService.getAll({
                 search: search || undefined,
                 documentType: (docTypeFilter as ClientDocumentType) || undefined,
-                limit: 100,
+                page,
+                limit: pageSize,
             });
             setClients(response.data ?? []);
             setTotalClients(response.pagination?.total ?? 0);
+            setTotalPages(response.pagination?.totalPages ?? 1);
         } catch (error: unknown) {
             toast.error(getApiErrorMessage(error, 'Error al cargar clientes'));
         } finally {
             setIsLoading(false);
         }
-    }, [search, docTypeFilter]);
+    }, [search, docTypeFilter, page]);
 
     useEffect(() => {
         loadClients();
     }, [loadClients]);
+
+    useEffect(() => {
+        setPage(1);
+    }, [search, docTypeFilter]);
 
     const resetForm = () => {
         setEditingClient(null);
@@ -466,6 +475,32 @@ export const Clients = () => {
                     </div>
                 )}
             </div>
+
+            {totalPages > 1 && (
+                <div className="flex items-center justify-between">
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                        Pagina {page} de {totalPages}
+                    </p>
+                    <div className="flex gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setPage((p) => Math.max(1, p - 1))}
+                            disabled={page === 1}
+                            className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            Anterior
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                            disabled={page === totalPages}
+                            className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            Siguiente
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

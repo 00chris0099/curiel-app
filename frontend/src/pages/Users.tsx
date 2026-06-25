@@ -52,6 +52,9 @@ export const Users = () => {
     const [roleFilter, setRoleFilter] = useState<UserRole | ''>('');
     const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
     const [form, setForm] = useState<UserFormState>(emptyForm);
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const pageSize = 20;
 
     const isEditing = Boolean(editingUser);
     const isFormVisible = showCreateForm || isEditing;
@@ -63,19 +66,21 @@ export const Users = () => {
                     search: search || undefined,
                     role: roleFilter || undefined,
                     isActive: statusFilter === 'all' ? undefined : statusFilter === 'active',
-                    limit: 100,
+                    page,
+                    limit: pageSize,
                 }),
                 userService.getStats(),
             ]);
 
             setUsers(usersResponse.data ?? []);
+            setTotalPages(usersResponse.pagination?.totalPages ?? 1);
             setStats(statsResponse);
         } catch (error: unknown) {
             toast.error(getApiErrorMessage(error, 'Error al cargar usuarios'));
         } finally {
             setIsLoading(false);
         }
-    }, [roleFilter, search, statusFilter]);
+    }, [roleFilter, search, statusFilter, page]);
 
     useEffect(() => {
         loadUsers();
@@ -247,6 +252,10 @@ export const Users = () => {
             toast.error(getApiErrorMessage(error, 'No se pudo transferir el master admin'));
         }
     };
+
+    useEffect(() => {
+        setPage(1);
+    }, [search, roleFilter, statusFilter]);
 
     const roleCounts = useMemo(() => {
         const counts: Record<UserRole, number> = {
@@ -512,6 +521,32 @@ export const Users = () => {
                             </table>
                         </div>
                     </div>
+
+                    {totalPages > 1 && (
+                        <div className="flex items-center justify-between">
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                                Pagina {page} de {totalPages}
+                            </p>
+                            <div className="flex gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                                    disabled={page === 1}
+                                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+                                >
+                                    Anterior
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                                    disabled={page === totalPages}
+                                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+                                >
+                                    Siguiente
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
             {isFormVisible && (

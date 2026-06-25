@@ -1,0 +1,93 @@
+{
+  "name": "CURIEL - Audit Log",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "audit-log",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-audit-log",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const headers = $input.first().json.headers;\nconst secret = headers['x-curiel-secret'];\nconst body = $input.first().json.body;\n\nif (secret !== $env.CURIEL_SECRET_TOKEN) {\n  throw new Error('Invalid secret token');\n}\n\nreturn [{ json: body }];"
+      },
+      "id": "validate-secret",
+      "name": "Validate Secret",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\nconst required = ['action', 'entityType'];\nconst missing = required.filter(f => !body[f]);\nif (missing.length) {\n  throw new Error('Missing required fields: ' + missing.join(', '));\n}\nreturn [{ json: body }];"
+      },
+      "id": "validate-payload",
+      "name": "Validate Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.action}}",
+              "operation": "contains",
+              "value2": "delete"
+            }
+          ]
+        }
+      },
+      "id": "is-high-risk",
+      "name": "Is High-Risk?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{$env.SMTP_FROM_EMAIL || 'noreply@curiel.com'}}",
+        "toEmail": "={{$env.ADMIN_EMAIL || 'admin@curiel.com'}}",
+        "subject": "[CURIEL] Accion de alto riesgo: {{$json.action}} en {{$json.entityType}}",
+        "html": "<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:32px;background:#ffffff;border-radius:12px;border:1px solid #e5e7eb'><div style='text-align:center;margin-bottom:24px'><h1 style='color:#17324a;font-size:22px;margin:0'>CURIEL</h1><p style='color:#6b7280;font-size:13px;margin:4px 0 0'>Alerta de Seguridad</p></div><div style='background:#fef2f2;border-radius:10px;padding:16px;margin-bottom:24px;text-align:center'><span style='font-size:32px'>&#128680;</span><h2 style='color:#991b1b;font-size:18px;margin:8px 0 4px'>Accion de alto riesgo detectada</h2><p style='color:#dc2626;font-size:13px;margin:0'>Se ha registrado una accion que requiere atencion</p></div><table style='width:100%;font-size:14px;color:#374151;border-collapse:collapse;margin:20px 0'><tr><td style='padding:8px 0;color:#6b7280'>Accion</td><td style='padding:8px 0;font-weight:600'>{{$json.action}}</td></tr><tr><td style='padding:8px 0;color:#6b7280'>Entidad</td><td style='padding:8px 0;font-weight:600'>{{$json.entityType}}</td></tr><tr><td style='padding:8px 0;color:#6b7280'>ID Entidad</td><td style='padding:8px 0'>{{$json.entityId || 'N/A'}}</td></tr><tr><td style='padding:8px 0;color:#6b7280'>Usuario</td><td style='padding:8px 0'>{{$json.userId || 'Sistema'}}</td></tr><tr><td style='padding:8px 0;color:#6b7280'>Timestamp</td><td style='padding:8px 0'>{{$json.timestamp}}</td></tr></table><p style='color:#374151;font-size:14px;line-height:1.6;margin-top:16px'>Detalles: <pre style='background:#f9fafb;padding:12px;border-radius:8px;font-size:12px;overflow-x:auto'>{{JSON.stringify($json.changes || {}, null, 2)}}</pre></p><hr style='border:none;border-top:1px solid #e5e7eb;margin:24px 0'><p style='color:#9ca3af;font-size:12px;text-align:center'>Este correo fue enviado automaticamente por CURIEL Inspecciones.</p></div>",
+        "options": {}
+      },
+      "id": "send-admin-alert",
+      "name": "Send Admin Alert",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1050, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { success: true, message: 'Audit log processed' } }];"
+      },
+      "id": "build-summary",
+      "name": "Build Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 400]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[ { "node": "Validate Secret", "type": "main", "index": 0 } ]] },
+    "Validate Secret": { "main": [[ { "node": "Validate Payload", "type": "main", "index": 0 } ]] },
+    "Validate Payload": { "main": [[ { "node": "Is High-Risk?", "type": "main", "index": 0 } ]] },
+    "Is High-Risk?": {
+      "main": [
+        [ { "node": "Send Admin Alert", "type": "main", "index": 0 } ],
+        [ { "node": "Build Summary", "type": "main", "index": 0 } ]
+      ]
+    },
+    "Send Admin Alert": { "main": [[ { "node": "Build Summary", "type": "main", "index": 0 } ]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

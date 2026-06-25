@@ -44,151 +44,36 @@ import {
     type OfflineSyncItem,
 } from '../utils/offlineDb';
 import {
-    areaStatusIconMap,
-    getAreaCategoryIcon,
     observationSeverityIconMap,
     photoTypeIconMap,
 } from '../utils/iconSystem';
-
-const areaStatusOptions: ExecutionAreaStatus[] = ['pendiente', 'en_revision', 'observado', 'aprobado'];
-const observationSeverityOptions: ObservationSeverity[] = ['leve', 'media', 'alta', 'critica'];
-const observationTypeOptions: ObservationType[] = ['humedad', 'electrico', 'sanitario', 'acabados', 'carpinteria', 'estructura', 'seguridad', 'otro'];
-const observationStatusOptions: ObservationResolutionStatus[] = ['pendiente', 'corregido', 'requiere_revision'];
-const generalPhotoTypeOptions: ExecutionPhotoType[] = ['edificio', 'plano', 'general'];
-const areaPhotoTypeOptions: ExecutionPhotoType[] = ['area', 'observacion'];
-const defaultAreaDefinitions = [
-    { name: 'Entrada', category: 'interior' },
-    { name: 'Sala', category: 'social' },
-    { name: 'Comedor', category: 'social' },
-    { name: 'Kitchenette', category: 'cocina' },
-    { name: 'Centro de lavado', category: 'servicio' },
-    { name: 'Balcón', category: 'exterior' },
-    { name: 'Estudio', category: 'privado' },
-    { name: 'Dormitorio principal', category: 'privado' },
-    { name: 'Dormitorio secundario', category: 'privado' },
-    { name: 'Baño principal', category: 'baño' },
-    { name: 'Baño 2', category: 'baño' },
-    { name: 'Muros y vanos', category: 'estructura/acabados' },
-];
-
-type AreaFormState = {
-    name: string;
-    category: string;
-    lengthM: string;
-    widthM: string;
-    ceilingHeightM: string;
-    status: ExecutionAreaStatus;
-    notes: string;
-};
-
-type ObservationFormState = {
-    title: string;
-    description: string;
-    severity: ObservationSeverity;
-    type: ObservationType;
-    recommendation: string;
-    metricValue: string;
-    metricUnit: string;
-    status: ObservationResolutionStatus;
-};
-
-type SummaryFormState = {
-    generalConclusion: string;
-    finalRecommendations: string;
-    reportStatus: ExecutionReportStatus;
-};
-
-type PhotoFormState = {
-    type: ExecutionPhotoType;
-    caption: string;
-    file: File | null;
-    observationId: string;
-};
-
-const emptyAreaForm: AreaFormState = {
-    name: '',
-    category: 'interior',
-    lengthM: '',
-    widthM: '',
-    ceilingHeightM: '',
-    status: 'pendiente',
-    notes: '',
-};
-
-const emptyObservationForm: ObservationFormState = {
-    title: '',
-    description: '',
-    severity: 'leve',
-    type: 'acabados',
-    recommendation: '',
-    metricValue: '',
-    metricUnit: '',
-    status: 'pendiente',
-};
-
-const emptySummaryForm: SummaryFormState = {
-    generalConclusion: '',
-    finalRecommendations: '',
-    reportStatus: 'borrador',
-};
-
-const emptyGeneralPhotoForm: PhotoFormState = {
-    type: 'edificio',
-    caption: '',
-    file: null,
-    observationId: '',
-};
-
-const emptyAreaPhotoForm: PhotoFormState = {
-    type: 'area',
-    caption: '',
-    file: null,
-    observationId: '',
-};
-
-const areaStatusLabels: Record<ExecutionAreaStatus, string> = {
-    pendiente: 'Pendiente',
-    en_revision: 'En revisión',
-    observado: 'Observado',
-    aprobado: 'Aprobado',
-};
-
-const areaStatusBadges: Record<ExecutionAreaStatus, string> = {
-    pendiente: 'badge-warning',
-    en_revision: 'badge-info',
-    observado: 'badge-danger',
-    aprobado: 'badge-success',
-};
-
-const severityBadges: Record<ObservationSeverity, string> = {
-    leve: 'badge-success',
-    media: 'badge-info',
-    alta: 'badge-warning',
-    critica: 'badge-danger',
-};
-
-const reportStatusLabels: Record<ExecutionReportStatus, string> = {
-    borrador: 'Borrador',
-    listo_para_revision: 'Listo para revisión',
-    aprobado: 'Aprobado',
-};
-
-const photoTypeLabels: Record<ExecutionPhotoType, string> = {
-    edificio: 'Edificio',
-    plano: 'Plano',
-    area: 'Área',
-    observacion: 'Observación',
-    general: 'General',
-};
-
-const inspectionStatusLabels: Record<string, string> = {
-    pendiente: 'Pendiente',
-    en_proceso: 'En proceso',
-    lista_revision: 'Lista para revisión',
-    finalizada: 'Finalizada',
-    cancelada: 'Cancelada',
-    reprogramada: 'Reprogramada',
-};
+import {
+    areaStatusOptions,
+    observationSeverityOptions,
+    observationTypeOptions,
+    observationStatusOptions,
+    generalPhotoTypeOptions,
+    areaPhotoTypeOptions,
+    defaultAreaDefinitions,
+    areaStatusLabels,
+    severityBadges,
+    photoTypeLabels,
+} from './execution/executionConstants';
+import {
+    type AreaFormState,
+    type ObservationFormState,
+    type SummaryFormState,
+    type PhotoFormState,
+    emptyAreaForm,
+    emptyObservationForm,
+    emptySummaryForm,
+    emptyGeneralPhotoForm,
+    emptyAreaPhotoForm,
+} from './execution/executionTypes';
+import { ExecutionHeader } from './execution/ExecutionHeader';
+import { ExecutionStatsBar } from './execution/ExecutionStatsBar';
+import { MobileAreaCarousel } from './execution/MobileAreaCarousel';
+import { DesktopAreaSidebar } from './execution/DesktopAreaSidebar';
 
 type InspectionExecutionRouteState = {
     selectedAreaId?: string;
@@ -896,171 +781,40 @@ export const InspectionExecution = () => {
                 isSyncing={isSyncing}
             />
 
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div className="flex items-start gap-3 sm:gap-4">
-                    <button
-                        type="button"
-                        onClick={() => navigate(`/inspections/${inspection.id}`)}
-                        className="min-h-11 shrink-0 rounded-xl border border-gray-200 bg-white p-2 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:border-gray-700 dark:hover:bg-gray-800"
-                    >
-                        <CustomIcon name="arrow-left" size="sm" tone="mist" />
-                    </button>
+            <ExecutionHeader
+                inspectionId={inspection.id}
+                projectName={inspection.projectName}
+                clientName={inspection.clientName}
+                scheduledDate={inspection.scheduledDate}
+                status={inspection.status}
+                locationLabel={locationLabel}
+                canDownloadReport={canDownloadExecutionReport}
+                canComplete={canCompleteExecution}
+                isDownloadingReport={isDownloadingReport}
+                busyAction={busyAction}
+                onDownloadReport={handleDownloadReport}
+                onComplete={handleCompleteInspection}
+            />
 
-                    <div className="min-w-0 max-w-3xl">
-                        <h1 className="text-xl font-bold leading-tight sm:text-2xl">{inspection.projectName}</h1>
-                        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                            <span>{inspection.clientName}</span>
-                            <span>·</span>
-                            <span>{locationLabel}</span>
-                            <span>·</span>
-                            <span>{new Date(inspection.scheduledDate).toLocaleString('es-PE')}</span>
-                            <span className={`badge badge-sm ${inspection.status === 'en_proceso' ? 'badge-success' : inspection.status === 'lista_revision' ? 'badge-warning' : 'badge-info'}`}>
-                                {inspectionStatusLabels[inspection.status] || inspection.status}
-                            </span>
-                        </div>
-                    </div>
-                </div>
+            <ExecutionStatsBar
+                totalAreaM2={stats.totalAreaM2}
+                areasRegistered={stats.areasRegistered}
+                totalObservations={stats.totalObservations}
+                criticalObservations={stats.criticalObservations}
+                photosCount={stats.photosCount}
+                reportStatus={stats.reportStatus}
+            />
 
-                <div className="flex flex-wrap gap-2">
-                    {canDownloadExecutionReport && (
-                        <button
-                            type="button"
-                            onClick={handleDownloadReport}
-                            disabled={isDownloadingReport}
-                            className="btn btn-secondary flex items-center justify-center gap-2"
-                        >
-                            <CustomIcon name={isDownloadingReport ? 'sync' : 'file-pdf'} size="xs" tone="cream" spin={isDownloadingReport} />
-                            {isDownloadingReport ? 'Generando...' : 'Generar informe'}
-                        </button>
-                    )}
-
-                    {canCompleteExecution && (
-                        <button
-                            type="button"
-                            onClick={handleCompleteInspection}
-                            disabled={busyAction === 'complete-inspection'}
-                            className="btn btn-primary flex items-center justify-center gap-2"
-                        >
-                            {busyAction === 'complete-inspection' ? <CustomIcon name="sync" size="xs" tone="white" spin /> : <CustomIcon name="seal-check" size="xs" tone="white" />}
-                            Enviar a revisión
-                        </button>
-                    )}
-                </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-gray-100 bg-[#fbfbfa] px-4 py-2.5 text-xs text-gray-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400">
-                <span className="flex items-center gap-1.5">
-                    <CustomIcon name="ruler" size="xs" tone="blue" />
-                    <span className="font-semibold text-gray-900 dark:text-gray-100">{stats.totalAreaM2.toFixed(1)} m²</span>
-                </span>
-                <span className="text-gray-300">|</span>
-                <span>{stats.areasRegistered} áreas</span>
-                <span className="text-gray-300">|</span>
-                <span>{stats.totalObservations} obs.</span>
-                {stats.criticalObservations > 0 && (
-                    <>
-                        <span className="text-gray-300">|</span>
-                        <span className="font-semibold text-red-600">{stats.criticalObservations} críticas</span>
-                    </>
-                )}
-                <span className="text-gray-300">|</span>
-                <span>{stats.photosCount} fotos</span>
-                <span className="text-gray-300">|</span>
-                <span>Informe: {reportStatusLabels[stats.reportStatus] || 'Borrador'}</span>
-            </div>
-
-            <div className="card space-y-4 lg:hidden">
-                <div className="flex flex-col gap-3">
-                    <div>
-                        <h2 className="text-lg font-semibold">Áreas del departamento</h2>
-                        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                            Recorre las áreas en horizontal y abre el detalle del ambiente que quieras inspeccionar.
-                        </p>
-                    </div>
-
-                    {canEditExecutionContent && (
-                        <button
-                            type="button"
-                            className="btn btn-secondary flex items-center justify-center gap-2"
-                            onClick={handleCreateDefaultAreas}
-                            disabled={busyAction === 'default-areas'}
-                        >
-                            {busyAction === 'default-areas' ? <CustomIcon name="sync" size="xs" tone="white" spin /> : <CustomIcon name="rooms" size="xs" tone="cream" />}
-                            Crear áreas por defecto
-                        </button>
-                    )}
-                </div>
-
-                {areas.length === 0 ? (
-                    <EmptyPanel message="Crea áreas por defecto para comenzar la ejecución técnica del departamento." compact />
-                ) : (
-                    <>
-                        <div className="-mx-1 overflow-x-auto pb-2 [scrollbar-width:none]">
-                            <div className="flex min-w-max snap-x gap-3 px-1">
-                                {areas.map((area) => {
-                                    const isSelected = area.id === selectedAreaId;
-
-                                    return (
-                                        <button
-                                            key={area.id}
-                                            type="button"
-                                            onClick={() => handleOpenAreaDetail(area.id)}
-                                            className={`min-h-20 w-44 shrink-0 snap-start rounded-2xl border px-4 py-3 text-left transition-colors ${isSelected
-                                                ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-500/10'
-                                                : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900'
-                                                }`}
-                                        >
-                                            <div className="flex items-center gap-2">
-                                                <CustomIcon name={getAreaCategoryIcon(area.category, area.name)} size="xs" tone="mist" />
-                                                <span className="text-sm font-semibold text-gray-900 dark:text-white">{area.name}</span>
-                                            </div>
-                                            <div className="mt-2 flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
-                                                <span>{areaStatusLabels[area.status]}</span>
-                                                <span>{areaObservationCounts[area.id] || 0} obs.</span>
-                                            </div>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
-                        {selectedArea && (
-                            <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/60">
-                                <div className="flex items-start justify-between gap-3">
-                                    <div>
-                                        <div className="flex items-center gap-2">
-                                            <CustomIcon name={getAreaCategoryIcon(selectedArea.category, selectedArea.name)} size="xs" tone="mist" />
-                                            <p className="font-semibold text-gray-900 dark:text-white">{selectedArea.name}</p>
-                                        </div>
-                                        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                                            {selectedArea.category} · {(selectedArea.calculatedAreaM2 || 0).toFixed(2)} m²
-                                        </p>
-                                    </div>
-                                    <span className={`badge ${areaStatusBadges[selectedArea.status]}`}><CustomIcon name={areaStatusIconMap[selectedArea.status] ?? 'rooms'} size="xs" tone="white" />{areaStatusLabels[selectedArea.status]}</span>
-                                </div>
-
-                                <div className="mt-3 flex items-center justify-between gap-3 text-xs text-gray-500 dark:text-gray-400">
-                                    <span>
-                                        {getEntitySyncState('area', selectedArea.id) === 'pending' && 'Pendiente de sincronizar'}
-                                        {getEntitySyncState('area', selectedArea.id) === 'failed' && 'Error al sincronizar'}
-                                        {getEntitySyncState('area', selectedArea.id) === 'synced' && 'Guardado'}
-                                    </span>
-                                    <span>{areaObservationCounts[selectedArea.id] || 0} observaciones</span>
-                                </div>
-
-                                <button
-                                    type="button"
-                                    className="btn btn-primary mt-4 flex w-full items-center justify-center gap-2"
-                                    onClick={() => handleOpenAreaDetail(selectedArea.id)}
-                                >
-                                    Abrir detalle del área
-                                    <CustomIcon name="arrow-right" size="xs" tone="white" />
-                                </button>
-                            </div>
-                        )}
-                    </>
-                )}
-            </div>
+            <MobileAreaCarousel
+                areas={areas}
+                selectedAreaId={selectedAreaId}
+                areaObservationCounts={areaObservationCounts}
+                getEntitySyncState={getEntitySyncState}
+                onSelectArea={handleOpenAreaDetail}
+                onCreateDefaultAreas={handleCreateDefaultAreas}
+                busyAction={busyAction}
+                canEdit={canEditExecutionContent}
+            />
 
             <div className="card space-y-5">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1112,79 +866,22 @@ export const InspectionExecution = () => {
             </div>
 
             <div className="hidden items-start gap-6 lg:grid lg:grid-cols-[320px_minmax(0,1fr)]">
-                <aside className="space-y-4">
-                    <div className="card space-y-4 xl:sticky xl:top-24">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between xl:flex-col xl:items-stretch">
-                            <div>
-                                <h2 className="text-lg font-semibold">Áreas del departamento</h2>
-                                <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                                    Selecciona un ambiente para cargar medidas, hallazgos y fotos.
-                                </p>
-                            </div>
-                            {canEditExecutionContent && (
-                                <div className="flex flex-col gap-2">
-                                    <button type="button" className="btn btn-secondary flex items-center justify-center gap-2" onClick={handleCreateDefaultAreas} disabled={busyAction === 'default-areas'}>
-                                        {busyAction === 'default-areas' ? <CustomIcon name="sync" size="xs" tone="cream" spin /> : <CustomIcon name="rooms" size="xs" tone="cream" />}
-                                        Crear áreas por defecto
-                                    </button>
-                                    <button type="button" className="btn btn-primary flex items-center justify-center gap-2" onClick={() => setShowAreaCreator((current) => !current)}>
-                                        <CustomIcon name="plus" size="xs" tone="white" />
-                                        {showAreaCreator ? 'Cerrar formulario' : 'Agregar área'}
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-
-                        {canEditExecutionContent && showAreaCreator && (
-                            <form onSubmit={handleCreateArea} className="space-y-3 rounded-2xl border border-dashed border-gray-300 p-4 dark:border-gray-600">
-                                <input className="input" placeholder="Nombre del área" value={manualAreaForm.name} onChange={(event) => setManualAreaForm((current) => ({ ...current, name: event.target.value }))} />
-                                <input className="input" placeholder="Categoría" value={manualAreaForm.category} onChange={(event) => setManualAreaForm((current) => ({ ...current, category: event.target.value }))} />
-                                <div className="grid grid-cols-2 gap-3">
-                                    <input className="input" type="number" min="0" step="0.01" placeholder="Largo m" value={manualAreaForm.lengthM} onChange={(event) => setManualAreaForm((current) => ({ ...current, lengthM: event.target.value }))} />
-                                    <input className="input" type="number" min="0" step="0.01" placeholder="Ancho m" value={manualAreaForm.widthM} onChange={(event) => setManualAreaForm((current) => ({ ...current, widthM: event.target.value }))} />
-                                </div>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">Área estimada: {areaCreatorCalculated.toFixed(2)} m²</p>
-                                <button type="submit" className="btn btn-primary w-full" disabled={busyAction === 'create-area'}>
-                                    {busyAction === 'create-area' ? 'Creando...' : 'Guardar área'}
-                                </button>
-                            </form>
-                        )}
-
-                        <div className="space-y-3">
-                                {areas.map((area) => (
-                                    <button
-                                        key={area.id}
-                                        type="button"
-                                        onClick={() => setSelectedAreaId(area.id)}
-                                        className={`w-full rounded-2xl border p-4 text-left transition-colors ${area.id === selectedAreaId
-                                            ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-500/10'
-                                            : 'border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800/80'
-                                            }`}
-                                    >
-                                        <div className="flex items-start justify-between gap-3">
-                                            <div>
-                                                <div className="flex items-center gap-2">
-                                                    <CustomIcon name={getAreaCategoryIcon(area.category, area.name)} size="xs" tone="mist" />
-                                                    <p className="font-semibold text-gray-900 dark:text-white">{area.name}</p>
-                                                </div>
-                                                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{area.category}</p>
-                                            </div>
-                                            <span className={`badge ${areaStatusBadges[area.status]}`}><CustomIcon name={areaStatusIconMap[area.status] ?? 'rooms'} size="xs" tone="white" />{areaStatusLabels[area.status]}</span>
-                                        </div>
-                                        <div className="mt-3 flex items-center justify-between text-sm text-gray-600 dark:text-gray-300">
-                                            <span>{(area.calculatedAreaM2 || 0).toFixed(2)} m²</span>
-                                            <span>{areaObservationCounts[area.id] || 0} obs.</span>
-                                        </div>
-                                        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                                            {getEntitySyncState('area', area.id) === 'pending' && 'Pendiente de sincronizar'}
-                                            {getEntitySyncState('area', area.id) === 'failed' && 'Error al sincronizar'}
-                                            {getEntitySyncState('area', area.id) === 'synced' && 'Guardado'}
-                                        </p>
-                                    </button>
-                                ))}
-                        </div>
-                    </div>
-                </aside>
+                <DesktopAreaSidebar
+                    areas={areas}
+                    selectedAreaId={selectedAreaId}
+                    areaObservationCounts={areaObservationCounts}
+                    getEntitySyncState={getEntitySyncState}
+                    onSelectArea={setSelectedAreaId}
+                    onCreateDefaultAreas={handleCreateDefaultAreas}
+                    onToggleCreator={() => setShowAreaCreator((current) => !current)}
+                    showAreaCreator={showAreaCreator}
+                    manualAreaForm={manualAreaForm}
+                    onManualAreaFormChange={setManualAreaForm}
+                    onCreateAreaSubmit={handleCreateArea}
+                    busyAction={busyAction}
+                    canEdit={canEditExecutionContent}
+                    creatorCalculated={areaCreatorCalculated}
+                />
 
                 <div className="space-y-6">
                     {selectedArea ? (

@@ -43,13 +43,16 @@ npm --prefix mobile run web
 npm --prefix mobile run build:android
 npm --prefix mobile run build:ios
 npm --prefix mobile run submit
+npm --prefix mobile run test
+npm --prefix mobile run lint
+npm --prefix mobile run typecheck
 ```
 
 ## Test commands
-- Backend is the only package with an automated test script right now.
-- There are currently no committed test files under `backend_legacy/`, `frontend/`, or `mobile/`.
-- `frontend/` has no `test` script or test dependencies configured.
-- `mobile/` has no `test` or `lint` script configured.
+- All three packages now have automated test scripts and test files.
+- Backend: Jest + Supertest (9 test files in `backend_legacy/src/__tests__/`).
+- Frontend: Vitest + React Testing Library (10 test files in `frontend/src/__tests__/`).
+- Mobile: Jest (11 test files in `mobile/src/__tests__/`).
 
 ### Run all backend tests
 ```bash
@@ -94,18 +97,19 @@ npx --prefix backend_legacy jest path/to/file.test.js -t "name of test" --runInB
 - Shared frontend domain types live in `frontend/src/types/index.ts`.
 
 ### Backend
-- Stack: Node.js, Express 4, Sequelize, PostgreSQL, Joi, JWT.
+- Stack: Node.js, Express 4, Prisma 7, PostgreSQL (7 DBs), Joi, JWT.
 - `src/routes/` wires auth/authorization and delegates to controllers.
 - `src/controllers/` parses request input, calls services, shapes HTTP responses, and triggers audit logging.
 - `src/services/` contains business rules and database access.
-- `src/models/` contains Sequelize models and associations.
+- `src/models/` contains Prisma schema and associations.
+- `src/middlewares/requestId.js` adds a UUID per request for tracing (X-Request-Id header).
 - Reuse `AppError` and `asyncHandler` from `src/middlewares/errorHandler.js`.
 
 ### Mobile
-- Stack: React Native + Expo with plain JavaScript.
+- Stack: React Native + Expo with TypeScript.
 - `mobile/src/services/api.js` owns Axios setup and API wrappers.
 - `mobile/src/context/AuthContext.js` manages session state and persistence.
-- `mobile/src/config/index.js` stores constants and backend URL.
+- `mobile/src/config/index.ts` stores constants and backend URL.
 - Most UI lives in `mobile/src/screens/` and uses `StyleSheet.create`.
 
 ## Imports and modules

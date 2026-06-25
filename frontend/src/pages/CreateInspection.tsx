@@ -9,17 +9,10 @@ import clientService from '../services/client.service';
 import type {
     Client,
     ClientDocumentType,
-    ContactChannel,
     CreateInspectionDto,
     DepartmentInspectionMetadata,
-    DepartmentServiceType,
-    InspectionPriority,
-    LimaDistrict,
-    PropertyCondition,
-    PropertyType,
     ReviewPoint,
     User,
-    YesNoOption,
 } from '../types';
 import {
     buildDepartmentInspectionNotes,
@@ -29,105 +22,17 @@ import {
     SERVICE_TYPE_TO_BACKEND_TYPE,
 } from '../utils/inspectionMetadata';
 import { getReviewPointIcon } from '../utils/iconSystem';
-
-const contactChannelOptions: ContactChannel[] = ['WhatsApp', 'Llamada', 'Facebook', 'Referido', 'Otro'];
-const districtOptions: LimaDistrict[] = [
-    'Miraflores',
-    'San Isidro',
-    'Santiago de Surco',
-    'San Borja',
-    'La Molina',
-    'Jesús María',
-    'Magdalena',
-    'Pueblo Libre',
-    'Lince',
-    'Barranco',
-    'Chorrillos',
-    'San Miguel',
-    'Cercado de Lima',
-    'Otro',
-];
-const propertyTypeOptions: PropertyType[] = ['Departamento', 'Dúplex', 'Penthouse'];
-const yesNoOptions: YesNoOption[] = ['Sí', 'No'];
-const propertyConditionOptions: PropertyCondition[] = [
-    'Nuevo / entrega de constructora',
-    'Usado',
-    'En remodelación',
-    'Remodelado recientemente',
-];
-const reviewPointOptions: ReviewPoint[] = [
-    'Humedad / filtraciones',
-    'Instalaciones eléctricas',
-    'Instalaciones sanitarias',
-    'Pisos y acabados',
-    'Puertas y ventanas',
-    'Grietas o fisuras',
-    'Cocina',
-    'Baños',
-    'Balcón / terraza',
-    'Otro',
-];
-const priorityOptions: InspectionPriority[] = ['Normal', 'Alta', 'Urgente'];
-
-type DepartmentInspectionFormState = {
-    serviceType: DepartmentServiceType;
-    scheduledDate: string;
-    scheduledTime: string;
-    clientFullName: string;
-    clientPhone: string;
-    clientEmail: string;
-    contactChannel: ContactChannel;
-    district: LimaDistrict | '';
-    exactAddress: string;
-    buildingName: string;
-    arrivalReference: string;
-    propertyType: PropertyType;
-    apartmentNumber: string;
-    floor: string;
-    areaSquareMeters: string;
-    bedrooms: string;
-    bathrooms: string;
-    hasParking: YesNoOption;
-    hasStorage: YesNoOption;
-    hasCommonAreas: YesNoOption;
-    propertyCondition: PropertyCondition;
-    reviewPoints: ReviewPoint[];
-    reviewPointOther: string;
-    inspectorId: string;
-    priority: InspectionPriority;
-    observations: string;
-    technicalReport: YesNoOption;
-};
-
-const initialFormState: DepartmentInspectionFormState = {
-    serviceType: 'Entrega de departamento',
-    scheduledDate: '',
-    scheduledTime: '',
-    clientFullName: '',
-    clientPhone: '',
-    clientEmail: '',
-    contactChannel: 'WhatsApp',
-    district: '',
-    exactAddress: '',
-    buildingName: '',
-    arrivalReference: '',
-    propertyType: 'Departamento',
-    apartmentNumber: '',
-    floor: '',
-    areaSquareMeters: '',
-    bedrooms: '',
-    bathrooms: '',
-    hasParking: 'No',
-    hasStorage: 'No',
-    hasCommonAreas: 'No',
-    propertyCondition: 'Nuevo / entrega de constructora',
-    reviewPoints: [],
-    reviewPointOther: '',
-    inspectorId: '',
-    priority: 'Normal',
-    observations: '',
-    technicalReport: 'Sí',
-};
+import {
+    contactChannelOptions,
+    districtOptions,
+    propertyTypeOptions,
+    propertyConditionOptions,
+    reviewPointOptions,
+    priorityOptions,
+    type DepartmentInspectionFormState,
+    initialFormState,
+} from './createInspection/createInspectionConstants';
+import { BinarySelect } from './createInspection/BinarySelect';
 
 export const CreateInspection = () => {
     const navigate = useNavigate();
@@ -1123,30 +1028,6 @@ export const CreateInspection = () => {
                     </div>
                 </div>
             </form>
-        </div>
-    );
-};
-
-type BinarySelectProps = {
-    id: string;
-    label: string;
-    value: YesNoOption;
-    onChange: (event: ChangeEvent<HTMLSelectElement>) => void;
-};
-
-const BinarySelect = ({ id, label, value, onChange }: BinarySelectProps) => {
-    return (
-        <div>
-            <label htmlFor={id} className="mb-2 block text-sm font-medium">
-                {label}
-            </label>
-            <select id={id} name={id} value={value} onChange={onChange} className="input">
-                {yesNoOptions.map((option) => (
-                    <option key={option} value={option}>
-                        {option}
-                    </option>
-                ))}
-            </select>
         </div>
     );
 };
