@@ -94,11 +94,6 @@ const InspectionDetailScreen = ({ route, navigation }) => {
                 <InfoRow label="Tipo" value={inspection.inspectionType} theme={theme} />
                 <InfoRow label="Fecha" value={inspection.scheduledDate ? new Date(inspection.scheduledDate).toLocaleDateString('es-PE') : '-'} theme={theme} />
                 <InfoRow label="Inspector" value={inspection.inspector ? `${inspection.inspector.firstName} ${inspection.inspector.lastName}` : '-'} theme={theme} />
-                {inspection.is_dirty && (
-                    <View style={[styles.dirtyBadge, { backgroundColor: isDark ? '#3e2723' : '#fff3e0' }]}>
-                        <Text style={[styles.dirtyText, { color: isDark ? '#ffab91' : '#e65100' }]}>Cambios sin sincronizar</Text>
-                    </View>
-                )}
             </View>
 
             <View style={[styles.section, { backgroundColor: theme.colors.card }]}>

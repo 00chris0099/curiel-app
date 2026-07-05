@@ -316,6 +316,18 @@ export const InspectionAreaDetail = () => {
         }
     };
 
+    const handleDeletePhoto = async (photoId: string) => {
+        if (!id || !window.confirm('¿Eliminar esta foto?')) return;
+
+        try {
+            await inspectionService.deletePhoto(photoId);
+            await loadExecution();
+            toast.success('Foto eliminada');
+        } catch (error) {
+            toast.error(getApiErrorMessage(error, 'Error al eliminar foto'));
+        }
+    };
+
     const handlePhotoSubmit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         if (!id || !areaId) return;
@@ -677,13 +689,23 @@ export const InspectionAreaDetail = () => {
 
                 <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-3">
                     {areaPhotos.map((photo: any) => (
-                        <div key={photo.id} className="relative">
+                        <div key={photo.id} className="relative group">
                             <img
                                 src={photo.url || photo.previewUrl}
                                 alt={photo.caption || 'Foto'}
                                 loading="lazy"
                                 className="h-36 w-full rounded-lg object-cover sm:h-32"
                             />
+                            {canEditExecutionContent && (
+                                <button
+                                    type="button"
+                                    onClick={() => handleDeletePhoto(photo.id)}
+                                    className="absolute right-1.5 top-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-red-500/90 text-white opacity-0 group-hover:opacity-100 shadow-md transition-opacity"
+                                    title="Eliminar foto"
+                                >
+                                    <CustomIcon name="trash" size="xs" tone="white" />
+                                </button>
+                            )}
                             {photo.caption && (
                                 <p className="text-xs mt-1 text-gray-600 dark:text-gray-400">{photo.caption}</p>
                             )}

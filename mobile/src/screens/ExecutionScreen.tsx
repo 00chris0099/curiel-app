@@ -1,14 +1,17 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
     View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet,
-    ActivityIndicator, Alert, FlatList, AppState
+    ActivityIndicator, Alert, FlatList, AppState, Image
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { useOffline } from '../context/OfflineContext';
 import { useAuth } from '../context/AuthContext';
 import { inspectionsRepo } from '../database/inspections.repo';
 import { areasRepo } from '../database/areas.repo';
 import { observationsRepo } from '../database/observations.repo';
+import { photosRepo } from '../database/photos.repo';
 import { offlineQueue } from '../services/offlineQueue';
+import { photoService } from '../services/api';
 import { SyncButton } from '../components/SyncButton';
 import { OfflineBadge } from '../components/OfflineBadge';
 import config from '../config';
@@ -23,6 +26,7 @@ const ExecutionScreen = ({ route, navigation }) => {
     const [inspection, setInspection] = useState(null);
     const [areas, setAreas] = useState([]);
     const [observations, setObservations] = useState([]);
+    const [photos, setPhotos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [newAreaName, setNewAreaName] = useState('');
@@ -34,12 +38,16 @@ const ExecutionScreen = ({ route, navigation }) => {
     const [newObsType, setNewObsType] = useState('otro');
     const [selectedAreaId, setSelectedAreaId] = useState(null);
     const [showAddObs, setShowAddObs] = useState(false);
+    const [summaryConclusion, setSummaryConclusion] = useState('');
+    const [summaryRecommendations, setSummaryRecommendations] = useState('');
+    const [photoType, setPhotoType] = useState('area');
+    const [uploadingPhoto, setUploadingPhoto] = useState(false);
     const autoSaveTimer = useRef(null);
-    const latestDataRef = useRef({ inspection: null, areas: [], observations: [] });
+    const latestDataRef = useRef({ inspection: null, areas: [], observations: [], photos: [] });
 
     useEffect(() => {
-        latestDataRef.current = { inspection, areas, observations };
-    }, [inspection, areas, observations]);
+        latestDataRef.current = { inspection, areas, observations, photos };
+    }, [inspection, areas, observations, photos]);
 
     useEffect(() => {
         loadData();
@@ -91,6 +99,8 @@ const ExecutionScreen = ({ route, navigation }) => {
             setAreas(localAreas);
             const localObs = await observationsRepo.getByInspection(inspectionId);
             setObservations(localObs);
+            const localPhotos = await photosRepo.getByInspection(inspectionId);
+            setPhotos(localPhotos);
         } catch (error) {
             Alert.alert('Error', 'No se pudo cargar la inspeccion');
         } finally {
@@ -160,6 +170,100 @@ const ExecutionScreen = ({ route, navigation }) => {
         setNewObsTitle('');
         setNewObsDesc('');
         setShowAddObs(false);
+    };
+
+    const takePhoto = async () => {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+            Alert.alert('Permiso requerido', 'Necesitamos acceso a la cámara para tomar fotos');
+            return;
+        }
+
+        const result = await ImagePicker.launchCameraAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            quality: 0.8,
+            allowsEditing: true,
+        });
+
+        if (!result.canceled && result.assets[0]) {
+            uploadPhoto(result.assets[0].uri);
+        }
+    };
+
+    const pickPhoto = async () => {
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            quality: 0.8,
+            allowsMultipleSelection: true,
+        });
+
+        if (!result.canceled && result.assets.length > 0) {
+            for (const asset of result.assets) {
+                await uploadPhoto(asset.uri);
+            }
+        }
+    };
+
+    const uploadPhoto = async (uri) => {
+        setUploadingPhoto(true);
+        try {
+            const photoData = {
+                id: `local_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+                inspectionId,
+                type: photoType,
+                url: uri,
+                localPath: uri,
+                caption: '',
+                uploadStatus: 'pending',
+            };
+
+            await photosRepo.upsert({ ...photoData, is_dirty: 1 });
+            await offlineQueue.savePhoto(inspectionId, photoData, isOnline);
+            setPhotos([...photos, photoData]);
+            Alert.alert('Foto guardada', isOnline ? 'Foto subida correctamente' : 'Foto guardada localmente');
+        } catch (error) {
+            Alert.alert('Error', 'No se pudo guardar la foto');
+        } finally {
+            setUploadingPhoto(false);
+        }
+    };
+
+    const deletePhoto = async (photoId) => {
+        Alert.alert('Eliminar foto', '¿Estás seguro de que deseas eliminar esta foto?', [
+            { text: 'Cancelar', style: 'cancel' },
+            {
+                text: 'Eliminar',
+                style: 'destructive',
+                onPress: async () => {
+                    try {
+                        await photosRepo.remove(photoId);
+                        setPhotos(photos.filter(p => p.id !== photoId));
+                        if (isOnline) {
+                            await photoService.delete(photoId);
+                        }
+                        Alert.alert('Eliminada', 'Foto eliminada correctamente');
+                    } catch (error) {
+                        Alert.alert('Error', 'No se pudo eliminar la foto');
+                    }
+                }
+            }
+        ]);
+    };
+
+    const saveSummary = async () => {
+        if (!inspection) return;
+        setSaving(true);
+        try {
+            await offlineQueue.saveInspection(
+                { ...inspection, generalConclusion: summaryConclusion, finalRecommendations: summaryRecommendations },
+                isOnline
+            );
+            Alert.alert('Guardado', 'Resumen guardado');
+        } catch (error) {
+            Alert.alert('Error', 'No se pudo guardar el resumen');
+        } finally {
+            setSaving(false);
+        }
     };
 
     const completeInspection = async () => {
@@ -241,7 +345,25 @@ const ExecutionScreen = ({ route, navigation }) => {
             <ScrollView style={styles.scroll}>
                 <View style={styles.header}>
                     <Text style={[styles.title, { color: theme.colors.text }]}>{inspection?.projectName}</Text>
-                    <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>{areas.length} areas | {observations.length} observaciones</Text>
+                    <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>{inspection?.clientName}</Text>
+                </View>
+
+                {/* Stats Bar */}
+                <View style={[styles.statsBar, { backgroundColor: theme.colors.card }]}>
+                    <View style={styles.statItem}>
+                        <Text style={[styles.statValue, { color: theme.colors.primary }]}>{areas.length}</Text>
+                        <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>Areas</Text>
+                    </View>
+                    <View style={[styles.statDivider, { backgroundColor: theme.colors.border }]} />
+                    <View style={styles.statItem}>
+                        <Text style={[styles.statValue, { color: theme.colors.primary }]}>{observations.length}</Text>
+                        <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>Obs.</Text>
+                    </View>
+                    <View style={[styles.statDivider, { backgroundColor: theme.colors.border }]} />
+                    <View style={styles.statItem}>
+                        <Text style={[styles.statValue, { color: theme.colors.primary }]}>{photos.length}</Text>
+                        <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>Fotos</Text>
+                    </View>
                 </View>
 
                 {/* Auto-save indicator */}
@@ -377,13 +499,93 @@ const ExecutionScreen = ({ route, navigation }) => {
                 {/* Photos section */}
                 <View style={[styles.section, { backgroundColor: theme.colors.card }]}>
                     <View style={styles.sectionHeader}>
-                        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Fotos</Text>
+                        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Fotos ({photos.length})</Text>
+                    </View>
+
+                    {/* Photo type selector */}
+                    <View style={styles.pickerRow}>
+                        <Text style={[styles.pickerLabel, { color: theme.colors.text }]}>Tipo:</Text>
+                        {['area', 'edificio', 'plano', 'general'].map((t) => (
+                            <TouchableOpacity
+                                key={t}
+                                style={[styles.pickerOpt, { backgroundColor: theme.colors.border }, photoType === t && styles.pickerOptActive]}
+                                onPress={() => setPhotoType(t)}
+                            >
+                                <Text style={[styles.pickerText, { color: theme.colors.text }, photoType === t && styles.pickerTextActive]}>{t}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+
+                    {/* Photo action buttons */}
+                    <View style={styles.photoActions}>
                         <TouchableOpacity
-                            onPress={() => navigation.navigate('PhotoCapture', { inspectionId })}
+                            style={[styles.photoActionBtn, { backgroundColor: theme.colors.primary }]}
+                            onPress={takePhoto}
+                            disabled={uploadingPhoto || isSyncing}
                         >
-                            <Text style={[styles.addBtn, { color: theme.colors.primary }]}>+ Tomar Foto</Text>
+                            {uploadingPhoto ? (
+                                <ActivityIndicator size="small" color="#fff" />
+                            ) : (
+                                <Text style={styles.photoActionText}>Tomar Foto</Text>
+                            )}
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.photoActionBtn, { backgroundColor: theme.colors.secondary || '#666' }]}
+                            onPress={pickPhoto}
+                            disabled={uploadingPhoto || isSyncing}
+                        >
+                            <Text style={styles.photoActionText}>Galeria</Text>
                         </TouchableOpacity>
                     </View>
+
+                    {/* Photo list */}
+                    {photos.length > 0 ? (
+                        <View style={styles.photoGrid}>
+                            {photos.map((photo) => (
+                                <View key={photo.id} style={styles.photoItem}>
+                                    <Image source={{ uri: photo.url || photo.localPath }} style={styles.photoThumb} />
+                                    <TouchableOpacity
+                                        style={styles.photoDeleteBtn}
+                                        onPress={() => deletePhoto(photo.id)}
+                                    >
+                                        <Text style={styles.photoDeleteText}>X</Text>
+                                    </TouchableOpacity>
+                                    <Text style={[styles.photoTypeLabel, { color: theme.colors.textSecondary }]}>{photo.type}</Text>
+                                </View>
+                            ))}
+                        </View>
+                    ) : (
+                        <Text style={[styles.emptyText, { color: theme.colors.textMuted }]}>Sin fotos registradas</Text>
+                    )}
+                </View>
+
+                {/* Summary section */}
+                <View style={[styles.section, { backgroundColor: theme.colors.card }]}>
+                    <View style={styles.sectionHeader}>
+                        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Resumen Tecnico</Text>
+                    </View>
+
+                    <Text style={[styles.fieldLabel, { color: theme.colors.text }]}>Conclusion general</Text>
+                    <TextInput
+                        style={[styles.input, styles.textArea, { backgroundColor: theme.colors.inputBg, borderColor: theme.colors.inputBorder, color: theme.colors.text }]}
+                        value={summaryConclusion}
+                        onChangeText={setSummaryConclusion}
+                        placeholder="Resumen del estado global del departamento..."
+                        multiline
+                    />
+
+                    <Text style={[styles.fieldLabel, { color: theme.colors.text }]}>Recomendaciones finales</Text>
+                    <TextInput
+                        style={[styles.input, styles.textArea, { backgroundColor: theme.colors.inputBg, borderColor: theme.colors.inputBorder, color: theme.colors.text }]}
+                        value={summaryRecommendations}
+                        onChangeText={setSummaryRecommendations}
+                        placeholder="Acciones correctivas y sugerencias..."
+                        multiline
+                    />
+
+                    <TouchableOpacity style={[styles.saveSummaryBtn, { backgroundColor: theme.colors.primary }]} onPress={saveSummary} disabled={saving}>
+                        <Text style={styles.saveSummaryText}>{saving ? 'Guardando...' : 'Guardar Resumen'}</Text>
+                    </TouchableOpacity>
                 </View>
 
                 {/* Complete button */}
@@ -420,7 +622,12 @@ const styles = StyleSheet.create({
     scroll: { flex: 1 },
     header: { padding: 16 },
     title: { fontSize: 20, fontWeight: '700', color: '#333' },
-    subtitle: { fontSize: 14, color: '#666', marginTop: 4 },
+    subtitle: { fontSize: 14, color: '#666', marginTop: 2 },
+    statsBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', marginHorizontal: 16, marginBottom: 12, padding: 12, borderRadius: 12, elevation: 1 },
+    statItem: { alignItems: 'center' },
+    statValue: { fontSize: 20, fontWeight: '700' },
+    statLabel: { fontSize: 11, marginTop: 2 },
+    statDivider: { width: 1, height: 30 },
     saveBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#e8eaf6', marginHorizontal: 16, marginBottom: 12, padding: 12, borderRadius: 8 },
     saveBtn: { backgroundColor: '#1a237e', paddingHorizontal: 20, paddingVertical: 8, borderRadius: 6 },
     saveBtnText: { color: '#fff', fontWeight: '600' },
@@ -452,6 +659,18 @@ const styles = StyleSheet.create({
     pickerText: { fontSize: 12, color: '#333' },
     pickerTextActive: { color: '#fff' },
     warningText: { color: '#e65100', fontSize: 12, marginBottom: 8 },
+    photoActions: { flexDirection: 'row', gap: 10, marginBottom: 12 },
+    photoActionBtn: { flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
+    photoActionText: { color: '#fff', fontWeight: '600', fontSize: 14 },
+    photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    photoItem: { width: '31%', position: 'relative' },
+    photoThumb: { width: '100%', height: 80, borderRadius: 8 },
+    photoDeleteBtn: { position: 'absolute', top: 2, right: 2, backgroundColor: 'rgba(220,38,38,0.9)', width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+    photoDeleteText: { color: '#fff', fontSize: 10, fontWeight: '700' },
+    photoTypeLabel: { fontSize: 10, marginTop: 2, textAlign: 'center' },
+    fieldLabel: { fontSize: 13, fontWeight: '600', marginBottom: 6, marginTop: 8 },
+    saveSummaryBtn: { backgroundColor: '#1a237e', paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginTop: 8 },
+    saveSummaryText: { color: '#fff', fontWeight: '600' },
     completeSection: { padding: 16 },
     completeBtn: { backgroundColor: '#4caf50', paddingVertical: 14, borderRadius: 8, alignItems: 'center' },
     completeBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
@@ -464,7 +683,8 @@ const styles = StyleSheet.create({
     pendingCompleteBanner: {
         backgroundColor: '#ff9800', paddingVertical: 14, borderRadius: 8, alignItems: 'center'
     },
-    pendingCompleteText: { color: '#fff', fontSize: 14, fontWeight: '600' }
+    pendingCompleteText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+    emptyText: { fontSize: 13, color: '#999', textAlign: 'center', fontStyle: 'italic' }
 });
 
 export default ExecutionScreen;

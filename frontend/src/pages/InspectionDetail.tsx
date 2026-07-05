@@ -282,10 +282,7 @@ export const InspectionDetail = () => {
                 <div className="card">
                     <div className="mb-5 flex items-center gap-3">
                         <CustomIcon name="clipboard-check" size="sm" tone="cream" />
-                        <div>
-                            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Información general</h2>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">Estado, agenda e inspector responsable.</p>
-                        </div>
+                        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Información general</h2>
                     </div>
                     <dl className="space-y-4">
                         <div className="rounded-[22px] bg-[#fbfbfa] dark:bg-slate-800 px-4 py-4 ring-1 ring-slate-200/70 dark:ring-slate-700">
@@ -312,10 +309,7 @@ export const InspectionDetail = () => {
                     <div className="card">
                         <div className="mb-5 flex items-center gap-3">
                             <CustomIcon name="settings" size="sm" tone="mist" />
-                            <div>
-                                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Cambiar estado</h2>
-                                <p className="text-sm text-slate-500 dark:text-slate-400">Acciones disponibles para esta inspección.</p>
-                            </div>
+                            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Cambiar estado</h2>
                         </div>
                         <div className="flex flex-wrap gap-3">
                             {availableStatusActions.map((action) => (

@@ -103,7 +103,6 @@ export const Inspections = () => {
                         )}
                     </div>
                     <h1 className="mt-2 font-display text-3xl text-slate-900 dark:text-slate-100">Inspecciones</h1>
-                    <p className="mt-2 text-slate-600 dark:text-slate-400">Gestiona visitas técnicas de departamentos en Lima con filtros claros y estados unificados.</p>
                 </div>
 
                 {canCreateInspection(user) && (
@@ -131,40 +130,34 @@ export const Inspections = () => {
 
             {inspections.length > 0 && (
                 <>
-                    <div className="card">
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                            <div>
-                                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Buscar</label>
+                    <div className="card py-3">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                            <div className="flex-1">
                                 <div className="field-with-icon">
                                     <CustomIcon name="search" size="sm" tone="mist" />
                                     <input
                                         type="text"
-                                        placeholder="Servicio, cliente o distrito..."
+                                        placeholder="Buscar por servicio, cliente o distrito..."
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="input"
+                                        className="input py-2"
                                     />
                                 </div>
                             </div>
-
-                            <div>
-                                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Estado</label>
-                                <div className="field-with-icon">
-                                    <CustomIcon name="filter" size="sm" tone="cream" />
-                                    <select
-                                        value={statusFilter}
-                                        onChange={(e) => setStatusFilter(e.target.value as InspectionStatus | '')}
-                                        className="input"
-                                    >
-                                        <option value="">Todos los estados</option>
-                                        <option value="pendiente">Pendiente</option>
-                                        <option value="en_proceso">En proceso</option>
-                                        <option value="lista_revision">Lista para revisión</option>
-                                        <option value="finalizada">Finalizada</option>
-                                        <option value="cancelada">Cancelada</option>
-                                        <option value="reprogramada">Reprogramada</option>
-                                    </select>
-                                </div>
+                            <div className="w-full sm:w-48">
+                                <select
+                                    value={statusFilter}
+                                    onChange={(e) => setStatusFilter(e.target.value as InspectionStatus | '')}
+                                    className="input py-2"
+                                >
+                                    <option value="">Todos los estados</option>
+                                    <option value="pendiente">Pendiente</option>
+                                    <option value="en_proceso">En proceso</option>
+                                    <option value="lista_revision">Lista para revisión</option>
+                                    <option value="finalizada">Finalizada</option>
+                                    <option value="cancelada">Cancelada</option>
+                                    <option value="reprogramada">Reprogramada</option>
+                                </select>
                             </div>
                         </div>
                     </div>
@@ -235,23 +228,23 @@ export const Inspections = () => {
 
                     <div className="card hidden overflow-hidden p-0 lg:block">
                         <div className="overflow-x-auto">
-                            <table className="w-full min-w-[900px]">
+                            <table className="w-full min-w-[800px]">
                                 <thead className="bg-[#fbfbfa] dark:bg-slate-800">
                                     <tr>
-                                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Inmueble</th>
-                                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Cliente</th>
-                                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Servicio</th>
-                                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Estado</th>
-                                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Fecha</th>
-                                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Inspector</th>
-                                        <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Acción</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Inmueble</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Cliente</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Servicio</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Estado</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Fecha</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Inspector</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Acción</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-200">
                                     {filteredInspections.length === 0 ? (
                                         <tr>
-                                            <td colSpan={7} className="px-6 py-14 text-center text-slate-500 dark:text-slate-400">
-                                                <div className="mb-4 flex justify-center">
+                                            <td colSpan={7} className="px-4 py-10 text-center text-slate-500 dark:text-slate-400">
+                                                <div className="mb-3 flex justify-center">
                                                     <CustomIcon name="folder-open" size="md" tone="mist" />
                                                 </div>
                                                 No se encontraron inspecciones.
@@ -264,29 +257,29 @@ export const Inspections = () => {
                                                 className="cursor-pointer transition-colors hover:bg-[#fbfbfa]"
                                                 onClick={() => navigate(`/inspections/${inspection.id}/execute`)}
                                             >
-                                                <td className="px-6 py-5 font-medium text-slate-900 dark:text-slate-100">
+                                                <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">
                                                     <div>
                                                         <p>{inspection.projectName}</p>
-                                                        <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">{getInspectionLocationLabel(inspection)}</p>
+                                                        <p className="mt-0.5 text-xs font-medium text-slate-500 dark:text-slate-400">{getInspectionLocationLabel(inspection)}</p>
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-5 text-slate-700 dark:text-slate-300">{inspection.clientName}</td>
-                                                <td className="px-6 py-5 text-slate-700 dark:text-slate-300">{getInspectionServiceLabel(inspection)}</td>
-                                                <td className="px-6 py-5">
+                                                <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{inspection.clientName}</td>
+                                                <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{getInspectionServiceLabel(inspection)}</td>
+                                                <td className="px-4 py-3">
                                                     <span className={`badge ${inspectionStatusBadgeClasses[inspection.status]}`}>
                                                         <CustomIcon name={inspectionStatusIconMap[inspection.status]} size="xs" tone="white" />
                                                         {inspectionStatusLabels[inspection.status]}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-5 text-slate-700 dark:text-slate-300">{new Date(inspection.scheduledDate).toLocaleDateString('es-ES')}</td>
-                                                <td className="px-6 py-5 text-slate-700 dark:text-slate-300">{getInspectorName(inspection)}</td>
-                                                <td className="px-6 py-5 text-right">
+                                                <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{new Date(inspection.scheduledDate).toLocaleDateString('es-ES')}</td>
+                                                <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{getInspectorName(inspection)}</td>
+                                                <td className="px-4 py-3 text-right">
                                                     <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             navigate(`/inspections/${inspection.id}`);
                                                         }}
-                                                        className="inline-flex items-center gap-2 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm font-semibold text-slate-700 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700"
+                                                        className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700"
                                                         title="Ver detalle"
                                                     >
                                                         <CustomIcon name="clipboard-check" size="xs" tone="cream" />

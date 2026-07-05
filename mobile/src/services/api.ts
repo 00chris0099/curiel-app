@@ -263,6 +263,43 @@ export const photoService = {
         });
 
         return response.data;
+    },
+
+    delete: async (photoId) => {
+        const response = await api.delete(`/photos/${photoId}`);
+        return response.data;
+    }
+};
+
+export const notificationService = {
+    getAll: async (page = 1, limit = 20) => {
+        const response = await api.get('/notifications', { params: { page, limit } });
+        return response.data;
+    },
+
+    getUnreadCount: async () => {
+        const response = await api.get('/notifications/unread-count');
+        return response.data?.data?.unreadCount || 0;
+    },
+
+    markAsRead: async (id) => {
+        const response = await api.put(`/notifications/${id}/read`);
+        return response.data;
+    },
+
+    markAllAsRead: async () => {
+        const response = await api.put('/notifications/read-all');
+        return response.data;
+    },
+
+    registerPushToken: async (token, platform) => {
+        const response = await api.post('/notifications/push-token', { token, platform });
+        return response.data;
+    },
+
+    removePushToken: async (token) => {
+        const response = await api.delete('/notifications/push-token', { data: { token } });
+        return response.data;
     }
 };
 

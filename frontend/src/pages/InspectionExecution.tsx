@@ -717,6 +717,23 @@ export const InspectionExecution = () => {
         }
     };
 
+    const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
+
+    const handleDeletePhoto = async (photoId: string) => {
+        if (!window.confirm('¿Eliminar esta foto?')) return;
+
+        setDeletingPhotoId(photoId);
+        try {
+            await inspectionService.deletePhoto(photoId);
+            await loadExecution(selectedAreaId);
+            toast.success('Foto eliminada');
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, 'No se pudo eliminar la foto'));
+        } finally {
+            setDeletingPhotoId(null);
+        }
+    };
+
     const handleOpenAreaDetail = useCallback((areaId: string) => {
         if (!id) {
             return;
@@ -860,7 +877,7 @@ export const InspectionExecution = () => {
                     {generalPhotos.length === 0 ? (
                         <EmptyPanel message="Aún no hay fotos generales registradas." />
                     ) : generalPhotos.map((photo) => (
-                        <PhotoCard key={photo.id} photo={photo} syncStatus={getEntitySyncState('photo', photo.id)} />
+                        <PhotoCard key={photo.id} photo={photo} syncStatus={getEntitySyncState('photo', photo.id)} onDelete={handleDeletePhoto} isDeleting={deletingPhotoId === photo.id} />
                     ))}
                 </div>
             </div>
@@ -1096,7 +1113,7 @@ export const InspectionExecution = () => {
                                             {selectedAreaPhotos.length === 0 ? (
                                                 <EmptyPanel message="No hay fotos asociadas a esta área." compact />
                                             ) : selectedAreaPhotos.map((photo) => (
-                                                <PhotoCard key={photo.id} photo={photo} syncStatus={getEntitySyncState('photo', photo.id)} />
+                                                <PhotoCard key={photo.id} photo={photo} syncStatus={getEntitySyncState('photo', photo.id)} onDelete={handleDeletePhoto} isDeleting={deletingPhotoId === photo.id} />
                                             ))}
                                         </div>
                                     </div>
@@ -1152,8 +1169,19 @@ export const InspectionExecution = () => {
     );
 };
 
-const PhotoCard = memo(({ photo, syncStatus }: { photo: InspectionExecutionData['photos'][number]; syncStatus?: 'pending' | 'failed' | 'synced' }) => (
-    <article className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800/80">
+const PhotoCard = memo(({ photo, syncStatus, onDelete, isDeleting }: { photo: InspectionExecutionData['photos'][number]; syncStatus?: 'pending' | 'failed' | 'synced'; onDelete?: (photoId: string) => void; isDeleting?: boolean }) => (
+    <article className="relative overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800/80">
+        {onDelete && (
+            <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onDelete(photo.id); }}
+                disabled={isDeleting}
+                className="absolute right-2 top-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-red-500/90 text-white shadow-md transition-colors hover:bg-red-600 disabled:opacity-50"
+                title="Eliminar foto"
+            >
+                <CustomIcon name="trash" size="xs" tone="white" />
+            </button>
+        )}
         <img src={photo.url} alt={photo.caption || photoTypeLabels[photo.type]} loading="lazy" className="h-36 w-full object-cover sm:h-44" />
         <div className="space-y-2 p-4">
             <div className="flex items-center justify-between gap-3">

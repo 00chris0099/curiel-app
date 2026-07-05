@@ -288,6 +288,10 @@ const inspectionService = {
             throw error;
         }
     },
+
+    async deletePhoto(photoId: string): Promise<void> {
+        await apiClient.delete(`/photos/${photoId}`);
+    },
 };
 
 export default inspectionService;
