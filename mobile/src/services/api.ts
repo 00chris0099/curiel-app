@@ -268,6 +268,11 @@ export const photoService = {
     delete: async (photoId) => {
         const response = await api.delete(`/photos/${photoId}`);
         return response.data;
+    },
+
+    updatePrincipal: async (photoId, isPrincipal) => {
+        const response = await api.patch(`/photos/${photoId}`, { isPrincipal });
+        return response.data;
     }
 };
 

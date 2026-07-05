@@ -15,6 +15,7 @@ const toRow = (data) => ({
     longitude: data.longitude || null,
     uploaded_by: data.uploadedBy || null,
     upload_status: data.uploadStatus || 'pending',
+    is_principal: data.isPrincipal ? 1 : 0,
     is_deleted: data.is_deleted ? 1 : 0,
     last_synced_at: data.last_synced_at || null,
     local_updated_at: data.local_updated_at || new Date().toISOString()
@@ -33,6 +34,7 @@ const fromRow = (row) => ({
     longitude: row.longitude,
     uploadedBy: row.uploaded_by,
     uploadStatus: row.upload_status,
+    isPrincipal: row.is_principal === 1,
     is_deleted: row.is_deleted === 1,
     last_synced_at: row.last_synced_at,
     local_updated_at: row.local_updated_at
@@ -69,13 +71,13 @@ export const photosRepo = {
             INSERT OR REPLACE INTO ${TABLE}
             (id, inspection_id, area_id, observation_id, type, url, local_path,
              caption, latitude, longitude, uploaded_by, upload_status,
-             is_deleted, last_synced_at, local_updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             is_principal, is_deleted, last_synced_at, local_updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
             row.id, row.inspection_id, row.area_id, row.observation_id,
             row.type, row.url, row.local_path, row.caption,
             row.latitude, row.longitude, row.uploaded_by, row.upload_status,
-            row.is_deleted, row.last_synced_at, row.local_updated_at
+            row.is_principal, row.is_deleted, row.last_synced_at, row.local_updated_at
         ]);
     },
 
@@ -95,6 +97,30 @@ export const photosRepo = {
     remove: async (id) => {
         const db = await getDB();
         await db.runAsync(`DELETE FROM ${TABLE} WHERE id = ?`, [id]);
+    },
+
+    getByType: async (inspectionId, type) => {
+        const db = await getDB();
+        const rows = await db.getAllAsync(
+            `SELECT * FROM ${TABLE} WHERE inspection_id = ? AND type = ? AND is_deleted = 0`,
+            [inspectionId, type]
+        );
+        return rows.map(fromRow);
+    },
+
+    getPrincipalPhoto: async (inspectionId) => {
+        const db = await getDB();
+        const row = await db.getFirstAsync(
+            `SELECT * FROM ${TABLE} WHERE inspection_id = ? AND is_principal = 1 AND is_deleted = 0`,
+            [inspectionId]
+        );
+        return row ? fromRow(row) : null;
+    },
+
+    setPrincipal: async (id, inspectionId) => {
+        const db = await getDB();
+        await db.runAsync(`UPDATE ${TABLE} SET is_principal = 0 WHERE inspection_id = ?`, [inspectionId]);
+        await db.runAsync(`UPDATE ${TABLE} SET is_principal = 1 WHERE id = ?`, [id]);
     },
 
     clear: async () => {

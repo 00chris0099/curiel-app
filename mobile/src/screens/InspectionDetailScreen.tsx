@@ -124,15 +124,6 @@ const InspectionDetailScreen = ({ route, navigation }) => {
                 )}
             </View>
 
-            <View style={[styles.section, { backgroundColor: theme.colors.card }]}>
-                <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Fotos ({photos.length})</Text>
-                {photos.length === 0 ? (
-                    <Text style={[styles.emptySection, { color: theme.colors.textMuted }]}>Sin fotos</Text>
-                ) : (
-                    <Text style={[styles.emptySection, { color: theme.colors.textMuted }]}>{photos.filter(p => p.uploadStatus === 'uploaded').length} subidas, {photos.filter(p => p.uploadStatus === 'pending').length} pendientes</Text>
-                )}
-            </View>
-
             <View style={styles.actions}>
                 <SyncButton style={styles.syncBtn} />
                 {(inspection.status === 'pendiente' || inspection.status === 'en_proceso' || inspection.status === 'reprogramada') && (

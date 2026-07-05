@@ -22,6 +22,12 @@ import AreaDetailScreen from './src/screens/AreaDetailScreen';
 import ObservationFormScreen from './src/screens/ObservationFormScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
+import EdificioScreen from './src/screens/modules/EdificioScreen';
+import FotoPlanoScreen from './src/screens/modules/FotoPlanoScreen';
+import AreasScreen from './src/screens/modules/AreasScreen';
+import ObsMetricaScreen from './src/screens/modules/ObsMetricaScreen';
+import ObservacionesScreen from './src/screens/modules/ObservacionesScreen';
+import ConsideracionesScreen from './src/screens/modules/ConsideracionesScreen';
 
 const Stack = createStackNavigator();
 
@@ -122,6 +128,36 @@ const Navigation = () => {
                             name="Settings"
                             component={SettingsScreen}
                             options={{ title: 'Configuracion' }}
+                        />
+                        <Stack.Screen
+                            name="ModuleEdificio"
+                            component={EdificioScreen}
+                            options={{ title: 'Foto Edificio' }}
+                        />
+                        <Stack.Screen
+                            name="ModuleFotoPlano"
+                            component={FotoPlanoScreen}
+                            options={{ title: 'Foto Plano' }}
+                        />
+                        <Stack.Screen
+                            name="ModuleAreas"
+                            component={AreasScreen}
+                            options={{ title: 'Areas' }}
+                        />
+                        <Stack.Screen
+                            name="ModuleObsMetrica"
+                            component={ObsMetricaScreen}
+                            options={{ title: 'Obs. Metrica' }}
+                        />
+                        <Stack.Screen
+                            name="ModuleObservaciones"
+                            component={ObservacionesScreen}
+                            options={{ title: 'Observaciones' }}
+                        />
+                        <Stack.Screen
+                            name="ModuleConsideraciones"
+                            component={ConsideracionesScreen}
+                            options={{ title: 'Consideraciones' }}
                         />
                     </>
                 )}

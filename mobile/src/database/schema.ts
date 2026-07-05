@@ -84,6 +84,7 @@ const initTables = async (database) => {
             longitude REAL,
             uploaded_by TEXT,
             upload_status TEXT DEFAULT 'pending',
+            is_principal INTEGER DEFAULT 0,
             is_deleted INTEGER DEFAULT 0,
             last_synced_at TEXT,
             local_updated_at TEXT
@@ -114,6 +115,15 @@ const initTables = async (database) => {
             created_at TEXT NOT NULL
         );
     `);
+
+    // Migration: add is_principal to photos if missing
+    try {
+        await database.execAsync(`
+            ALTER TABLE photos ADD COLUMN is_principal INTEGER DEFAULT 0;
+        `);
+    } catch {
+        // Column already exists, ignore
+    }
 };
 
 export const closeDB = async () => {

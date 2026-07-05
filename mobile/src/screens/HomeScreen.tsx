@@ -15,7 +15,6 @@ import { useTheme } from '../context/ThemeContext';
 import { getStatusThemeColor, getStatusLabel } from '../utils/colors';
 import { inspectionService } from '../services/api';
 import { inspectionsRepo } from '../database/inspections.repo';
-import { OfflineBadge } from '../components/OfflineBadge';
 import { SyncButton } from '../components/SyncButton';
 import { LoadingScreen } from '../components/VideoSplashScreen';
 
@@ -93,25 +92,27 @@ const HomeScreen = ({ navigation }) => {
             style={[styles.card, { backgroundColor: theme.colors.card, shadowColor: theme.colors.shadow }]}
             onPress={() => navigation.navigate('InspectionDetail', { inspectionId: item.id })}
         >
-            <View style={styles.cardHeader}>
+            {/* Bloque 1: Info principal */}
+            <View style={styles.cardMain}>
                 <Text style={[styles.projectName, { color: theme.colors.text }]} numberOfLines={1}>
                     {item.projectName}
+                </Text>
+                <Text style={[styles.address, { color: theme.colors.textMuted }]} numberOfLines={1}>
+                    {item.address}
+                </Text>
+                <Text style={[styles.date, { color: theme.colors.textSecondary }]}>
+                    {new Date(item.scheduledDate).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })}
+                </Text>
+            </View>
+
+            {/* Bloque 2: Inspector + Estado */}
+            <View style={[styles.cardMeta, { borderTopColor: theme.colors.divider }]}>
+                <Text style={[styles.inspector, { color: theme.colors.textSecondary }]} numberOfLines={1}>
+                    {item.inspector?.firstName} {item.inspector?.lastName}
                 </Text>
                 <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
                     <Text style={styles.statusText}>{getStatusLabel(item.status)}</Text>
                 </View>
-            </View>
-
-            <Text style={[styles.clientName, { color: theme.colors.textSecondary }]}>{item.clientName}</Text>
-            <Text style={[styles.address, { color: theme.colors.textMuted }]} numberOfLines={1}>{item.address}</Text>
-
-            <View style={[styles.cardFooter, { borderTopColor: theme.colors.divider }]}>
-                <Text style={[styles.inspector, { color: theme.colors.textSecondary }]}>
-                    Inspector: {item.inspector?.firstName} {item.inspector?.lastName}
-                </Text>
-                <Text style={[styles.date, { color: theme.colors.textMuted }]}>
-                    {new Date(item.scheduledDate).toLocaleDateString('es-ES')}
-                </Text>
             </View>
         </TouchableOpacity>
     );
@@ -122,21 +123,19 @@ const HomeScreen = ({ navigation }) => {
 
     return (
         <View style={[styles.container, { backgroundColor: theme.colors.bg }]}>
-            {/* Header con estadísticas */}
+            {/* Header */}
             <View style={[styles.header, { backgroundColor: theme.colors.headerBg }]}>
                 <View style={styles.headerTop}>
-                    <View>
+                    <View style={styles.headerLeft}>
                         <Text style={[styles.welcomeText, { color: theme.colors.headerText }]}>Hola, {user?.firstName}!</Text>
-                        <Text style={[styles.roleText, { color: theme.colors.headerText, opacity: 0.8 }]}>{user?.role?.toUpperCase()}</Text>
+                        <View style={styles.onlineRow}>
+                            <View style={[styles.onlineDot, { backgroundColor: isOnline ? '#4caf50' : '#f44336' }]} />
+                            <Text style={[styles.onlineText, { color: theme.colors.headerText, opacity: 0.8 }]}>
+                                {isOnline ? 'Online' : 'Offline'}
+                            </Text>
+                        </View>
                     </View>
                     <View style={styles.headerActions}>
-                        <OfflineBadge />
-                        <TouchableOpacity style={[styles.headerBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.2)' }]} onPress={() => navigation.navigate('Profile')}>
-                            <Text style={[styles.headerBtnText, { color: theme.colors.headerText }]}>Perfil</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.headerBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.2)' }]} onPress={() => navigation.navigate('Settings')}>
-                            <Text style={[styles.headerBtnText, { color: theme.colors.headerText }]}>Config</Text>
-                        </TouchableOpacity>
                         <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
                             <Text style={styles.logoutBtnText}>Salir</Text>
                         </TouchableOpacity>
@@ -225,77 +224,79 @@ const styles = StyleSheet.create({
     },
     header: {
         backgroundColor: '#1a237e',
-        padding: 24,
+        padding: 20,
         paddingTop: 48
     },
     headerTop: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'flex-start'
+        alignItems: 'center'
+    },
+    headerLeft: {
+        flex: 1
     },
     headerActions: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8
     },
-    headerBtn: {
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderRadius: 8
-    },
-    headerBtnText: {
+    welcomeText: {
+        fontSize: 22,
+        fontWeight: 'bold',
         color: '#fff',
+        marginBottom: 4
+    },
+    onlineRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6
+    },
+    onlineDot: {
+        width: 10,
+        height: 10,
+        borderRadius: 5
+    },
+    onlineText: {
         fontSize: 12,
-        fontWeight: '600'
+        color: '#fff',
+        opacity: 0.8
     },
     logoutBtn: {
         backgroundColor: 'rgba(244,67,54,0.8)',
-        paddingHorizontal: 10,
-        paddingVertical: 6,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
         borderRadius: 8
     },
     logoutBtnText: {
         color: '#fff',
-        fontSize: 12,
+        fontSize: 13,
         fontWeight: '600'
-    },
-    welcomeText: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#fff',
-        marginBottom: 4
-    },
-    roleText: {
-        fontSize: 14,
-        color: '#fff',
-        opacity: 0.8
     },
     statsContainer: {
         flexDirection: 'row',
         padding: 16,
-        gap: 12
+        gap: 10
     },
     statCard: {
         flex: 1,
         backgroundColor: '#fff',
-        borderRadius: 12,
-        padding: 16,
+        borderRadius: 10,
+        padding: 12,
         alignItems: 'center',
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.08,
+        shadowRadius: 3,
+        elevation: 2
     },
     statNumber: {
-        fontSize: 28,
+        fontSize: 24,
         fontWeight: 'bold',
         color: '#1a237e',
-        marginBottom: 4
+        marginBottom: 2
     },
     statLabel: {
-        fontSize: 12,
+        fontSize: 11,
         color: '#666'
     },
     listHeader: {
@@ -303,7 +304,7 @@ const styles = StyleSheet.create({
         paddingBottom: 8
     },
     listTitle: {
-        fontSize: 18,
+        fontSize: 17,
         fontWeight: '600',
         color: '#333'
     },
@@ -319,11 +320,11 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff3e0',
         marginHorizontal: 16,
         marginBottom: 8,
-        padding: 12,
+        padding: 10,
         borderRadius: 8
     },
     syncText: {
-        fontSize: 13,
+        fontSize: 12,
         color: '#e65100',
         flex: 1
     },
@@ -334,62 +335,54 @@ const styles = StyleSheet.create({
     card: {
         backgroundColor: '#fff',
         borderRadius: 12,
-        padding: 16,
-        marginBottom: 12,
+        padding: 14,
+        marginBottom: 10,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.08,
+        shadowRadius: 3,
+        elevation: 2
     },
-    cardHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 8
+    cardMain: {
+        marginBottom: 10
     },
     projectName: {
-        fontSize: 16,
-        fontWeight: '600',
+        fontSize: 15,
+        fontWeight: '700',
         color: '#333',
-        flex: 1,
-        marginRight: 8
-    },
-    statusBadge: {
-        paddingHorizontal: 12,
-        paddingVertical: 4,
-        borderRadius: 12
-    },
-    statusText: {
-        color: '#fff',
-        fontSize: 12,
-        fontWeight: '600'
-    },
-    clientName: {
-        fontSize: 14,
-        color: '#666',
-        marginBottom: 4
+        marginBottom: 3
     },
     address: {
         fontSize: 13,
         color: '#999',
-        marginBottom: 12
+        marginBottom: 3
     },
-    cardFooter: {
+    date: {
+        fontSize: 12,
+        color: '#666'
+    },
+    cardMeta: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingTop: 12,
+        paddingTop: 10,
         borderTopWidth: 1,
         borderTopColor: '#f0f0f0'
     },
     inspector: {
         fontSize: 13,
-        color: '#666'
+        color: '#666',
+        flex: 1
     },
-    date: {
-        fontSize: 13,
-        color: '#999'
+    statusBadge: {
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 10
+    },
+    statusText: {
+        color: '#fff',
+        fontSize: 11,
+        fontWeight: '600'
     },
     emptyContainer: {
         padding: 48,
@@ -401,22 +394,22 @@ const styles = StyleSheet.create({
     },
     fab: {
         position: 'absolute',
-        right: 24,
-        bottom: 24,
-        width: 56,
-        height: 56,
-        borderRadius: 28,
+        right: 20,
+        bottom: 20,
+        width: 52,
+        height: 52,
+        borderRadius: 26,
         backgroundColor: '#1a237e',
         justifyContent: 'center',
         alignItems: 'center',
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.25,
         shadowRadius: 4,
-        elevation: 8
+        elevation: 6
     },
     fabText: {
-        fontSize: 32,
+        fontSize: 28,
         color: '#fff',
         fontWeight: '300'
     }
