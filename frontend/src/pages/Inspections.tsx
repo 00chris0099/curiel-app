@@ -162,7 +162,7 @@ export const Inspections = () => {
                         </div>
                     </div>
 
-                    <div className="space-y-3 lg:hidden">
+                    <div className="space-y-3">
                         {filteredInspections.length === 0 ? (
                             <div className="card py-10 text-center text-slate-600 dark:text-slate-400">
                                 <div className="mb-4 flex justify-center">
@@ -172,11 +172,16 @@ export const Inspections = () => {
                             </div>
                         ) : (
                             filteredInspections.map((inspection) => (
-                                <article key={inspection.id} className="card space-y-4">
+                                <article
+                                    key={inspection.id}
+                                    className="card cursor-pointer space-y-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                                    onClick={() => navigate(`/inspections/${inspection.id}/execute`)}
+                                >
                                     <div className="flex items-start justify-between gap-3">
                                         <div className="min-w-0">
                                             <p className="text-base font-semibold leading-snug text-slate-900 dark:text-slate-100">{inspection.projectName}</p>
-                                            <p className="mt-1 text-sm font-medium text-slate-600 dark:text-slate-400">{getInspectionLocationLabel(inspection)}</p>
+                                            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 truncate">{inspection.address}</p>
+                                            <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">{new Date(inspection.scheduledDate).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
                                         </div>
                                         <span className={`badge shrink-0 ${inspectionStatusBadgeClasses[inspection.status]}`}>
                                             <CustomIcon name={inspectionStatusIconMap[inspection.status]} size="xs" tone="white" />
@@ -184,114 +189,22 @@ export const Inspections = () => {
                                         </span>
                                     </div>
 
-                                    <dl className="grid grid-cols-1 gap-3 text-sm text-slate-700 dark:text-slate-300 min-[420px]:grid-cols-2">
-                                        <div>
-                                            <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Cliente</dt>
-                                            <dd className="mt-1 font-medium text-slate-900 dark:text-slate-100">{inspection.clientName}</dd>
-                                        </div>
-                                        <div>
-                                            <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Servicio</dt>
-                                            <dd className="mt-1 font-medium text-slate-900 dark:text-slate-100">{getInspectionServiceLabel(inspection)}</dd>
-                                        </div>
-                                        <div>
-                                            <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Fecha</dt>
-                                            <dd className="mt-1 font-medium text-slate-900 dark:text-slate-100">{new Date(inspection.scheduledDate).toLocaleDateString('es-ES')}</dd>
-                                        </div>
-                                        <div>
-                                            <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Inspector</dt>
-                                            <dd className="mt-1 font-medium text-slate-900 dark:text-slate-100">{getInspectorName(inspection)}</dd>
-                                        </div>
-                                    </dl>
-
-                                    <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
+                                    <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-700 pt-3">
+                                        <span className="text-sm text-slate-600 dark:text-slate-400">{getInspectorName(inspection)}</span>
                                         <button
-                                            type="button"
-                                            onClick={() => navigate(`/inspections/${inspection.id}/execute`)}
-                                            className="btn btn-primary gap-2"
-                                        >
-                                            <CustomIcon name="play" size="xs" tone="white" />
-                                            Ejecutar
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => navigate(`/inspections/${inspection.id}`)}
-                                            className="btn btn-secondary gap-2"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                navigate(`/inspections/${inspection.id}`);
+                                            }}
+                                            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700"
                                         >
                                             <CustomIcon name="clipboard-check" size="xs" tone="cream" />
-                                            Ver detalle
+                                            Ver
                                         </button>
                                     </div>
                                 </article>
                             ))
                         )}
-                    </div>
-
-                    <div className="card hidden overflow-hidden p-0 lg:block">
-                        <div className="overflow-x-auto">
-                            <table className="w-full min-w-[800px]">
-                                <thead className="bg-[#fbfbfa] dark:bg-slate-800">
-                                    <tr>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Inmueble</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Cliente</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Servicio</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Estado</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Fecha</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Inspector</th>
-                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Acción</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-200">
-                                    {filteredInspections.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={7} className="px-4 py-10 text-center text-slate-500 dark:text-slate-400">
-                                                <div className="mb-3 flex justify-center">
-                                                    <CustomIcon name="folder-open" size="md" tone="mist" />
-                                                </div>
-                                                No se encontraron inspecciones.
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        filteredInspections.map((inspection) => (
-                                            <tr
-                                                key={inspection.id}
-                                                className="cursor-pointer transition-colors hover:bg-[#fbfbfa]"
-                                                onClick={() => navigate(`/inspections/${inspection.id}/execute`)}
-                                            >
-                                                <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">
-                                                    <div>
-                                                        <p>{inspection.projectName}</p>
-                                                        <p className="mt-0.5 text-xs font-medium text-slate-500 dark:text-slate-400">{getInspectionLocationLabel(inspection)}</p>
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{inspection.clientName}</td>
-                                                <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{getInspectionServiceLabel(inspection)}</td>
-                                                <td className="px-4 py-3">
-                                                    <span className={`badge ${inspectionStatusBadgeClasses[inspection.status]}`}>
-                                                        <CustomIcon name={inspectionStatusIconMap[inspection.status]} size="xs" tone="white" />
-                                                        {inspectionStatusLabels[inspection.status]}
-                                                    </span>
-                                                </td>
-                                                <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{new Date(inspection.scheduledDate).toLocaleDateString('es-ES')}</td>
-                                                <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{getInspectorName(inspection)}</td>
-                                                <td className="px-4 py-3 text-right">
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            navigate(`/inspections/${inspection.id}`);
-                                                        }}
-                                                        className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700"
-                                                        title="Ver detalle"
-                                                    >
-                                                        <CustomIcon name="clipboard-check" size="xs" tone="cream" />
-                                                        Ver
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
                     </div>
                 </>
             )}
