@@ -25,6 +25,9 @@ const triggerN8nWebhook = async (webhookType, data) => {
             case 'evaluationNotification':
                 webhookUrl = config.n8n.evaluationNotification;
                 break;
+            case 'pushNotification':
+                webhookUrl = config.n8n.pushNotification;
+                break;
             default:
                 throw new Error(`Tipo de webhook desconocido: ${webhookType}`);
         }

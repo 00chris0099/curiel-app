@@ -4,11 +4,11 @@
     {
       "parameters": {
         "rule": {
-          "interval": [{ "field": "cronExpression", "expression": "0 9 * * 1" }]
+          "interval": [{ "field": "cronExpression", "expression": "0 7-19/2 * * 1-5" }]
         }
       },
-      "id": "schedule-weekly",
-      "name": "Weekly Monday 9am",
+      "id": "schedule-every-2h",
+      "name": "Every 2h (Mon-Fri 7am-7pm)",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [250, 300]
@@ -16,7 +16,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "={{$env.BACKEND_URL}}/api/v1/inspections?status=en_proceso&limit=100",
+        "url": "={{$env.BACKEND_URL}}/api/v1/inspections/internal/overdue",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
@@ -30,8 +30,8 @@
         },
         "options": {}
       },
-      "id": "get-in-process",
-      "name": "Get In-Process Inspections",
+      "id": "get-overdue",
+      "name": "Get Overdue Inspections",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [500, 300],
@@ -51,34 +51,128 @@
     },
     {
       "parameters": {
-        "jsCode": "const inspections = $input.first().json.inspections;\nconst rows = inspections.map(i => {\n  const scheduled = i.scheduledDate ? new Date(i.scheduledDate).toLocaleDateString('es-PE') : 'Sin fecha';\n  const inspector = i.inspectorName || i.inspector?.fullName || 'Sin asignar';\n  const project = i.projectName || i.name || 'Sin nombre';\n  return '<tr><td style=\"padding:10px 12px;border-bottom:1px solid #f3f4f6;font-weight:600;color:#374151\">' + project + '</td><td style=\"padding:10px 12px;border-bottom:1px solid #f3f4f6;color:#6b7280\">' + inspector + '</td><td style=\"padding:10px 12px;border-bottom:1px solid #f3f4f6;color:#6b7280\">' + scheduled + '</td></tr>';\n}).join('');\n\nreturn [{ json: { ...$input.first().json, rows } }];"
+        "jsCode": "const inspections = $input.first().json.inspections;\nconst now = new Date();\nconst results = [];\n\nfor (const insp of inspections) {\n  const scheduled = new Date(insp.scheduledDate);\n  const diffMs = now - scheduled;\n  const diffHours = Math.round(diffMs / 3600000);\n  \n  results.push({\n    json: {\n      inspectionId: insp.id,\n      projectName: insp.projectName,\n      clientName: insp.clientName,\n      inspectorId: insp.inspectorId,\n      scheduledDate: insp.scheduledDate,\n      status: insp.status,\n      hoursOverdue: diffHours\n    }\n  });\n}\n\nreturn results;"
       },
-      "id": "build-email-content",
-      "name": "Build Email Content",
+      "id": "build-overdue-list",
+      "name": "Build Overdue List",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [900, 300]
     },
     {
       "parameters": {
-        "fromEmail": "={{$env.SMTP_FROM_EMAIL || 'noreply@curiel.com'}}",
-        "toEmail": "={{$env.ADMIN_EMAIL || 'admin@curiel.com'}}",
-        "subject": "[CURIEL] {{$json.count}} inspeccion(es) vencida(s) o en proceso prolongado",
-        "html": "<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:32px;background:#ffffff;border-radius:12px;border:1px solid #e5e7eb'><div style='text-align:center;margin-bottom:24px'><h1 style='color:#17324a;font-size:22px;margin:0'>CURIEL</h1><p style='color:#6b7280;font-size:13px;margin:4px 0 0'>Sistema de Inspecciones Tecnicas</p></div><div style='background:#fef3c7;border-radius:10px;padding:16px;margin-bottom:24px;text-align:center'><span style='font-size:32px'>&#9888;&#65039;</span><h2 style='color:#92400e;font-size:18px;margin:8px 0 4px'>Inspecciones vencidas</h2><p style='color:#b45309;font-size:13px;margin:0'>Se encontraron {{$json.count}} inspeccion(es) que requieren atencion</p></div><table style='width:100%;border-collapse:collapse;margin:20px 0'><thead><tr style='background:#f9fafb'><th style='padding:10px 12px;text-align:left;color:#6b7280;font-size:13px;font-weight:600'>Proyecto</th><th style='padding:10px 12px;text-align:left;color:#6b7280;font-size:13px;font-weight:600'>Inspector</th><th style='padding:10px 12px;text-align:left;color:#6b7280;font-size:13px;font-weight:600'>Fecha programada</th></tr></thead><tbody>{{$json.rows}}</tbody></table><div style='text-align:center;margin:28px 0'><a href='{{$env.FRONTEND_URL || 'https://curiel.vercel.app'}}/inspections' style='display:inline-block;background:#17324a;color:#ffffff;padding:14px 32px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:600'>Revisar inspecciones</a></div><hr style='border:none;border-top:1px solid #e5e7eb;margin:24px 0'><p style='color:#9ca3af;font-size:12px;text-align:center'>Este correo fue enviado automaticamente por CURIEL Inspecciones.</p></div>",
+        "method": "GET",
+        "url": "={{$env.BACKEND_URL}}/api/v1/users/{{$json.inspectorId}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Internal-API-Key",
+              "value": "={{$env.INTERNAL_API_KEY}}"
+            }
+          ]
+        },
         "options": {}
       },
-      "id": "send-overdue-email",
-      "name": "Send Overdue Email",
+      "id": "get-inspector",
+      "name": "Get Inspector",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 300],
+      "credentials": {
+        "httpHeaderAuth": { "id": "curiel-api", "name": "CURIEL API" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const overdue = $input.first().json;\nconst inspector = overdue.data?.data || overdue.data || {};\nconst frontendUrl = $env.FRONTEND_URL || 'https://curiel.vercel.app';\n\nconst html = `\n<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:0'>\n  <div style='background:#fef2f2;border-radius:16px 16px 0 0;padding:32px;text-align:center'>\n    <span style='font-size:48px'>&#9888;&#65039;</span>\n    <h1 style='color:#dc2626;font-size:22px;margin:12px 0 4px;font-family:Georgia,serif'>Inspeccion Vencida</h1>\n    <p style='color:#9ca3af;font-size:13px;margin:0'>${overdue.hoursOverdue} horas de retraso</p>\n  </div>\n  <div style='background:#ffffff;padding:32px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 16px 16px'>\n    <p style='color:#374151;font-size:15px;line-height:1.7;margin:0 0 16px'>Hola <strong>${inspector.fullName || 'Inspector'}</strong>,</p>\n    <p style='color:#374151;font-size:15px;line-height:1.7;margin:0 0 16px'>La inspeccion del proyecto <strong>${overdue.projectName}</strong> ha pasado su fecha programada y sigue en estado <strong>${overdue.status}</strong>.</p>\n    <div style='background:#fef2f2;border-radius:10px;padding:16px;margin:20px 0'>\n      <p style='color:#dc2626;font-size:14px;margin:0;text-align:center'><strong>Inicie la inspeccion lo antes posible.</strong></p>\n    </div>\n    <div style='text-align:center;margin:24px 0'>\n      <a href='${frontendUrl}/inspections/${overdue.inspectionId}' style='display:inline-block;background:#dc2626;color:#ffffff;padding:12px 28px;border-radius:10px;text-decoration:none;font-size:14px;font-weight:600'>Ver inspeccion</a>\n    </div>\n    <hr style='border:none;border-top:1px solid #e5e7eb;margin:24px 0'>\n    <p style='color:#9ca3af;font-size:12px;text-align:center;margin:0'>CURIEL Inspecciones &middot; Alerta automatica</p>\n  </div>\n</div>`;\n\nreturn [{ json: { to: inspector.email, subject: `[CURIEL ALERTA] Inspeccion vencida - ${overdue.projectName}`, html, inspectorId: overdue.inspectorId, inspectionId: overdue.inspectionId } }];"
+      },
+      "id": "build-inspector-email",
+      "name": "Build Inspector Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1300, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{$env.SMTP_FROM_EMAIL || 'noreply@curiel.com'}}",
+        "toEmail": "={{$json.to}}",
+        "subject": "={{$json.subject}}",
+        "html": "={{$json.html}}",
+        "options": { "appendAttribution": false }
+      },
+      "id": "send-inspector-email",
+      "name": "Send Inspector Email",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
-      "position": [1150, 300]
+      "position": [1500, 200],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{$env.SMTP_FROM_EMAIL || 'noreply@curiel.com'}}",
+        "toEmail": "={{$env.ADMIN_EMAIL || 'admin@curiel.com'}}",
+        "subject": "[CURIEL ALERTA] Inspeccion vencida - {{$json.subject.match(/Inspeccion vencida - (.+)/)?.[1] || 'Desconocido'}}",
+        "html": "<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:32px;background:#ffffff;border-radius:12px;border:1px solid #e5e7eb'><h2 style='color:#dc2626;font-size:18px;margin:0 0 16px'>Inspeccion Vencida</h2><p style='color:#374151;font-size:14px'>Una inspeccion ha pasado su fecha programada y requiere atencion.</p><p style='color:#374151;font-size:14px'>Verifique el panel de supervision para mas detalles.</p></div>",
+        "options": { "appendAttribution": false }
+      },
+      "id": "send-admin-email",
+      "name": "Send Admin Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1500, 400],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.BACKEND_URL}}/api/v1/notifications/internal/bulk",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Internal-API-Key",
+              "value": "={{$env.INTERNAL_API_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"userIds\": [\"{{ $('Build Inspector Email').first().json.inspectorId }}\"],\n  \"type\": \"inspection_overdue\",\n  \"title\": \"Inspeccion vencida\",\n  \"message\": \"La inspeccion del proyecto {{ $('Build Overdue List').first().json.projectName }} ha pasado su fecha programada.\",\n  \"inspectionId\": \"{{ $('Build Inspector Email').first().json.inspectionId }}\",\n  \"priority\": \"urgent\",\n  \"category\": \"inspection\"\n}",
+        "options": {}
+      },
+      "id": "create-in-app-inspector",
+      "name": "In-App: Inspector",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1700, 200],
+      "credentials": {
+        "httpHeaderAuth": { "id": "curiel-api", "name": "CURIEL API" }
+      },
+      "continueOnFail": true
     }
   ],
   "connections": {
-    "Weekly Monday 9am": { "main": [[ { "node": "Get In-Process Inspections", "type": "main", "index": 0 } ]] },
-    "Get In-Process Inspections": { "main": [[ { "node": "Has Overdue?", "type": "main", "index": 0 } ]] },
-    "Has Overdue?": { "main": [[ { "node": "Build Email Content", "type": "main", "index": 0 } ], []] },
-    "Build Email Content": { "main": [[ { "node": "Send Overdue Email", "type": "main", "index": 0 } ]] }
+    "Every 2h (Mon-Fri 7am-7pm)": { "main": [[ { "node": "Get Overdue Inspections", "type": "main", "index": 0 } ]] },
+    "Get Overdue Inspections": { "main": [[ { "node": "Has Overdue?", "type": "main", "index": 0 } ]] },
+    "Has Overdue?": { "main": [[ { "node": "Build Overdue List", "type": "main", "index": 0 } ], []] },
+    "Build Overdue List": { "main": [[ { "node": "Get Inspector", "type": "main", "index": 0 } ]] },
+    "Get Inspector": { "main": [[ { "node": "Build Inspector Email", "type": "main", "index": 0 } ]] },
+    "Build Inspector Email": {
+      "main": [
+        [
+          { "node": "Send Inspector Email", "type": "main", "index": 0 },
+          { "node": "Send Admin Email", "type": "main", "index": 0 },
+          { "node": "In-App: Inspector", "type": "main", "index": 0 }
+        ]
+      ]
+    }
   },
-  "settings": { "executionOrder": "v1" }
+  "settings": {
+    "executionOrder": "v1"
+  }
 }

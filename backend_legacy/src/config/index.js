@@ -100,6 +100,7 @@ module.exports = {
     userNotification: process.env.N8N_WEBHOOK_USER_NOTIFICATION,
     auditLog: process.env.N8N_WEBHOOK_AUDIT_LOG,
     evaluationNotification: process.env.N8N_WEBHOOK_EVALUATION_NOTIFICATION,
+    pushNotification: process.env.N8N_WEBHOOK_PUSH_NOTIFICATION,
     secretToken: process.env.N8N_SECRET_TOKEN
   },
 

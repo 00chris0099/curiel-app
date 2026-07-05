@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { getApiErrorMessage } from '../api/axios';
 import { CustomIcon } from '../components/CustomIcon';
+import { NotificationPreferences } from '../components/NotificationPreferences';
 import { NotificationsSkeleton } from '../components/Skeleton';
 import notificationService from '../services/notification.service';
 import type { Notification } from '../types';
@@ -96,6 +97,8 @@ export const Notifications = () => {
                     </button>
                 ))}
             </div>
+
+            <NotificationPreferences />
         </div>
     );
 };

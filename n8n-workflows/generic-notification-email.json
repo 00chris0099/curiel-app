@@ -1,0 +1,76 @@
+{
+  "name": "CURIEL - Email de Notificacion Generico",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generic-notification-email",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-entry",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "generic-notification-email"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\nconst headers = $input.first().json.headers;\n\nconst secret = headers['x-curiel-secret'];\nif (!secret || secret !== $env.CURIEL_SECRET_TOKEN) {\n  return [{ json: { valid: false, error: 'INVALID_SECRET' } }];\n}\n\nif (!body?.recipient?.email || !body?.notificationTitle) {\n  return [{ json: { valid: false, error: 'MISSING_FIELDS' } }];\n}\n\nconst emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;\nif (!emailRegex.test(body.recipient.email)) {\n  return [{ json: { valid: false, error: 'INVALID_EMAIL' } }];\n}\n\nreturn [{ json: { ...body, valid: true } }];"
+      },
+      "id": "validate-payload",
+      "name": "Validate Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nif (data.valid === false) {\n  throw new Error(`Validation failed: ${data.error}`);\n}\nreturn $input.all();"
+      },
+      "id": "gate-valid",
+      "name": "Gate: Valid?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst recipient = data.recipient;\nconst type = data.type || 'notification';\nconst title = data.notificationTitle;\nconst message = data.notificationMessage || '';\nconst inspectionId = data.inspectionId;\nconst frontendUrl = $env.FRONTEND_URL || 'https://curiel.vercel.app';\n\nconst typeConfig = {\n  inspection_assigned: { icon: '&#128203;', color: '#17324a', label: 'Asignacion' },\n  inspection_started: { icon: '&#9654;', color: '#3b82f6', label: 'Iniciada' },\n  inspection_ready_for_review: { icon: '&#128269;', color: '#8b5cf6', label: 'Para Revision' },\n  inspection_returned_for_correction: { icon: '&#9998;', color: '#f59e0b', label: 'Correccion' },\n  inspection_finalized: { icon: '&#9989;', color: '#10b981', label: 'Finalizada' },\n  inspection_cancelled: { icon: '&#10060;', color: '#ef4444', label: 'Cancelada' },\n  inspection_rescheduled: { icon: '&#128259;', color: '#f97316', label: 'Reprogramada' },\n  inspection_overdue: { icon: '&#9888;&#65039;', color: '#dc2626', label: 'Vencida' },\n  inspection_reminder_30min: { icon: '&#9200;', color: '#2563eb', label: 'Recordatorio' },\n  inspection_not_started: { icon: '&#9888;', color: '#d97706', label: 'No Iniciada' },\n  alert_created: { icon: '&#128680;', color: '#dc2626', label: 'Alerta' },\n  evaluation_received: { icon: '&#127942;', color: '#17324a', label: 'Evaluacion' }\n};\n\nconst config = typeConfig[type] || { icon: '&#128172;', color: '#17324a', label: 'Notificacion' };\n\nconst inspectionLink = inspectionId\n  ? `<div style='text-align:center;margin:24px 0'><a href='${frontendUrl}/inspections/${inspectionId}' style='display:inline-block;background:#17324a;color:#ffffff;padding:12px 28px;border-radius:10px;text-decoration:none;font-size:14px;font-weight:600'>Ver inspeccion</a></div>`\n  : '';\n\nconst html = `\n<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:0'>\n  <div style='background:${config.color}15;border-radius:16px 16px 0 0;padding:32px;text-align:center'>\n    <span style='font-size:48px'>${config.icon}</span>\n    <h1 style='color:${config.color};font-size:22px;margin:12px 0 4px;font-family:Georgia,serif'>${title}</h1>\n    <p style='color:#6b7280;font-size:13px;margin:0'>${config.label}</p>\n  </div>\n  <div style='background:#ffffff;padding:32px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 16px 16px'>\n    <p style='color:#374151;font-size:15px;line-height:1.7;margin:0 0 16px'>Hola <strong>${recipient.fullName || 'Usuario'}</strong>,</p>\n    <p style='color:#374151;font-size:15px;line-height:1.7;margin:0 0 16px'>${message}</p>\n    ${inspectionLink}\n    <hr style='border:none;border-top:1px solid #e5e7eb;margin:24px 0'>\n    <p style='color:#9ca3af;font-size:12px;text-align:center;margin:0'>CURIEL Inspecciones &middot; Sistema tecnico de gestion</p>\n  </div>\n</div>`;\n\nreturn [{ json: { to: recipient.email, subject: `[CURIEL] ${title}`, html } }];"
+      },
+      "id": "build-email",
+      "name": "Build Email HTML",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [910, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{$env.SMTP_FROM_EMAIL || 'noreply@curiel.com'}}",
+        "toEmail": "={{$json.to}}",
+        "subject": "={{$json.subject}}",
+        "html": "={{$json.html}}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "send-email",
+      "name": "Send Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1130, 300],
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[ { "node": "Validate Payload", "type": "main", "index": 0 } ]] },
+    "Validate Payload": { "main": [[ { "node": "Gate: Valid?", "type": "main", "index": 0 } ]] },
+    "Gate: Valid?": { "main": [[ { "node": "Build Email HTML", "type": "main", "index": 0 } ]] },
+    "Build Email HTML": { "main": [[ { "node": "Send Email", "type": "main", "index": 0 } ]] }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true
+  }
+}

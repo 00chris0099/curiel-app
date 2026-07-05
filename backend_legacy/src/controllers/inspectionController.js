@@ -158,6 +158,37 @@ const getInspectionStats = asyncHandler(async (req, res) => {
     });
 });
 
+/**
+ * @desc    Obtener inspecciones próximas (para recordatorios)
+ * @route   GET /api/v1/inspections/internal/upcoming
+ * @access  Internal (n8n)
+ */
+const getUpcomingInspections = asyncHandler(async (req, res) => {
+    const minutes = parseInt(req.query.minutes) || 35;
+    const inspections = await inspectionService.getUpcomingInspections(minutes);
+
+    res.json({
+        success: true,
+        data: inspections,
+        count: inspections.length
+    });
+});
+
+/**
+ * @desc    Obtener inspecciones vencidas
+ * @route   GET /api/v1/inspections/internal/overdue
+ * @access  Internal (n8n)
+ */
+const getOverdueInspections = asyncHandler(async (req, res) => {
+    const inspections = await inspectionService.getOverdueInspections();
+
+    res.json({
+        success: true,
+        data: inspections,
+        count: inspections.length
+    });
+});
+
 module.exports = {
     getAllInspections,
     getInspectionById,
@@ -165,5 +196,7 @@ module.exports = {
     updateInspection,
     updateInspectionStatus,
     deleteInspection,
-    getInspectionStats
+    getInspectionStats,
+    getUpcomingInspections,
+    getOverdueInspections
 };

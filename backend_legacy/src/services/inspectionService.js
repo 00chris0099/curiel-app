@@ -167,11 +167,13 @@ class InspectionService {
         });
 
         const district = state || city || 'Lima';
-        await notificationService.createForUser(inspectorId, {
+        await notificationService.createAndNotify(inspectorId, {
             inspectionId: inspection.id,
             type: 'inspection_assigned',
             title: 'Nueva inspección asignada',
-            message: `Se te asignó la inspección del departamento ${projectName} en ${district}.`
+            message: `Se te asignó la inspección del departamento ${projectName} en ${district}.`,
+            category: 'inspection',
+            sendEmail: true
         });
 
         return inspection;

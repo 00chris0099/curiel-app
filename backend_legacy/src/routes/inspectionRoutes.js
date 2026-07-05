@@ -25,6 +25,12 @@ router.use(authenticate);
 // GET /api/v1/inspections/stats - Estadisticas
 router.get('/stats', inspectionController.getInspectionStats);
 
+// GET /api/v1/inspections/internal/upcoming - Inspecciones próximas (para n8n recordatorios)
+router.get('/internal/upcoming', inspectionController.getUpcomingInspections);
+
+// GET /api/v1/inspections/internal/overdue - Inspecciones vencidas (para n8n alertas)
+router.get('/internal/overdue', inspectionController.getOverdueInspections);
+
 // GET /api/v1/inspections - Listar inspecciones
 router.get('/', inspectionController.getAllInspections);
 

@@ -401,11 +401,13 @@ class InspectionExecutionService {
             }
         });
 
-        await notificationService.createForRoles(['admin', 'arquitecto'], {
+        await notificationService.createAndNotifyForRoles(['admin', 'arquitecto', 'supervisor'], {
             inspectionId: inspection.id,
             type: 'inspection_ready_for_review',
             title: 'Inspección lista para revisión',
-            message: `El informe de la inspección ${inspection.projectName} ya está listo para ser revisado.`
+            message: `El informe de la inspección ${inspection.projectName} ya está listo para ser revisado.`,
+            category: 'inspection',
+            sendEmail: true
         }, [inspection.inspectorId]);
 
         return {

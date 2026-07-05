@@ -58,8 +58,16 @@ export type NotificationType =
     | 'inspection_finalized'
     | 'inspection_cancelled'
     | 'inspection_rescheduled'
+    | 'inspection_overdue'
+    | 'inspection_reminder_30min'
+    | 'inspection_not_started'
+    | 'alert_created'
+    | 'evaluation_received'
     | 'sync_failed'
     | 'offline_changes_synced';
+
+export type NotificationPriority = 'low' | 'normal' | 'high' | 'urgent';
+export type NotificationCategory = 'inspection' | 'evaluation' | 'alert' | 'system';
 
 export interface Notification {
     id: string;
@@ -68,7 +76,25 @@ export interface Notification {
     type: NotificationType;
     title: string;
     message: string;
+    channel?: string;
+    priority?: NotificationPriority;
+    category?: NotificationCategory;
+    metadata?: Record<string, unknown> | null;
     readAt?: string | null;
+    sentAt?: string | null;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface NotificationPreference {
+    id: string;
+    userId: string;
+    emailEnabled: boolean;
+    pushEnabled: boolean;
+    inAppEnabled: boolean;
+    categories: Record<string, boolean>;
+    quietHoursStart?: string | null;
+    quietHoursEnd?: string | null;
     createdAt: string;
     updatedAt: string;
 }
