@@ -13,13 +13,10 @@ import type {
     CreateInspectionObservationDto,
     InspectionArea,
     InspectionExecutionData,
+    UpdateInspectionAreaDto,
 } from '../types';
 import {
-    getInspectionLocationLabel,
-} from '../utils/inspectionMetadata';
-import {
     canApproveInspectionReport,
-    canGenerateInspectionReport,
     canManageExecutionContent,
     canSendExecutionToReview,
 } from '../utils/inspectionPermissions';
@@ -38,12 +35,10 @@ import {
 } from './execution/executionConstants';
 import {
     type AreaFormState,
-    type ObservationFormState,
     type SummaryFormState,
     emptySummaryForm,
 } from './execution/executionTypes';
 import { ExecutionHeader } from './execution/ExecutionHeader';
-import { ExecutionStatsBar } from './execution/ExecutionStatsBar';
 import { ModuleGrid } from './execution/ModuleGrid';
 import { ModuleEdificio } from './execution/ModuleEdificio';
 import { ModuleFotoPlano } from './execution/ModuleFotoPlano';
@@ -60,7 +55,6 @@ export const InspectionExecution = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [busyAction, setBusyAction] = useState<string | null>(null);
-    const [isDownloadingReport, setIsDownloadingReport] = useState(false);
     const [summaryForm, setSummaryForm] = useState<SummaryFormState>(emptySummaryForm);
     const [queueItems, setQueueItems] = useState<OfflineSyncItem[]>([]);
 
@@ -137,17 +131,9 @@ export const InspectionExecution = () => {
     const photos = useMemo(() => Array.isArray(execution?.photos) ? execution.photos : [], [execution?.photos]);
     const summary = execution?.summary ?? null;
     const inspection = execution?.inspection || null;
-    const stats = execution?.stats ?? {
-        totalAreaM2: areas.reduce((sum, area) => sum + Number(area?.calculatedAreaM2 || 0), 0),
-        areasRegistered: areas.length,
-        totalObservations: observations.length,
-        criticalObservations: observations.filter((observation) => observation?.severity === 'critica').length,
-        highObservations: observations.filter((observation) => observation?.severity === 'alta').length,
-        mediumObservations: observations.filter((observation) => observation?.severity === 'media').length,
-        lightObservations: observations.filter((observation) => observation?.severity === 'leve').length,
-        photosCount: photos.length,
-        reportStatus: summary?.reportStatus || 'borrador',
-    };
+    const canApproveReport = canApproveInspectionReport(user || null);
+    const canEditExecutionContent = canManageExecutionContent(inspection, user || null);
+    const canCompleteExecution = canSendExecutionToReview(inspection, user || null);
 
     useEffect(() => {
         if (!summary) {
@@ -161,11 +147,6 @@ export const InspectionExecution = () => {
             reportStatus: summary.reportStatus,
         });
     }, [summary]);
-
-    const canApproveReport = canApproveInspectionReport(user || null);
-    const canEditExecutionContent = canManageExecutionContent(inspection, user || null);
-    const canDownloadExecutionReport = canGenerateInspectionReport(inspection, user || null);
-    const canCompleteExecution = canSendExecutionToReview(inspection, user || null);
     const getEntitySyncState = useCallback((entityType: OfflineSyncItem['entityType'], entityId: string) => {
         const related = queueItems.find((item) => item.entityType === entityType && (
             ('clientId' in item && item.clientId === entityId)
@@ -174,8 +155,6 @@ export const InspectionExecution = () => {
 
         return related?.syncStatus || 'synced';
     }, [queueItems]);
-
-    const locationLabel = inspection ? getInspectionLocationLabel(inspection) : 'Sin ubicación';
 
     const withBusyAction = async (action: string, callback: () => Promise<void>) => {
         setBusyAction(action);
@@ -266,6 +245,34 @@ export const InspectionExecution = () => {
         });
     };
 
+    const handleUpdateArea = async (areaId: string, form: AreaFormState) => {
+        if (!id) return;
+
+        await withBusyAction(`update-area-${areaId}`, async () => {
+            const payload: UpdateInspectionAreaDto = {
+                name: form.name.trim(),
+                category: form.category.trim() || 'interior',
+                lengthM: form.lengthM ? Number(form.lengthM) : null,
+                widthM: form.widthM ? Number(form.widthM) : null,
+                ceilingHeightM: form.ceilingHeightM ? Number(form.ceilingHeightM) : null,
+                status: form.status,
+                notes: form.notes.trim() || undefined,
+            };
+
+            await queueMutation({
+                inspectionId: id,
+                entityType: 'area',
+                action: 'update',
+                targetId: areaId,
+                data: payload,
+            }, areaId, 'Área actualizada offline');
+
+            if (isOnline) {
+                toast.success('Área actualizada');
+            }
+        });
+    };
+
     const handleDeleteArea = async (area: InspectionArea) => {
         if (!id) return;
 
@@ -283,21 +290,18 @@ export const InspectionExecution = () => {
         });
     };
 
-    const handleSaveObservation = async (form: ObservationFormState, editingId?: string) => {
+    const handleSaveObservation = async (form: { areaId: string; title: string; description: string; severity: string; type: string; status: string }, editingId?: string) => {
         if (!id) return;
 
         await withBusyAction('save-observation', async () => {
             const clientId = createLocalId('local-observation');
-            const payload: CreateInspectionObservationDto = {
-                areaId: areas[0]?.id || '',
+            const payload = {
+                areaId: form.areaId || areas[0]?.id || '',
                 title: form.title.trim(),
                 description: form.description.trim(),
-                severity: form.severity,
-                type: form.type,
-                recommendation: form.recommendation.trim() || undefined,
-                metricValue: form.metricValue ? Number(form.metricValue) : null,
-                metricUnit: form.metricUnit.trim() || undefined,
-                status: form.status,
+                severity: form.severity as 'leve' | 'media' | 'alta' | 'critica',
+                type: form.type as 'humedad' | 'electrico' | 'sanitario' | 'acabados' | 'carpinteria' | 'estructura' | 'seguridad' | 'otro',
+                status: form.status as 'pendiente' | 'corregido' | 'requiere_revision',
             };
 
             if (editingId) {
@@ -403,9 +407,10 @@ export const InspectionExecution = () => {
 
     const handleUploadPhoto = async (
         event: FormEvent<HTMLFormElement>,
-        type: 'edificio' | 'plano',
+        type: string,
         caption: string,
-        file: File | null
+        file: File | null,
+        areaId?: string
     ) => {
         event.preventDefault();
         if (!id) return;
@@ -423,8 +428,9 @@ export const InspectionExecution = () => {
                 action: 'create',
                 clientId: createLocalId('local-photo'),
                 data: {
-                    type,
+                    type: type as 'edificio' | 'plano' | 'area' | 'observacion' | 'general',
                     caption: caption.trim() || undefined,
+                    areaId,
                 },
                 file,
                 fileName: file?.name,
@@ -484,28 +490,6 @@ export const InspectionExecution = () => {
                 await loadExecution();
             }
         });
-    };
-
-    const handleDownloadReport = async () => {
-        if (!id || !inspection) return;
-
-        setIsDownloadingReport(true);
-        try {
-            const blob = await inspectionService.downloadReport(id);
-            const url = window.URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `informe-inspeccion-${inspection.projectName}.pdf`;
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            window.URL.revokeObjectURL(url);
-            toast.success('Informe generado');
-        } catch (error: unknown) {
-            toast.error(getApiErrorMessage(error, 'No se pudo generar el informe PDF'));
-        } finally {
-            setIsDownloadingReport(false);
-        }
     };
 
     const handleDeletePhoto = async (photoId: string) => {
@@ -577,7 +561,7 @@ export const InspectionExecution = () => {
     ];
 
     return (
-        <div className="space-y-5 pb-10 sm:space-y-6">
+        <div className="space-y-4 pb-10">
             <ConnectionStatus
                 pendingCount={pendingCount}
                 onSyncNow={syncNow}
@@ -585,26 +569,10 @@ export const InspectionExecution = () => {
             />
 
             <ExecutionHeader
-                inspectionId={inspection.id}
                 projectName={inspection.projectName}
-                clientName={inspection.clientName}
-                scheduledDate={inspection.scheduledDate}
-                status={inspection.status}
-                locationLabel={locationLabel}
-                canDownloadReport={canDownloadExecutionReport}
                 canComplete={canCompleteExecution}
-                isDownloadingReport={isDownloadingReport}
                 busyAction={busyAction}
-                onDownloadReport={handleDownloadReport}
                 onComplete={handleCompleteInspection}
-            />
-
-            <ExecutionStatsBar
-                totalAreaM2={stats.totalAreaM2}
-                areasRegistered={stats.areasRegistered}
-                totalObservations={stats.totalObservations}
-                criticalObservations={stats.criticalObservations}
-                photosCount={stats.photosCount}
             />
 
             <ModuleGrid modules={moduleDefinitions}>
@@ -631,6 +599,7 @@ export const InspectionExecution = () => {
                     getEntitySyncState={getEntitySyncState}
                     onCreateDefaultAreas={handleCreateDefaultAreas}
                     onCreateArea={handleCreateArea}
+                    onUpdateArea={handleUpdateArea}
                     onDeleteArea={handleDeleteArea}
                 />
                 <ModuleObsMetrica
@@ -641,18 +610,18 @@ export const InspectionExecution = () => {
                 <ModuleObservaciones
                     areas={areas}
                     observations={observations}
+                    photos={photos}
                     busyAction={busyAction}
                     canEdit={canEditExecutionContent}
-                    getEntitySyncState={getEntitySyncState}
                     onSaveObservation={handleSaveObservation}
                     onDeleteObservation={handleDeleteObservation}
+                    onUploadPhoto={handleUploadPhoto}
+                    onDeletePhoto={handleDeletePhoto}
                 />
                 <ModuleConsideraciones
                     summaryForm={summaryForm}
-                    inspection={inspection}
                     busyAction={busyAction}
                     canEdit={canEditExecutionContent}
-                    canApproveReport={canApproveReport}
                     onSummaryChange={setSummaryForm}
                     onSaveSummary={handleSaveSummary}
                 />

@@ -130,7 +130,8 @@ export const Inspections = () => {
 
             {inspections.length > 0 && (
                 <>
-                    <div className="card py-3">
+                    {/* Search + filter — hidden on mobile */}
+                    <div className="hidden card py-3 sm:block">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                             <div className="flex-1">
                                 <div className="field-with-icon">
@@ -162,7 +163,7 @@ export const Inspections = () => {
                         </div>
                     </div>
 
-                    <div className="space-y-3">
+                    <div className="space-y-2 sm:space-y-3">
                         {filteredInspections.length === 0 ? (
                             <div className="card py-10 text-center text-slate-600 dark:text-slate-400">
                                 <div className="mb-4 flex justify-center">
@@ -174,33 +175,37 @@ export const Inspections = () => {
                             filteredInspections.map((inspection) => (
                                 <article
                                     key={inspection.id}
-                                    className="card cursor-pointer space-y-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                                    className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800/80 sm:rounded-[24px] sm:px-5 sm:py-4 sm:space-y-3 sm:block cursor-pointer"
                                     onClick={() => navigate(`/inspections/${inspection.id}/execute`)}
                                 >
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div className="min-w-0">
-                                            <p className="text-base font-semibold leading-snug text-slate-900 dark:text-slate-100">{inspection.projectName}</p>
-                                            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 truncate">{inspection.address}</p>
-                                            <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">{new Date(inspection.scheduledDate).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
-                                        </div>
-                                        <span className={`badge shrink-0 ${inspectionStatusBadgeClasses[inspection.status]}`}>
-                                            <CustomIcon name={inspectionStatusIconMap[inspection.status]} size="xs" tone="white" />
-                                            {inspectionStatusLabels[inspection.status]}
-                                        </span>
+                                    {/* Mobile: single row */}
+                                    <div className="min-w-0 flex-1 sm:hidden">
+                                        <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{inspection.projectName}</p>
+                                        <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">
+                                            {new Date(inspection.scheduledDate).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
+                                        </p>
                                     </div>
+                                    <span className={`badge shrink-0 sm:hidden ${inspectionStatusBadgeClasses[inspection.status]}`}>
+                                        <CustomIcon name={inspectionStatusIconMap[inspection.status]} size="xs" tone="white" />
+                                        {inspectionStatusLabels[inspection.status]}
+                                    </span>
 
-                                    <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-700 pt-3">
-                                        <span className="text-sm text-slate-600 dark:text-slate-400">{getInspectorName(inspection)}</span>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                navigate(`/inspections/${inspection.id}`);
-                                            }}
-                                            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700"
-                                        >
-                                            <CustomIcon name="clipboard-check" size="xs" tone="cream" />
-                                            Ver
-                                        </button>
+                                    {/* Desktop: full card */}
+                                    <div className="hidden sm:block">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="min-w-0">
+                                                <p className="text-base font-semibold leading-snug text-slate-900 dark:text-slate-100">{inspection.projectName}</p>
+                                                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 truncate">{inspection.address}</p>
+                                                <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">{new Date(inspection.scheduledDate).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                                            </div>
+                                            <span className={`badge shrink-0 ${inspectionStatusBadgeClasses[inspection.status]}`}>
+                                                <CustomIcon name={inspectionStatusIconMap[inspection.status]} size="xs" tone="white" />
+                                                {inspectionStatusLabels[inspection.status]}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-700 pt-3 mt-3">
+                                            <span className="text-sm text-slate-600 dark:text-slate-400">{getInspectorName(inspection)}</span>
+                                        </div>
                                     </div>
                                 </article>
                             ))
