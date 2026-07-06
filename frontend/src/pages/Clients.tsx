@@ -185,30 +185,21 @@ export const Clients = () => {
     }
 
     return (
-        <div className="space-y-6">
-            {/* Header */}
+        <div className="space-y-6 pb-10 animate-in fade-in duration-300">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h1 className="font-display text-3xl font-bold text-slate-900 dark:text-slate-100">Clientes</h1>
-                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                        {totalClients} clientes registrados
-                    </p>
+                    <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Clientes</h1>
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{totalClients} clientes registrados</p>
                 </div>
-                <button
-                    onClick={handleCreate}
-                    className="inline-flex items-center gap-2 rounded-2xl bg-[#17324a] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#1e3d56] focus:outline-none focus:ring-2 focus:ring-[#17324a] focus:ring-offset-2"
-                >
-                    <CustomIcon name={isFormVisible ? 'x-circle' : 'plus'} size="sm" tone="cream" />
+                <button onClick={handleCreate} className="btn btn-primary flex items-center gap-2">
+                    <CustomIcon name={isFormVisible ? 'x-circle' : 'plus'} size="xs" tone="white" />
                     {isFormVisible ? 'Cancelar' : 'Nuevo Cliente'}
                 </button>
             </div>
 
-            {/* Create/Edit Form */}
             {isFormVisible && (
-                <div className="rounded-[28px] bg-white dark:bg-slate-800 p-6 shadow-sm ring-1 ring-slate-200/80 dark:ring-slate-700/80">
-                    <h2 className="font-display text-xl font-bold text-slate-900 dark:text-slate-100">
-                        {isEditing ? 'Editar Cliente' : 'Nuevo Cliente'}
-                    </h2>
+                <div className="rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+                    <h2 className="text-lg font-bold text-gray-900 dark:text-white">{isEditing ? 'Editar Cliente' : 'Nuevo Cliente'}</h2>
                     <form onSubmit={handleSubmit} className="mt-4 space-y-4">
                         <div className="grid gap-4 sm:grid-cols-2">
                             {/* Document Type */}
@@ -395,13 +386,11 @@ export const Clients = () => {
             </div>
 
             {/* Clients Table */}
-            <div className="overflow-hidden rounded-[28px] bg-white dark:bg-slate-800 shadow-sm ring-1 ring-slate-200/80 dark:ring-slate-700/80">
+            <div className="rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
                 {clients.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16">
                         <CustomIcon name="users" size="lg" tone="mist" />
-                        <p className="mt-4 text-sm font-medium text-slate-500 dark:text-slate-400">
-                            No se encontraron clientes
-                        </p>
+                        <p className="mt-4 text-sm font-medium text-gray-500 dark:text-gray-400">No se encontraron clientes</p>
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
