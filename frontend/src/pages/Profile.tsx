@@ -111,7 +111,7 @@ export const Profile = () => {
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     {profileRows.map((row) => (
-                        <div key={row.title} className="rounded-[24px] border border-slate-200 bg-[#fbfbfa] p-4 dark:border-slate-700 dark:bg-slate-800">
+                        <div key={row.title} className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
                             <div className="flex items-start gap-4">
                                 <CustomIcon name={row.icon} size="sm" tone={row.tone} />
                                 <div>

@@ -57,7 +57,7 @@ export const ClientDetail = () => {
         return (
             <div className="flex flex-col items-center justify-center py-16">
                 <CustomIcon name="users" size="lg" tone="mist" />
-                <p className="mt-4 text-sm font-medium text-slate-500">Cliente no encontrado</p>
+                <p className="mt-4 text-sm font-medium text-gray-500">Cliente no encontrado</p>
                 <button
                     onClick={() => navigate('/clients')}
                     className="mt-4 rounded-xl bg-[#17324a] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1e3d56]"
@@ -77,45 +77,45 @@ export const ClientDetail = () => {
                 <div>
                     <button
                         onClick={() => navigate('/clients')}
-                        className="mb-2 inline-flex items-center gap-1 text-sm font-medium text-slate-500 hover:text-slate-700"
+                        className="mb-2 inline-flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-slate-700"
                     >
                         <CustomIcon name="arrow-left" size="sm" tone="mist" />
                         Volver a Clientes
                     </button>
-                    <h1 className="font-display text-3xl font-bold text-slate-900">{displayName}</h1>
-                    <p className="mt-1 text-sm text-slate-500">
+                    <h1 className="text-2xl font-bold tracking-tight text-gray-900">{displayName}</h1>
+                    <p className="mt-1 text-sm text-gray-500">
                         {documentTypeLabels[client.documentType]} {client.documentNumber}
                     </p>
                 </div>
             </div>
 
             {/* Client Info Card */}
-            <div className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200/80">
-                <h2 className="font-display text-xl font-bold text-slate-900">Informacion del Cliente</h2>
+            <div className="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Informacion del Cliente</h2>
                 <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     <div>
-                        <p className="text-xs font-medium text-slate-500">Email</p>
-                        <p className="mt-1 text-sm text-slate-900">{client.email}</p>
+                        <p className="text-xs font-medium text-gray-500">Email</p>
+                        <p className="mt-1 text-sm text-gray-900">{client.email}</p>
                     </div>
                     <div>
-                        <p className="text-xs font-medium text-slate-500">Telefono</p>
-                        <p className="mt-1 text-sm text-slate-900">{client.phone || '-'}</p>
+                        <p className="text-xs font-medium text-gray-500">Telefono</p>
+                        <p className="mt-1 text-sm text-gray-900">{client.phone || '-'}</p>
                     </div>
                     <div>
-                        <p className="text-xs font-medium text-slate-500">Direccion</p>
-                        <p className="mt-1 text-sm text-slate-900">{client.address || '-'}</p>
+                        <p className="text-xs font-medium text-gray-500">Direccion</p>
+                        <p className="mt-1 text-sm text-gray-900">{client.address || '-'}</p>
                     </div>
                     <div>
-                        <p className="text-xs font-medium text-slate-500">Tipo de documento</p>
-                        <p className="mt-1 text-sm text-slate-900">{documentTypeLabels[client.documentType]}</p>
+                        <p className="text-xs font-medium text-gray-500">Tipo de documento</p>
+                        <p className="mt-1 text-sm text-gray-900">{documentTypeLabels[client.documentType]}</p>
                     </div>
                     <div>
-                        <p className="text-xs font-medium text-slate-500">Protegido</p>
-                        <p className="mt-1 text-sm text-slate-900">{client.isProtected ? 'Si' : 'No'}</p>
+                        <p className="text-xs font-medium text-gray-500">Protegido</p>
+                        <p className="mt-1 text-sm text-gray-900">{client.isProtected ? 'Si' : 'No'}</p>
                     </div>
                     <div>
-                        <p className="text-xs font-medium text-slate-500">Creado</p>
-                        <p className="mt-1 text-sm text-slate-900">
+                        <p className="text-xs font-medium text-gray-500">Creado</p>
+                        <p className="mt-1 text-sm text-gray-900">
                             {new Date(client.createdAt).toLocaleDateString('es-PE')}
                         </p>
                     </div>
@@ -123,9 +123,9 @@ export const ClientDetail = () => {
             </div>
 
             {/* Inspections */}
-            <div className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200/80">
+            <div className="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <h2 className="font-display text-xl font-bold text-slate-900">
+                    <h2 className="text-lg font-bold text-gray-900 dark:text-white">
                         Inspecciones ({inspections.length})
                     </h2>
                     <select
@@ -146,7 +146,7 @@ export const ClientDetail = () => {
                 {inspections.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12">
                         <CustomIcon name="clipboard-check" size="lg" tone="mist" />
-                        <p className="mt-4 text-sm font-medium text-slate-500">
+                        <p className="mt-4 text-sm font-medium text-gray-500">
                             Este cliente no tiene inspecciones
                         </p>
                     </div>
@@ -169,7 +169,7 @@ export const ClientDetail = () => {
                                         className="cursor-pointer transition-colors hover:bg-slate-50/50"
                                         onClick={() => navigate(`/inspections/${inspection.id}`)}
                                     >
-                                        <td className="px-4 py-3 font-medium text-slate-900">
+                                        <td className="px-4 py-3 font-medium text-gray-900">
                                             {inspection.projectName}
                                         </td>
                                         <td className="px-4 py-3 text-slate-600">{inspection.inspectionType}</td>

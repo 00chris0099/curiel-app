@@ -195,9 +195,7 @@ export const Evaluations = () => {
             {isEditing && selectedEvaluation && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
                     <div className="mx-4 w-full max-w-lg rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 p-6 shadow-xl">
-                        <h3 className="font-display text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">
-                            Editar Evaluacion
-                        </h3>
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Editar Evaluacion</h3>
                         <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
                             {selectedEvaluation.evaluatedUser?.fullName} - Semana {selectedEvaluation.weekStart}
                         </p>

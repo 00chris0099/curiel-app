@@ -102,7 +102,7 @@ export const Inspections = () => {
                             </span>
                         )}
                     </div>
-                    <h1 className="mt-2 font-display text-3xl text-slate-900 dark:text-slate-100">Inspecciones</h1>
+                    <h1 className="mt-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Inspecciones</h1>
                 </div>
 
                 {canCreateInspection(user) && (
@@ -175,7 +175,7 @@ export const Inspections = () => {
                             filteredInspections.map((inspection) => (
                                 <article
                                     key={inspection.id}
-                                    className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800/80 sm:rounded-[24px] sm:px-5 sm:py-4 sm:space-y-3 sm:block cursor-pointer"
+                                    className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-3 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800/80 sm:px-5 sm:py-4 sm:space-y-3 sm:block cursor-pointer"
                                     onClick={() => navigate(`/inspections/${inspection.id}/execute`)}
                                 >
                                     {/* Mobile: single row */}

@@ -142,8 +142,8 @@ export const SupervisorActions = () => {
 
             {showForm && selectedInspection && (
                 <form onSubmit={handleSubmit} className="rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 p-6 space-y-4">
-                    <h3 className="font-display text-lg font-bold text-slate-900 dark:text-slate-100">{actionTitle()}</h3>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">Inspeccion: {selectedInspection.projectName} ({selectedInspection.status})</p>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">{actionTitle()}</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Inspeccion: {selectedInspection.projectName} ({selectedInspection.status})</p>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div>
                             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Motivo *</label>
