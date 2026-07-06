@@ -605,7 +605,6 @@ export const InspectionExecution = () => {
                 totalObservations={stats.totalObservations}
                 criticalObservations={stats.criticalObservations}
                 photosCount={stats.photosCount}
-                reportStatus={stats.reportStatus}
             />
 
             <ModuleGrid modules={moduleDefinitions}>

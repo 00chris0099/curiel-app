@@ -1,10 +1,8 @@
 import { memo, useMemo, useState, type FormEvent } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
 import { CustomIcon } from '../../components/CustomIcon';
-import { getAreaCategoryIcon, areaStatusIconMap } from '../../utils/iconSystem';
-import { areaStatusOptions, areaStatusLabels, areaStatusBadges } from './executionConstants';
+import { getAreaCategoryIcon } from '../../utils/iconSystem';
 import { type AreaFormState, emptyAreaForm } from './executionTypes';
-import type { ExecutionAreaStatus, InspectionArea } from '../../types';
+import type { InspectionArea } from '../../types';
 import type { OfflineSyncItem } from '../../utils/offlineDb';
 
 type ModuleAreasProps = {
@@ -26,8 +24,6 @@ export const ModuleAreas = memo(({
     onCreateArea,
     onDeleteArea,
 }: ModuleAreasProps) => {
-    const { id } = useParams<{ id: string }>();
-    const navigate = useNavigate();
     const [showForm, setShowForm] = useState(false);
     const [form, setForm] = useState<AreaFormState>(emptyAreaForm);
 
@@ -35,13 +31,6 @@ export const ModuleAreas = memo(({
         () => areas.reduce((sum, area) => sum + Number(area?.calculatedAreaM2 || 0), 0),
         [areas],
     );
-
-    const calculated = useMemo(() => {
-        const length = Number(form.lengthM);
-        const width = Number(form.widthM);
-        if (!form.lengthM || !form.widthM || Number.isNaN(length) || Number.isNaN(width)) return 0;
-        return Number((length * width).toFixed(2));
-    }, [form.lengthM, form.widthM]);
 
     const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -51,26 +40,19 @@ export const ModuleAreas = memo(({
         setShowForm(false);
     };
 
-    const handleOpenDetail = (areaId: string) => {
-        if (!id) return;
-        navigate(`/inspections/${id}/execute/areas/${areaId}`, {
-            state: { selectedAreaId: areaId },
-        });
-    };
-
     return (
-        <div className="space-y-4">
+        <div className="space-y-3">
             {areas.length > 0 && (
-                <div className="rounded-2xl bg-gray-50 px-4 py-3 text-sm text-gray-700 dark:bg-gray-900/50 dark:text-gray-200">
-                    Total: <span className="font-semibold">{totalM2.toFixed(2)} m²</span> en {areas.length} área{areas.length !== 1 ? 's' : ''}
+                <div className="rounded-2xl bg-gray-50 px-3 py-2 text-xs text-gray-700 dark:bg-gray-900/50 dark:text-gray-200">
+                    Total: <span className="font-bold">{totalM2.toFixed(1)} m²</span> · {areas.length} área{areas.length !== 1 ? 's' : ''}
                 </div>
             )}
 
             {canEdit && (
-                <div className="flex flex-col gap-2 sm:flex-row">
+                <div className="flex gap-2">
                     <button
                         type="button"
-                        className="btn btn-secondary flex items-center justify-center gap-2"
+                        className="btn btn-secondary flex items-center justify-center gap-2 text-sm"
                         onClick={onCreateDefaultAreas}
                         disabled={busyAction === 'default-areas'}
                     >
@@ -79,22 +61,23 @@ export const ModuleAreas = memo(({
                         ) : (
                             <CustomIcon name="rooms" size="xs" tone="cream" />
                         )}
-                        Crear áreas por defecto
+                        <span className="hidden sm:inline">Crear áreas por defecto</span>
+                        <span className="sm:hidden">Por defecto</span>
                     </button>
                     <button
                         type="button"
-                        className="btn btn-primary flex items-center justify-center gap-2"
+                        className="btn btn-primary flex items-center justify-center gap-2 text-sm"
                         onClick={() => setShowForm(!showForm)}
                     >
                         <CustomIcon name="plus" size="xs" tone="white" />
-                        {showForm ? 'Cerrar formulario' : 'Agregar área'}
+                        {showForm ? 'Cancelar' : 'Agregar'}
                     </button>
                 </div>
             )}
 
             {canEdit && showForm && (
-                <form onSubmit={handleSubmit} className="space-y-3 rounded-2xl border border-dashed border-gray-300 p-4 dark:border-gray-600">
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <form onSubmit={handleSubmit} className="space-y-3 rounded-2xl border border-dashed border-gray-300 p-3 dark:border-gray-600">
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                         <input
                             className="input"
                             placeholder="Nombre del área"
@@ -113,38 +96,20 @@ export const ModuleAreas = memo(({
                             type="number"
                             min="0"
                             step="0.01"
-                            placeholder="Largo (m)"
+                            placeholder="Área (m²)"
                             value={form.lengthM}
-                            onChange={(e) => setForm((current) => ({ ...current, lengthM: e.target.value }))}
+                            onChange={(e) => setForm((current) => ({
+                                ...current,
+                                lengthM: e.target.value,
+                                widthM: e.target.value,
+                            }))}
                         />
-                        <input
-                            className="input"
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            placeholder="Ancho (m)"
-                            value={form.widthM}
-                            onChange={(e) => setForm((current) => ({ ...current, widthM: e.target.value }))}
-                        />
-                        <div>
-                            <label className="mb-2 block text-sm font-medium">Estado</label>
-                            <select
-                                className="input"
-                                value={form.status}
-                                onChange={(e) => setForm((current) => ({ ...current, status: e.target.value as ExecutionAreaStatus }))}
-                            >
-                                {areaStatusOptions.map((opt) => (
-                                    <option key={opt} value={opt}>{areaStatusLabels[opt]}</option>
-                                ))}
-                            </select>
-                        </div>
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Área estimada: {calculated.toFixed(2)} m²</p>
                     <div className="flex gap-2">
-                        <button type="submit" className="btn btn-primary" disabled={busyAction === 'create-area'}>
-                            {busyAction === 'create-area' ? 'Creando...' : 'Guardar área'}
+                        <button type="submit" className="btn btn-primary text-sm" disabled={busyAction === 'create-area'}>
+                            {busyAction === 'create-area' ? 'Creando...' : 'Guardar'}
                         </button>
-                        <button type="button" className="btn btn-secondary" onClick={() => { setShowForm(false); setForm(emptyAreaForm); }}>
+                        <button type="button" className="btn btn-secondary text-sm" onClick={() => { setShowForm(false); setForm(emptyAreaForm); }}>
                             Cancelar
                         </button>
                     </div>
@@ -155,53 +120,36 @@ export const ModuleAreas = memo(({
                 <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-6 text-center dark:border-gray-600 dark:bg-gray-900/40">
                     <CustomIcon name="rooms" size="md" tone="mist" />
                     <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                        Crea áreas por defecto o agrega un ambiente manual para comenzar.
+                        Crea áreas por defecto o agrega una manual.
                     </p>
                 </div>
             ) : (
-                <div className="space-y-3">
+                <div className="space-y-2">
                     {areas.map((area) => (
                         <div
                             key={area.id}
-                            className="rounded-2xl border border-gray-200 p-4 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800/80"
+                            className="flex items-center gap-3 rounded-2xl border border-gray-200 px-3 py-2.5 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800/80"
                         >
-                            <div className="flex items-start justify-between gap-3">
+                            <CustomIcon name={getAreaCategoryIcon(area.category, area.name)} size="xs" tone="mist" />
+                            <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{area.name}</p>
+                                <p className="text-[11px] text-gray-400 dark:text-gray-500">
+                                    {getEntitySyncState('area', area.id) === 'pending' && 'Pendiente sync'}
+                                    {getEntitySyncState('area', area.id) === 'failed' && 'Error sync'}
+                                    {(getEntitySyncState('area', area.id) === 'synced' || getEntitySyncState('area', area.id) === undefined) && 'Guardado'}
+                                </p>
+                            </div>
+                            <span className="shrink-0 text-sm font-bold text-gray-700 dark:text-gray-200">{(area.calculatedAreaM2 || 0).toFixed(1)} m²</span>
+                            {canEdit && (
                                 <button
                                     type="button"
-                                    className="flex-1 text-left"
-                                    onClick={() => handleOpenDetail(area.id)}
+                                    onClick={() => onDeleteArea(area)}
+                                    disabled={busyAction === `delete-area-${area.id}`}
+                                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-red-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
                                 >
-                                    <div className="flex items-center gap-2">
-                                        <CustomIcon name={getAreaCategoryIcon(area.category, area.name)} size="xs" tone="mist" />
-                                        <p className="font-semibold text-gray-900 dark:text-white">{area.name}</p>
-                                    </div>
-                                    <div className="mt-1 flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
-                                        <span>{area.category}</span>
-                                        <span>{(area.calculatedAreaM2 || 0).toFixed(2)} m²</span>
-                                    </div>
-                                    <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-                                        {getEntitySyncState('area', area.id) === 'pending' && 'Pendiente de sincronizar'}
-                                        {getEntitySyncState('area', area.id) === 'failed' && 'Error al sincronizar'}
-                                        {(getEntitySyncState('area', area.id) === 'synced' || getEntitySyncState('area', area.id) === undefined) && 'Guardado'}
-                                    </p>
+                                    <CustomIcon name="trash" size="xs" tone="rose" />
                                 </button>
-                                <div className="flex items-center gap-2">
-                                    <span className={`badge ${areaStatusBadges[area.status]}`}>
-                                        <CustomIcon name={areaStatusIconMap[area.status] ?? 'rooms'} size="xs" tone="white" />
-                                        {areaStatusLabels[area.status]}
-                                    </span>
-                                    {canEdit && (
-                                        <button
-                                            type="button"
-                                            onClick={() => onDeleteArea(area)}
-                                            disabled={busyAction === `delete-area-${area.id}`}
-                                            className="flex h-8 w-8 items-center justify-center rounded-lg text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-900/20"
-                                        >
-                                            <CustomIcon name="trash" size="xs" tone="rose" />
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
+                            )}
                         </div>
                     ))}
                 </div>

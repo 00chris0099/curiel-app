@@ -6,7 +6,6 @@ type ExecutionStatsBarProps = {
     totalObservations: number;
     criticalObservations: number;
     photosCount: number;
-    reportStatus: string;
 };
 
 export const ExecutionStatsBar = ({
@@ -15,7 +14,6 @@ export const ExecutionStatsBar = ({
     totalObservations,
     criticalObservations,
     photosCount,
-    reportStatus,
 }: ExecutionStatsBarProps) => (
     <>
         {/* Mobile: ultra compact */}
@@ -56,8 +54,6 @@ export const ExecutionStatsBar = ({
             )}
             <span className="text-gray-300">|</span>
             <span>{photosCount} fotos</span>
-            <span className="text-gray-300">|</span>
-            <span>Informe: {reportStatus === 'borrador' ? 'Borrador' : reportStatus === 'listo_para_revision' ? 'Listo para revisión' : 'Aprobado'}</span>
         </div>
     </>
 );

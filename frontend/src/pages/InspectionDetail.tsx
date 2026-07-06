@@ -10,13 +10,12 @@ import { useAuthStore } from '../store/authStore';
 import type { Inspection, UpdateInspectionStatusDto } from '../types';
 import { inspectionStatusIconMap } from '../utils/iconSystem';
 import { canAccessInspectionExecution, canGenerateInspectionReport } from '../utils/inspectionPermissions';
-import { getInspectionLocationLabel, getInspectionServiceLabel, getInspectorName, parseDepartmentInspectionNotes } from '../utils/inspectionMetadata';
-import { safeArray, saveCachedInspectionDetail, getCachedInspectionDetail } from '../utils/offlineDb';
+import { getInspectionLocationLabel, getInspectorName } from '../utils/inspectionMetadata';
+import { saveCachedInspectionDetail, getCachedInspectionDetail } from '../utils/offlineDb';
 import {
     buildStatusUpdatePayload,
     getAllowedStatusActions,
     getStatusReasonOptions,
-    inspectionStatusBadgeClasses,
     inspectionStatusLabels,
     type StatusActionConfig,
 } from '../utils/inspectionStatus';
@@ -48,7 +47,6 @@ export const InspectionDetail = () => {
     const [isDownloadingReport, setIsDownloadingReport] = useState(false);
     const [statusAction, setStatusAction] = useState<StatusActionConfig | null>(null);
     const [statusModal, setStatusModal] = useState<StatusModalState>(emptyStatusModalState);
-    const [isOfflineData, setIsOfflineData] = useState(false);
 
     const loadInspection = useCallback(async () => {
         if (!id) {
@@ -57,7 +55,6 @@ export const InspectionDetail = () => {
         }
 
         setIsLoading(true);
-        setIsOfflineData(false);
 
         if (effectiveOnline) {
             try {
@@ -68,7 +65,6 @@ export const InspectionDetail = () => {
                 const cached = await getCachedInspectionDetail(id);
                 if (cached) {
                     setInspection(cached.data);
-                    setIsOfflineData(true);
                     toast.success('Mostrando datos guardados offline');
                 } else {
                     toast.error(getApiErrorMessage(error, 'Error al cargar la inspeccion'));
@@ -82,7 +78,6 @@ export const InspectionDetail = () => {
                 const cached = await getCachedInspectionDetail(id);
                 if (cached) {
                     setInspection(cached.data);
-                    setIsOfflineData(true);
                 } else {
                     toast.error('No hay datos disponibles offline para esta inspección. Abre esta inspección con internet al menos una vez.');
                 }
@@ -98,9 +93,7 @@ export const InspectionDetail = () => {
         loadInspection();
     }, [loadInspection]);
 
-    const safeStatusHistory = useMemo(() => safeArray(inspection?.statusHistory), [inspection?.statusHistory]);
     const availableStatusActions = useMemo(() => (inspection ? getAllowedStatusActions(inspection, user || null) : []), [inspection, user]);
-    const statusHistory = useMemo(() => [...safeStatusHistory].sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()), [safeStatusHistory]);
     const reasonOptions = useMemo(() => {
         if (!inspection || !statusAction) {
             return [];
@@ -215,151 +208,69 @@ export const InspectionDetail = () => {
         );
     }
 
-    const serviceLabel = getInspectionServiceLabel(inspection);
     const locationLabel = getInspectionLocationLabel(inspection);
     const inspectorName = getInspectorName(inspection);
-    const notes = parseDepartmentInspectionNotes(inspection?.notes);
     const canExecuteInspection = canAccessInspectionExecution(inspection, user || null);
     const canDownloadReport = canGenerateInspectionReport(inspection, user || null);
 
     return (
-        <div className="space-y-6 pb-10">
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                <div className="flex items-start gap-4">
-                    <button
-                        onClick={() => navigate('/inspections')}
-                        className="rounded-[22px] border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 transition-colors hover:bg-slate-50"
-                    >
-                        <CustomIcon name="arrow-left" size="sm" tone="mist" />
-                    </button>
-                    <div>
-                        <div className="flex flex-wrap items-center gap-3">
-                            <p className="section-eyebrow">Detalle de inspección</p>
-                            {isOfflineData && (
-                                <span className="badge badge-warning">
-                                    <CustomIcon name="database" size="xs" tone="white" />
-                                    Datos offline
-                                </span>
-                            )}
-                        </div>
-                        <h1 className="mt-2 font-display text-3xl text-slate-900 dark:text-slate-100">{inspection.projectName}</h1>
-                        <p className="mt-2 text-slate-600 dark:text-slate-400">{serviceLabel} · {inspection.clientName} · {locationLabel}</p>
-                        <div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-600 dark:text-slate-400">
-                            <span className="inline-flex items-center gap-2 rounded-full bg-white dark:bg-slate-800 px-3 py-1.5 ring-1 ring-slate-200 dark:ring-slate-700">
-                                <CustomIcon name="calendar" size="xs" tone="cream" />
-                                {new Date(inspection.scheduledDate).toLocaleString('es-ES')}
-                            </span>
-                            <span className="inline-flex items-center gap-2 rounded-full bg-white dark:bg-slate-800 px-3 py-1.5 ring-1 ring-slate-200 dark:ring-slate-700">
-                                <CustomIcon name="map-pin" size="xs" tone="blue" />
-                                {locationLabel}
-                            </span>
-                            <span className={`badge ${inspectionStatusBadgeClasses[inspection.status]}`}>
-                                <CustomIcon name={inspectionStatusIconMap[inspection.status]} size="xs" tone="white" />
-                                {inspectionStatusLabels[inspection.status]}
-                            </span>
-                        </div>
-                    </div>
+        <div className="space-y-4 pb-10">
+            {/* Compact header */}
+            <div className="flex items-center gap-3">
+                <button
+                    onClick={() => navigate('/inspections')}
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800"
+                >
+                    <CustomIcon name="arrow-left" size="xs" tone="mist" />
+                </button>
+                <div className="min-w-0 flex-1">
+                    <h1 className="truncate text-lg font-bold text-slate-900 dark:text-slate-100 sm:text-xl">{inspection.projectName}</h1>
                 </div>
-
-                <div className="flex flex-col gap-3 sm:flex-row">
+                <div className="flex shrink-0 items-center gap-1.5">
                     {canExecuteInspection && (
-                        <button onClick={() => navigate(`/inspections/${id}/execute`)} className="btn btn-primary flex items-center gap-3">
+                        <button onClick={() => navigate(`/inspections/${id}/execute`)} className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#17324a] text-white transition-colors hover:bg-[#1d3d5c] sm:h-11 sm:w-11 sm:rounded-2xl sm:w-auto sm:gap-2 sm:px-4" title="Ejecutar inspección">
                             <CustomIcon name="clipboard-check" size="xs" tone="white" />
-                            Ejecutar
+                            <span className="hidden sm:inline">Ejecutar</span>
                         </button>
                     )}
-
                     {canDownloadReport && (
-                        <button onClick={handleDownloadReport} disabled={isDownloadingReport} className="btn btn-secondary flex items-center gap-3">
+                        <button onClick={handleDownloadReport} disabled={isDownloadingReport} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800" title="Descargar informe">
                             <CustomIcon name={isDownloadingReport ? 'sync' : 'download'} size="xs" tone="cream" spin={isDownloadingReport} />
-                            {isDownloadingReport ? 'Generando...' : 'Informe'}
                         </button>
                     )}
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                <div className="card">
-                    <div className="mb-5 flex items-center gap-3">
-                        <CustomIcon name="clipboard-check" size="sm" tone="cream" />
-                        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Información general</h2>
-                    </div>
-                    <dl className="space-y-4">
-                        <div className="rounded-[22px] bg-[#fbfbfa] dark:bg-slate-800 px-4 py-4 ring-1 ring-slate-200/70 dark:ring-slate-700">
-                            <dt className="text-sm text-slate-500 dark:text-slate-400">Estado</dt>
-                            <dd className="mt-2">
-                                <span className={`badge ${inspectionStatusBadgeClasses[inspection.status]}`}>
-                                    <CustomIcon name={inspectionStatusIconMap[inspection.status]} size="xs" tone="white" />
-                                    {inspectionStatusLabels[inspection.status]}
-                                </span>
-                            </dd>
-                        </div>
-                        <div className="rounded-[22px] bg-[#fbfbfa] dark:bg-slate-800 px-4 py-4 ring-1 ring-slate-200/70 dark:ring-slate-700">
-                            <dt className="text-sm text-slate-500 dark:text-slate-400">Fecha programada</dt>
-                            <dd className="mt-2 font-semibold text-slate-900 dark:text-slate-100">{new Date(inspection.scheduledDate).toLocaleString('es-ES')}</dd>
-                        </div>
-                        <div className="rounded-[22px] bg-[#fbfbfa] dark:bg-slate-800 px-4 py-4 ring-1 ring-slate-200/70 dark:ring-slate-700">
-                            <dt className="text-sm text-slate-500 dark:text-slate-400">Inspector</dt>
-                            <dd className="mt-2 font-semibold text-slate-900 dark:text-slate-100">{inspectorName}</dd>
-                        </div>
-                    </dl>
-                </div>
-
-                {availableStatusActions.length > 0 && (
-                    <div className="card">
-                        <div className="mb-5 flex items-center gap-3">
-                            <CustomIcon name="settings" size="sm" tone="mist" />
-                            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Cambiar estado</h2>
-                        </div>
-                        <div className="flex flex-wrap gap-3">
-                            {availableStatusActions.map((action) => (
-                                <button key={action.status} onClick={() => openStatusModal(action)} className={`btn ${action.primary ? 'btn-primary' : 'btn-secondary'} flex items-center gap-3`}>
-                                    <CustomIcon name={inspectionStatusIconMap[action.status] ?? 'clipboard-check'} size="xs" tone={action.primary ? 'white' : 'cream'} />
-                                    {action.label}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                )}
+            {/* Status + meta row */}
+            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold ${
+                    inspection.status === 'en_proceso' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                        : inspection.status === 'lista_revision' ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+                            : 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                }`}>
+                    {inspectionStatusLabels[inspection.status] || inspection.status}
+                </span>
+                <span>·</span>
+                <span>{new Date(inspection.scheduledDate).toLocaleDateString('es-PE')}</span>
+                <span className="hidden sm:inline">·</span>
+                <span className="hidden sm:inline">{locationLabel}</span>
+                <span className="hidden sm:inline">·</span>
+                <span className="hidden sm:inline">{inspectorName}</span>
             </div>
 
-            {notes && notes.plainNotes && (
-                <div className="card">
-                    <div className="mb-4 flex items-center gap-3">
-                        <CustomIcon name="note-pencil" size="sm" tone="blue" />
-                        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Notas de inspección</h2>
-                    </div>
-                    <p className="whitespace-pre-wrap text-slate-700 dark:text-slate-300">{notes.plainNotes}</p>
+            {/* Status actions (if any) */}
+            {availableStatusActions.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                    {availableStatusActions.map((action) => (
+                        <button key={action.status} onClick={() => openStatusModal(action)} className={`btn ${action.primary ? 'btn-primary' : 'btn-secondary'} flex items-center gap-2 text-sm`}>
+                            <CustomIcon name={inspectionStatusIconMap[action.status] ?? 'clipboard-check'} size="xs" tone={action.primary ? 'white' : 'cream'} />
+                            {action.label}
+                        </button>
+                    ))}
                 </div>
             )}
 
-            {statusHistory.length > 0 && (
-                <div className="card">
-                    <div className="mb-5 flex items-center gap-3">
-                        <CustomIcon name="clock" size="sm" tone="cream" />
-                        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Historial de estados</h2>
-                    </div>
-                    <div className="space-y-4">
-                        {statusHistory.map((entry, index) => (
-                            <div key={index} className="flex gap-4 border-b border-slate-200 dark:border-slate-700 pb-4 last:border-0">
-                                <CustomIcon name={inspectionStatusIconMap[entry.toStatus]} size="sm" tone="mist" />
-                                <div className="flex-1">
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <span className={`badge ${inspectionStatusBadgeClasses[entry.toStatus]}`}>
-                                            <CustomIcon name={inspectionStatusIconMap[entry.toStatus]} size="xs" tone="white" />
-                                            {inspectionStatusLabels[entry.toStatus]}
-                                        </span>
-                                        <span className="text-sm text-slate-500 dark:text-slate-400">{new Date(entry.createdAt).toLocaleString('es-ES')}</span>
-                                    </div>
-                                    {entry.reasonLabel && <p className="mt-1 text-sm text-slate-800">{entry.reasonLabel}</p>}
-                                    {entry.comment && <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{entry.comment}</p>}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
+            {/* Status change modal */}
             {statusAction && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#17324a]/18 px-4 backdrop-blur-sm">
                     <div className="card w-full max-w-md">
