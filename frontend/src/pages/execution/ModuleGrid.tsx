@@ -1,5 +1,6 @@
-import { memo, useState } from 'react';
+import { memo, useState, type ReactNode } from 'react';
 import { CustomIcon, type CustomIconName } from '../../components/CustomIcon';
+import { ModuleSheet } from './ModuleSheet';
 
 type ModuleDefinition = {
     id: string;
@@ -10,93 +11,56 @@ type ModuleDefinition = {
 
 type ModuleGridProps = {
     modules: ModuleDefinition[];
-    children: React.ReactNode[];
-};
-
-const MODULE_ICONS: Record<string, CustomIconName> = {
-    edificio: 'buildings',
-    plano: 'ruler',
-    areas: 'rooms',
-    obs_metrica: 'note-pencil',
-    observaciones: 'rooms',
-    consideraciones: 'note-pencil',
+    children: ReactNode[];
 };
 
 export const ModuleGrid = memo(({ modules, children }: ModuleGridProps) => {
-    const [expandedId, setExpandedId] = useState<string | null>(null);
+    const [activeModule, setActiveModule] = useState<string | null>(null);
 
-    const toggleModule = (id: string) => {
-        setExpandedId((current) => (current === id ? null : id));
-    };
+    const activeIndex = activeModule ? modules.findIndex((m) => m.id === activeModule) : -1;
+    const activeDef = activeIndex >= 0 ? modules[activeIndex] : null;
 
     return (
-        <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {modules.map((mod) => {
-                    const isExpanded = expandedId === mod.id;
-                    return (
-                        <button
-                            key={mod.id}
-                            type="button"
-                            onClick={() => toggleModule(mod.id)}
-                            className={`relative rounded-2xl border p-4 text-left transition-all sm:p-5 ${
-                                isExpanded
-                                    ? 'border-primary-500 bg-primary-50 shadow-sm dark:border-primary-400 dark:bg-primary-500/10'
-                                    : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm dark:border-gray-700 dark:bg-gray-900 dark:hover:border-gray-600'
-                            }`}
-                        >
-                            <div className="flex items-center gap-3">
-                                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-                                    isExpanded
-                                        ? 'bg-primary-100 dark:bg-primary-900/30'
-                                        : 'bg-gray-100 dark:bg-gray-800'
-                                }`}>
-                                    <CustomIcon
-                                        name={MODULE_ICONS[mod.id] ?? 'clipboard-check'}
-                                        size="sm"
-                                        tone={isExpanded ? 'blue' : 'mist'}
-                                    />
-                                </div>
-                                <div className="min-w-0">
-                                    <p className={`text-sm font-semibold ${
-                                        isExpanded
-                                            ? 'text-primary-700 dark:text-primary-300'
-                                            : 'text-gray-900 dark:text-white'
-                                    }`}>
-                                        {mod.title}
-                                    </p>
-                                    {mod.count > 0 && (
-                                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                                            {mod.count} elemento{mod.count !== 1 ? 's' : ''}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-                            {mod.count > 0 && (
-                                <span className="absolute right-3 top-3 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary-100 px-1.5 text-xs font-semibold text-primary-700 dark:bg-primary-900/30 dark:text-primary-300">
-                                    {mod.count}
-                                </span>
-                            )}
-                        </button>
-                    );
-                })}
+        <>
+            {/* Grid of icon cards */}
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-3 sm:gap-3">
+                {modules.map((mod) => (
+                    <button
+                        key={mod.id}
+                        type="button"
+                        onClick={() => setActiveModule(mod.id)}
+                        className="group relative flex flex-col items-center gap-2 rounded-2xl border border-gray-200 bg-white p-3 transition-all hover:border-primary-300 hover:shadow-md active:scale-[0.97] dark:border-gray-700 dark:bg-gray-900 dark:hover:border-primary-600 sm:rounded-3xl sm:p-5"
+                    >
+                        {/* Badge */}
+                        {mod.count > 0 && (
+                            <span className="absolute right-2 top-2 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary-100 px-1.5 text-[10px] font-bold text-primary-700 dark:bg-primary-900/40 dark:text-primary-300 sm:right-3 sm:top-3 sm:text-xs">
+                                {mod.count}
+                            </span>
+                        )}
+
+                        {/* Icon */}
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-100 transition-colors group-hover:bg-primary-50 dark:bg-gray-800 dark:group-hover:bg-primary-900/20 sm:h-14 sm:w-14 sm:rounded-3xl">
+                            <CustomIcon name={mod.icon} size="sm" tone="mist" />
+                        </div>
+
+                        {/* Title */}
+                        <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-300 sm:text-sm">{mod.title}</span>
+                    </button>
+                ))}
             </div>
 
-            {modules.map((mod, index) => (
-                expandedId === mod.id && (
-                    <div
-                        key={mod.id}
-                        className="card animate-in fade-in slide-in-from-top-2 duration-200"
-                    >
-                        <div className="mb-4 flex items-center gap-3">
-                            <CustomIcon name={MODULE_ICONS[mod.id] ?? 'clipboard-check'} size="sm" tone="cream" />
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{mod.title}</h3>
-                        </div>
-                        {children[index]}
-                    </div>
-                )
-            ))}
-        </div>
+            {/* Sheet for active module */}
+            {activeDef && (
+                <ModuleSheet
+                    isOpen={true}
+                    title={activeDef.title}
+                    icon={activeDef.icon}
+                    onClose={() => setActiveModule(null)}
+                >
+                    {children[activeIndex]}
+                </ModuleSheet>
+            )}
+        </>
     );
 });
 ModuleGrid.displayName = 'ModuleGrid';

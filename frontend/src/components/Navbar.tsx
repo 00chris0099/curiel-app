@@ -25,11 +25,11 @@ export const Navbar = ({ onMenuClick }: NavbarProps) => {
                 <div className="flex min-w-0 items-center gap-2 sm:gap-4">
                     <button
                         onClick={onMenuClick}
-                        className="inline-flex min-h-11 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-2.5 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 active:scale-[0.98] dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 sm:px-3 lg:hidden"
+                        className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 bg-white p-2.5 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 active:scale-[0.98] dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 sm:rounded-2xl sm:px-3 sm:gap-2 lg:hidden"
                         aria-label="Abrir menu lateral"
                     >
                         <CustomIcon name="dashboard" size="xs" tone="blue" variant="plain" />
-                        <span className="hidden min-[380px]:inline">Menu</span>
+                        <span className="hidden sm:inline">Menu</span>
                     </button>
 
                     <div className="min-w-0">
@@ -40,27 +40,27 @@ export const Navbar = ({ onMenuClick }: NavbarProps) => {
                 <div className="flex min-w-0 items-center justify-end gap-1.5 sm:gap-3">
                     <button
                         onClick={toggleTheme}
-                        className="hidden items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 sm:inline-flex"
+                        className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 bg-white p-2.5 transition-colors hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 sm:rounded-2xl sm:px-3 sm:gap-2"
                         aria-label="Cambiar tema"
                     >
                         <CustomIcon name="settings" size="xs" tone={isDark ? 'blue' : 'cream'} variant="plain" />
-                        {isDark ? 'Modo claro' : 'Modo suave'}
+                        <span className="hidden sm:inline">{isDark ? 'Modo claro' : 'Modo suave'}</span>
                     </button>
 
                     <NotificationDropdown />
 
-                    <div className="hidden max-w-[10rem] min-w-0 flex-shrink-0 min-[430px]:block sm:max-w-none">
+                    <div className="min-w-0 flex-shrink-0">
                         <ConnectionStatus variant="navbar" />
                     </div>
 
                     <div className="relative">
                         <button
                             onClick={() => setShowUserMenu(!showUserMenu)}
-                            className="flex min-h-11 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-2 py-2 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 active:scale-[0.98] dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 sm:gap-3 sm:px-2.5"
+                            className="flex min-h-11 items-center justify-center rounded-xl border border-slate-200 bg-white p-1.5 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 active:scale-[0.98] dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 sm:rounded-2xl sm:gap-3 sm:p-2"
                             aria-label="Menu de usuario"
                             aria-expanded={showUserMenu}
                         >
-                            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[#17324a] text-sm font-semibold text-white sm:h-10 sm:w-10">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#17324a] text-xs font-semibold text-white sm:h-10 sm:w-10 sm:rounded-2xl sm:text-sm">
                                 {user?.fullName?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                             </div>
                             <div className="hidden text-left md:block">
