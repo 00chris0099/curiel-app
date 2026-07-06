@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState, memo, type ChangeEvent, type FormEvent } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { getApiErrorMessage } from '../api/axios';
-import { CustomIcon } from '../components/CustomIcon';
 import { Loader } from '../components/Loader';
+import { type CustomIconName } from '../components/CustomIcon';
 import ConnectionStatus from '../components/ConnectionStatus';
 import { useOfflineSync } from '../hooks/useOfflineSync';
 import inspectionService from '../services/inspection.service';
@@ -11,16 +11,8 @@ import { useAuthStore } from '../store/authStore';
 import type {
     CreateInspectionAreaDto,
     CreateInspectionObservationDto,
-    ExecutionAreaStatus,
-    ExecutionPhotoType,
-    ExecutionReportStatus,
     InspectionArea,
     InspectionExecutionData,
-    InspectionObservation,
-    ObservationResolutionStatus,
-    ObservationSeverity,
-    ObservationType,
-    UpdateInspectionAreaDto,
 } from '../types';
 import {
     getInspectionLocationLabel,
@@ -35,53 +27,33 @@ import {
     addSyncQueueItem,
     createLocalId,
     fileToDataUrl,
-    getExecutionDraft,
     getInspectionQueueItems,
     getExecutionSnapshot,
     mergeExecutionWithQueue,
-    saveExecutionDraft,
     saveExecutionSnapshot,
     type OfflineSyncItem,
 } from '../utils/offlineDb';
 import {
-    observationSeverityIconMap,
-    photoTypeIconMap,
-} from '../utils/iconSystem';
-import {
-    areaStatusOptions,
-    observationSeverityOptions,
-    observationTypeOptions,
-    observationStatusOptions,
-    generalPhotoTypeOptions,
-    areaPhotoTypeOptions,
     defaultAreaDefinitions,
-    areaStatusLabels,
-    severityBadges,
-    photoTypeLabels,
 } from './execution/executionConstants';
 import {
     type AreaFormState,
     type ObservationFormState,
     type SummaryFormState,
-    type PhotoFormState,
-    emptyAreaForm,
-    emptyObservationForm,
     emptySummaryForm,
-    emptyGeneralPhotoForm,
-    emptyAreaPhotoForm,
 } from './execution/executionTypes';
 import { ExecutionHeader } from './execution/ExecutionHeader';
 import { ExecutionStatsBar } from './execution/ExecutionStatsBar';
-import { MobileAreaCarousel } from './execution/MobileAreaCarousel';
-import { DesktopAreaSidebar } from './execution/DesktopAreaSidebar';
-
-type InspectionExecutionRouteState = {
-    selectedAreaId?: string;
-};
+import { ModuleGrid } from './execution/ModuleGrid';
+import { ModuleEdificio } from './execution/ModuleEdificio';
+import { ModuleFotoPlano } from './execution/ModuleFotoPlano';
+import { ModuleAreas } from './execution/ModuleAreas';
+import { ModuleObsMetrica } from './execution/ModuleObsMetrica';
+import { ModuleObservaciones } from './execution/ModuleObservaciones';
+import { ModuleConsideraciones } from './execution/ModuleConsideraciones';
 
 export const InspectionExecution = () => {
     const { id } = useParams<{ id: string }>();
-    const location = useLocation();
     const navigate = useNavigate();
     const { user } = useAuthStore();
     const [execution, setExecution] = useState<InspectionExecutionData | null>(null);
@@ -89,21 +61,10 @@ export const InspectionExecution = () => {
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [busyAction, setBusyAction] = useState<string | null>(null);
     const [isDownloadingReport, setIsDownloadingReport] = useState(false);
-    const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
-    const [showAreaCreator, setShowAreaCreator] = useState(false);
-    const [editingObservationId, setEditingObservationId] = useState<string | null>(null);
-    const [manualAreaForm, setManualAreaForm] = useState<AreaFormState>(emptyAreaForm);
-    const [areaForm, setAreaForm] = useState<AreaFormState>(emptyAreaForm);
-    const [observationForm, setObservationForm] = useState<ObservationFormState>(emptyObservationForm);
     const [summaryForm, setSummaryForm] = useState<SummaryFormState>(emptySummaryForm);
-    const [generalPhotoForm, setGeneralPhotoForm] = useState<PhotoFormState>(emptyGeneralPhotoForm);
-    const [areaPhotoForm, setAreaPhotoForm] = useState<PhotoFormState>(emptyAreaPhotoForm);
     const [queueItems, setQueueItems] = useState<OfflineSyncItem[]>([]);
 
-    const routeState = location.state as InspectionExecutionRouteState | null;
-    const routeSelectedAreaId = typeof routeState?.selectedAreaId === 'string' ? routeState.selectedAreaId : null;
-
-    const loadExecution = useCallback(async (preferredAreaId?: string | null) => {
+    const loadExecution = useCallback(async () => {
         if (!id) {
             navigate('/inspections', { replace: true });
             return;
@@ -139,15 +100,6 @@ export const InspectionExecution = () => {
             const mergedExecution = mergeExecutionWithQueue(remoteExecution, pendingQueueItems);
 
             setExecution(mergedExecution);
-
-            const safeAreas = Array.isArray(mergedExecution?.areas) ? mergedExecution.areas : [];
-
-            const nextSelectedAreaId = preferredAreaId
-                && safeAreas.some((area) => area.id === preferredAreaId)
-                ? preferredAreaId
-                : safeAreas[0]?.id || null;
-
-            setSelectedAreaId(nextSelectedAreaId);
         } catch (error: unknown) {
             const message = getApiErrorMessage(error, 'No se pudo cargar la ejecución de la inspección');
             setExecution(null);
@@ -156,7 +108,7 @@ export const InspectionExecution = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [id]);
+    }, [id, navigate]);
 
     const {
         isOnline,
@@ -165,20 +117,20 @@ export const InspectionExecution = () => {
         syncNow,
         refreshPendingCount,
     } = useOfflineSync(id, async () => {
-        await loadExecution(selectedAreaId);
+        await loadExecution();
     });
 
     useEffect(() => {
-        loadExecution(routeSelectedAreaId);
-    }, [loadExecution, routeSelectedAreaId]);
+        loadExecution();
+    }, [loadExecution]);
 
     const prevIsOnlineRef = useRef(isOnline);
     useEffect(() => {
         if (isOnline && !prevIsOnlineRef.current) {
-            loadExecution(selectedAreaId);
+            loadExecution();
         }
         prevIsOnlineRef.current = isOnline;
-    }, [isOnline, loadExecution, selectedAreaId]);
+    }, [isOnline, loadExecution]);
 
     const areas = useMemo(() => Array.isArray(execution?.areas) ? execution.areas : [], [execution?.areas]);
     const observations = useMemo(() => Array.isArray(execution?.observations) ? execution.observations : [], [execution?.observations]);
@@ -210,104 +162,6 @@ export const InspectionExecution = () => {
         });
     }, [summary]);
 
-    const selectedArea = useMemo(() => areas.find((area) => area.id === selectedAreaId) || null, [areas, selectedAreaId]);
-
-    useEffect(() => {
-        if (!selectedArea) {
-            setAreaForm(emptyAreaForm);
-            setObservationForm(emptyObservationForm);
-            setAreaPhotoForm(emptyAreaPhotoForm);
-            setEditingObservationId(null);
-            return;
-        }
-
-        setAreaForm({
-            name: selectedArea.name,
-            category: selectedArea.category,
-            lengthM: selectedArea.lengthM?.toString() || '',
-            widthM: selectedArea.widthM?.toString() || '',
-            ceilingHeightM: selectedArea.ceilingHeightM?.toString() || '',
-            status: selectedArea.status,
-            notes: selectedArea.notes || '',
-        });
-
-        setObservationForm(emptyObservationForm);
-        setAreaPhotoForm((current) => ({
-            ...emptyAreaPhotoForm,
-            type: current.type,
-        }));
-        setEditingObservationId(null);
-    }, [selectedArea]);
-
-    useEffect(() => {
-        if (!id) {
-            return;
-        }
-
-        void (async () => {
-            const draft = await getExecutionDraft(id);
-            if (!draft) {
-                return;
-            }
-
-            if (draft.areaForm) {
-                setAreaForm((current) => ({ ...current, ...draft.areaForm as AreaFormState }));
-            }
-
-            if (draft.manualAreaForm) {
-                setManualAreaForm((current) => ({ ...current, ...draft.manualAreaForm as AreaFormState }));
-            }
-
-            if (draft.observationForm) {
-                setObservationForm((current) => ({ ...current, ...draft.observationForm as ObservationFormState }));
-            }
-
-            if (draft.summaryForm) {
-                setSummaryForm((current) => ({ ...current, ...draft.summaryForm as SummaryFormState }));
-            }
-
-            if (draft.generalPhotoForm) {
-                setGeneralPhotoForm((current) => ({ ...current, ...draft.generalPhotoForm as PhotoFormState }));
-            }
-
-            if (draft.areaPhotoForm) {
-                setAreaPhotoForm((current) => ({ ...current, ...draft.areaPhotoForm as PhotoFormState }));
-            }
-        })();
-    }, [id, selectedArea?.id]);
-
-    useEffect(() => {
-        if (!id) {
-            return;
-        }
-
-        void saveExecutionDraft({
-            inspectionId: id,
-            areaForm,
-            manualAreaForm,
-            observationForm,
-            summaryForm,
-            generalPhotoForm: {
-                ...generalPhotoForm,
-                file: null,
-            },
-            areaPhotoForm: {
-                ...areaPhotoForm,
-                file: null,
-            },
-            updatedAt: new Date().toISOString(),
-        });
-    }, [id, areaForm, manualAreaForm, observationForm, summaryForm, generalPhotoForm.type, generalPhotoForm.caption, areaPhotoForm.type, areaPhotoForm.caption, areaPhotoForm.observationId]);
-
-    const selectedAreaObservations = observations.filter((observation) => observation.areaId === selectedAreaId);
-    const selectedAreaPhotos = photos.filter((photo) => photo.areaId === selectedAreaId);
-    const generalPhotos = photos.filter((photo) => ['edificio', 'plano', 'general'].includes(photo.type));
-    const areaObservationCounts = useMemo(() => observations.reduce<Record<string, number>>((acc, observation) => {
-        if (observation.areaId) {
-            acc[observation.areaId] = (acc[observation.areaId] || 0) + 1;
-        }
-        return acc;
-    }, {}), [observations]);
     const canApproveReport = canApproveInspectionReport(user || null);
     const canEditExecutionContent = canManageExecutionContent(inspection, user || null);
     const canDownloadExecutionReport = canGenerateInspectionReport(inspection, user || null);
@@ -320,28 +174,6 @@ export const InspectionExecution = () => {
 
         return related?.syncStatus || 'synced';
     }, [queueItems]);
-
-    const areaCalculated = useMemo(() => {
-        const length = Number(areaForm.lengthM);
-        const width = Number(areaForm.widthM);
-
-        if (!areaForm.lengthM || !areaForm.widthM || Number.isNaN(length) || Number.isNaN(width)) {
-            return 0;
-        }
-
-        return Number((length * width).toFixed(2));
-    }, [areaForm.lengthM, areaForm.widthM]);
-
-    const areaCreatorCalculated = useMemo(() => {
-        const length = Number(manualAreaForm.lengthM);
-        const width = Number(manualAreaForm.widthM);
-
-        if (!manualAreaForm.lengthM || !manualAreaForm.widthM || Number.isNaN(length) || Number.isNaN(width)) {
-            return 0;
-        }
-
-        return Number((length * width).toFixed(2));
-    }, [manualAreaForm.lengthM, manualAreaForm.widthM]);
 
     const locationLabel = inspection ? getInspectionLocationLabel(inspection) : 'Sin ubicación';
 
@@ -356,16 +188,16 @@ export const InspectionExecution = () => {
 
     const queueMutation = async (
         item: Parameters<typeof addSyncQueueItem>[0],
-        preferredAreaId?: string | null,
+        _preferredAreaId?: string | null,
         successMessage = 'Guardado offline'
     ) => {
         await addSyncQueueItem(item);
         await refreshPendingCount();
-        await loadExecution(preferredAreaId ?? selectedAreaId);
+        await loadExecution();
 
         if (isOnline) {
             await syncNow();
-            await loadExecution(preferredAreaId ?? selectedAreaId);
+            await loadExecution();
         } else {
             toast.success(successMessage);
         }
@@ -394,40 +226,31 @@ export const InspectionExecution = () => {
                 }
 
                 await refreshPendingCount();
-                await loadExecution(selectedAreaId);
+                await loadExecution();
                 toast.success(missingAreas.length > 0 ? 'Áreas base guardadas offline' : 'Las áreas base ya estaban registradas');
                 return;
             }
 
             const result = await inspectionService.createDefaultAreas(id);
             toast.success(result.createdCount > 0 ? 'Áreas base creadas correctamente' : 'Las áreas base ya existían');
-            await loadExecution(selectedAreaId);
+            await loadExecution();
         });
     };
 
-    const handleCreateArea = async (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
+    const handleCreateArea = async (form: AreaFormState) => {
         if (!id) return;
-
-        if (!manualAreaForm.name.trim()) {
-            toast.error('Debes indicar el nombre del área');
-            return;
-        }
 
         await withBusyAction('create-area', async () => {
             const clientId = createLocalId('local-area');
             const payload: CreateInspectionAreaDto = {
-                name: manualAreaForm.name.trim(),
-                category: manualAreaForm.category.trim() || 'interior',
-                lengthM: manualAreaForm.lengthM ? Number(manualAreaForm.lengthM) : null,
-                widthM: manualAreaForm.widthM ? Number(manualAreaForm.widthM) : null,
-                ceilingHeightM: manualAreaForm.ceilingHeightM ? Number(manualAreaForm.ceilingHeightM) : null,
-                status: manualAreaForm.status,
-                notes: manualAreaForm.notes.trim() || undefined,
+                name: form.name.trim(),
+                category: form.category.trim() || 'interior',
+                lengthM: form.lengthM ? Number(form.lengthM) : null,
+                widthM: form.widthM ? Number(form.widthM) : null,
+                ceilingHeightM: form.ceilingHeightM ? Number(form.ceilingHeightM) : null,
+                status: form.status,
+                notes: form.notes.trim() || undefined,
             };
-
-            setManualAreaForm(emptyAreaForm);
-            setShowAreaCreator(false);
 
             await queueMutation({
                 inspectionId: id,
@@ -443,38 +266,8 @@ export const InspectionExecution = () => {
         });
     };
 
-    const handleSaveSelectedArea = async (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        if (!id || !selectedArea) return;
-
-        await withBusyAction('save-area', async () => {
-            const payload: UpdateInspectionAreaDto = {
-                name: areaForm.name.trim(),
-                category: areaForm.category.trim(),
-                lengthM: areaForm.lengthM ? Number(areaForm.lengthM) : null,
-                widthM: areaForm.widthM ? Number(areaForm.widthM) : null,
-                ceilingHeightM: areaForm.ceilingHeightM ? Number(areaForm.ceilingHeightM) : null,
-                status: areaForm.status,
-                notes: areaForm.notes.trim() || undefined,
-            };
-
-            await queueMutation({
-                inspectionId: id,
-                entityType: 'area',
-                action: 'update',
-                targetId: selectedArea.id,
-                data: payload,
-            }, selectedArea.id, 'Área guardada offline');
-
-            if (isOnline) {
-                toast.success('Área actualizada');
-            }
-        });
-    };
-
     const handleDeleteArea = async (area: InspectionArea) => {
         if (!id) return;
-        if (!window.confirm(`¿Eliminar el área ${area.name}?`)) return;
 
         await withBusyAction(`delete-area-${area.id}`, async () => {
             await queueMutation({
@@ -490,37 +283,31 @@ export const InspectionExecution = () => {
         });
     };
 
-    const handleObservationSubmit = async (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        if (!id || !selectedArea) return;
-
-        if (!observationForm.title.trim() || !observationForm.description.trim()) {
-            toast.error('Debes completar el título y la descripción técnica');
-            return;
-        }
+    const handleSaveObservation = async (form: ObservationFormState, editingId?: string) => {
+        if (!id) return;
 
         await withBusyAction('save-observation', async () => {
             const clientId = createLocalId('local-observation');
             const payload: CreateInspectionObservationDto = {
-                areaId: selectedArea.id,
-                title: observationForm.title.trim(),
-                description: observationForm.description.trim(),
-                severity: observationForm.severity,
-                type: observationForm.type,
-                recommendation: observationForm.recommendation.trim() || undefined,
-                metricValue: observationForm.metricValue ? Number(observationForm.metricValue) : null,
-                metricUnit: observationForm.metricUnit.trim() || undefined,
-                status: observationForm.status,
+                areaId: areas[0]?.id || '',
+                title: form.title.trim(),
+                description: form.description.trim(),
+                severity: form.severity,
+                type: form.type,
+                recommendation: form.recommendation.trim() || undefined,
+                metricValue: form.metricValue ? Number(form.metricValue) : null,
+                metricUnit: form.metricUnit.trim() || undefined,
+                status: form.status,
             };
 
-            if (editingObservationId) {
+            if (editingId) {
                 await queueMutation({
                     inspectionId: id,
                     entityType: 'observation',
                     action: 'update',
-                    targetId: editingObservationId,
+                    targetId: editingId,
                     data: payload,
-                }, selectedArea.id, 'Observación guardada offline');
+                }, null, 'Observación guardada offline');
                 if (isOnline) {
                     toast.success('Observación actualizada');
                 }
@@ -531,34 +318,16 @@ export const InspectionExecution = () => {
                     action: 'create',
                     clientId,
                     data: payload,
-                }, selectedArea.id, 'Observación guardada offline');
+                }, null, 'Observación guardada offline');
                 if (isOnline) {
                     toast.success('Observación registrada');
                 }
             }
-
-            setObservationForm(emptyObservationForm);
-            setEditingObservationId(null);
-        });
-    };
-
-    const handleEditObservation = (observation: InspectionObservation) => {
-        setEditingObservationId(observation.id);
-        setObservationForm({
-            title: observation.title,
-            description: observation.description,
-            severity: observation.severity,
-            type: observation.type,
-            recommendation: observation.recommendation || '',
-            metricValue: observation.metricValue?.toString() || '',
-            metricUnit: observation.metricUnit || '',
-            status: observation.status,
         });
     };
 
     const handleDeleteObservation = async (observationId: string) => {
-        if (!id || !selectedArea) return;
-        if (!window.confirm('¿Eliminar esta observación técnica?')) return;
+        if (!id) return;
 
         await withBusyAction(`delete-observation-${observationId}`, async () => {
             await queueMutation({
@@ -566,13 +335,47 @@ export const InspectionExecution = () => {
                 entityType: 'observation',
                 action: 'delete',
                 targetId: observationId,
-            }, selectedArea.id, 'Observación eliminada offline');
+            }, null, 'Observación eliminada offline');
 
             if (isOnline) {
                 toast.success('Observación eliminada');
             }
-            setObservationForm(emptyObservationForm);
-            setEditingObservationId(null);
+        });
+    };
+
+    const handleSaveMetric = async (text: string) => {
+        if (!id) return;
+
+        await withBusyAction('save-metric', async () => {
+            const existingMetric = observations.find((o) => o.areaId === 'metrico');
+
+            const payload: CreateInspectionObservationDto = {
+                areaId: 'metrico',
+                title: 'Observaciones Métricas',
+                description: text,
+                severity: 'leve',
+                type: 'otro',
+                status: 'pendiente',
+            };
+
+            if (existingMetric) {
+                await queueMutation({
+                    inspectionId: id,
+                    entityType: 'observation',
+                    action: 'update',
+                    targetId: existingMetric.id,
+                    data: payload,
+                }, null, 'Métrica guardada offline');
+            } else {
+                const clientId = createLocalId('local-observation');
+                await queueMutation({
+                    inspectionId: id,
+                    entityType: 'observation',
+                    action: 'create',
+                    clientId,
+                    data: payload,
+                }, null, 'Métrica guardada offline');
+            }
         });
     };
 
@@ -590,7 +393,7 @@ export const InspectionExecution = () => {
                     finalRecommendations: summaryForm.finalRecommendations.trim() || undefined,
                     reportStatus: summaryForm.reportStatus,
                 },
-            }, selectedAreaId, 'Resumen guardado offline');
+            }, null, 'Resumen guardado offline');
 
             if (isOnline) {
                 toast.success('Resumen técnico actualizado');
@@ -598,51 +401,39 @@ export const InspectionExecution = () => {
         });
     };
 
-    const handlePhotoSubmit = async (
+    const handleUploadPhoto = async (
         event: FormEvent<HTMLFormElement>,
-        form: PhotoFormState,
-        source: 'general' | 'area'
+        type: 'edificio' | 'plano',
+        caption: string,
+        file: File | null
     ) => {
         event.preventDefault();
         if (!id) return;
 
-        if (!form.file) {
+        if (!file) {
             toast.error('Debes seleccionar una imagen');
             return;
         }
 
-        if (source === 'area' && !selectedArea) {
-            toast.error('Selecciona un área para asociar la foto');
-            return;
-        }
-
-        await withBusyAction(`photo-${source}`, async () => {
-            const previewUrl = await fileToDataUrl(form.file as Blob);
+        await withBusyAction(`photo-${type}`, async () => {
+            const previewUrl = await fileToDataUrl(file as Blob);
             await queueMutation({
                 inspectionId: id,
                 entityType: 'photo',
                 action: 'create',
                 clientId: createLocalId('local-photo'),
                 data: {
-                    type: form.type,
-                    caption: form.caption.trim() || undefined,
-                    areaId: source === 'area' && selectedArea ? selectedArea.id : undefined,
-                    observationId: form.type === 'observacion' ? form.observationId || undefined : undefined,
+                    type,
+                    caption: caption.trim() || undefined,
                 },
-                file: form.file,
-                fileName: form.file?.name,
-                fileType: form.file?.type,
+                file,
+                fileName: file?.name,
+                fileType: file?.type,
                 previewUrl,
-            }, selectedAreaId, 'Foto guardada offline');
+            }, null, 'Foto guardada offline');
 
             if (isOnline) {
                 toast.success('Foto registrada');
-            }
-
-            if (source === 'general') {
-                setGeneralPhotoForm(emptyGeneralPhotoForm);
-            } else {
-                setAreaPhotoForm(emptyAreaPhotoForm);
             }
         });
     };
@@ -677,7 +468,7 @@ export const InspectionExecution = () => {
                     finalRecommendations: summaryForm.finalRecommendations.trim() || undefined,
                     reportStatus,
                 },
-            }, selectedAreaId, 'Resumen guardado offline');
+            }, null, 'Resumen guardado offline');
 
             await queueMutation({
                 inspectionId: id,
@@ -686,11 +477,11 @@ export const InspectionExecution = () => {
                 data: {
                     status: 'lista_revision',
                 },
-            }, selectedAreaId, 'Cambio de estado guardado offline');
+            }, null, 'Cambio de estado guardado offline');
 
             if (isOnline) {
                 toast.success('Inspección enviada a revisión');
-                await loadExecution(selectedAreaId);
+                await loadExecution();
             }
         });
     };
@@ -717,33 +508,15 @@ export const InspectionExecution = () => {
         }
     };
 
-    const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
-
     const handleDeletePhoto = async (photoId: string) => {
-        if (!window.confirm('¿Eliminar esta foto?')) return;
-
-        setDeletingPhotoId(photoId);
         try {
             await inspectionService.deletePhoto(photoId);
-            await loadExecution(selectedAreaId);
+            await loadExecution();
             toast.success('Foto eliminada');
         } catch (error: unknown) {
             toast.error(getApiErrorMessage(error, 'No se pudo eliminar la foto'));
-        } finally {
-            setDeletingPhotoId(null);
         }
     };
-
-    const handleOpenAreaDetail = useCallback((areaId: string) => {
-        if (!id) {
-            return;
-        }
-
-        setSelectedAreaId(areaId);
-        navigate(`/inspections/${id}/execute/areas/${areaId}`, {
-            state: { selectedAreaId: areaId },
-        });
-    }, [id, navigate]);
 
     if (isLoading) {
         return <Loader fullScreen />;
@@ -753,7 +526,9 @@ export const InspectionExecution = () => {
         return (
             <div className="mx-auto max-w-3xl pb-10 pt-6">
                 <div className="card space-y-4 text-center">
-                    <div className="flex justify-center"><CustomIcon name="warning-circle" size="lg" tone="rose" /></div>
+                    <div className="flex justify-center">
+                        <span className="text-4xl">⚠️</span>
+                    </div>
                     <div>
                         <h1 className="text-xl font-bold">No se pudo cargar la ejecución</h1>
                         <p className="mt-2 text-gray-600 dark:text-gray-400">{errorMessage}</p>
@@ -775,7 +550,9 @@ export const InspectionExecution = () => {
         return (
             <div className="mx-auto max-w-3xl pb-10 pt-6">
                 <div className="card space-y-4 text-center">
-                    <div className="flex justify-center"><CustomIcon name="house" size="lg" tone="cream" /></div>
+                    <div className="flex justify-center">
+                        <span className="text-4xl">🏠</span>
+                    </div>
                     <div>
                         <h1 className="text-xl font-bold">Inspección no disponible</h1>
                         <p className="mt-2 text-gray-600 dark:text-gray-400">
@@ -789,6 +566,15 @@ export const InspectionExecution = () => {
             </div>
         );
     }
+
+    const moduleDefinitions: { id: string; title: string; icon: CustomIconName; count: number }[] = [
+        { id: 'edificio', title: 'Edificio', icon: 'buildings', count: photos.filter((p) => p.type === 'edificio').length },
+        { id: 'plano', title: 'Foto Plano', icon: 'ruler', count: photos.filter((p) => p.type === 'plano').length },
+        { id: 'areas', title: 'Áreas', icon: 'rooms', count: areas.length },
+        { id: 'obs_metrica', title: 'Obs. Métrica', icon: 'note-pencil', count: observations.filter((o) => o.areaId === 'metrico').length },
+        { id: 'observaciones', title: 'Observaciones', icon: 'rooms', count: observations.filter((o) => o.areaId !== 'metrico' && o.areaId !== 'consideraciones').length },
+        { id: 'consideraciones', title: 'Consideraciones', icon: 'note-pencil', count: 0 },
+    ];
 
     return (
         <div className="space-y-5 pb-10 sm:space-y-6">
@@ -822,418 +608,56 @@ export const InspectionExecution = () => {
                 reportStatus={stats.reportStatus}
             />
 
-            <MobileAreaCarousel
-                areas={areas}
-                selectedAreaId={selectedAreaId}
-                areaObservationCounts={areaObservationCounts}
-                getEntitySyncState={getEntitySyncState}
-                onSelectArea={handleOpenAreaDetail}
-                onCreateDefaultAreas={handleCreateDefaultAreas}
-                busyAction={busyAction}
-                canEdit={canEditExecutionContent}
-            />
-
-            <div className="card space-y-5">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <h2 className="text-lg font-semibold">Fotos generales</h2>
-                        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                            Registra evidencia del edificio, plano del departamento y tomas generales de la inspección.
-                        </p>
-                    </div>
-                </div>
-
-                <form onSubmit={(event) => handlePhotoSubmit(event, generalPhotoForm, 'general')} className="grid grid-cols-1 gap-4 lg:grid-cols-[0.8fr_1fr_1fr_auto]">
-                    <select
-                        className="input"
-                        value={generalPhotoForm.type}
-                        onChange={(event) => setGeneralPhotoForm((current) => ({ ...current, type: event.target.value as ExecutionPhotoType }))}
-                    >
-                        {generalPhotoTypeOptions.map((option) => (
-                            <option key={option} value={option}>{photoTypeLabels[option]}</option>
-                        ))}
-                    </select>
-                    <input
-                        className="input"
-                        placeholder="Descripción o referencia visual"
-                        value={generalPhotoForm.caption}
-                        onChange={(event) => setGeneralPhotoForm((current) => ({ ...current, caption: event.target.value }))}
-                    />
-                    <input
-                        type="file"
-                        accept="image/*"
-                        className="input px-3 py-2"
-                        onChange={(event) => setGeneralPhotoForm((current) => ({ ...current, file: event.target.files?.[0] || null }))}
-                    />
-                    {canEditExecutionContent && (
-                        <button type="submit" className="btn btn-secondary flex items-center justify-center gap-2" disabled={busyAction === 'photo-general'}>
-                            {busyAction === 'photo-general' ? <CustomIcon name="sync" size="xs" tone="cream" spin /> : <CustomIcon name={photoTypeIconMap[generalPhotoForm.type] ?? 'image'} size="xs" tone="cream" />}
-                            Agregar foto
-                        </button>
-                    )}
-                </form>
-
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    {generalPhotos.length === 0 ? (
-                        <EmptyPanel message="Aún no hay fotos generales registradas." />
-                    ) : generalPhotos.map((photo) => (
-                        <PhotoCard key={photo.id} photo={photo} syncStatus={getEntitySyncState('photo', photo.id)} onDelete={handleDeletePhoto} isDeleting={deletingPhotoId === photo.id} />
-                    ))}
-                </div>
-            </div>
-
-            <div className="hidden items-start gap-6 lg:grid lg:grid-cols-[320px_minmax(0,1fr)]">
-                <DesktopAreaSidebar
-                    areas={areas}
-                    selectedAreaId={selectedAreaId}
-                    areaObservationCounts={areaObservationCounts}
-                    getEntitySyncState={getEntitySyncState}
-                    onSelectArea={setSelectedAreaId}
-                    onCreateDefaultAreas={handleCreateDefaultAreas}
-                    onToggleCreator={() => setShowAreaCreator((current) => !current)}
-                    showAreaCreator={showAreaCreator}
-                    manualAreaForm={manualAreaForm}
-                    onManualAreaFormChange={setManualAreaForm}
-                    onCreateAreaSubmit={handleCreateArea}
+            <ModuleGrid modules={moduleDefinitions}>
+                <ModuleEdificio
+                    photos={photos}
                     busyAction={busyAction}
                     canEdit={canEditExecutionContent}
-                    creatorCalculated={areaCreatorCalculated}
+                    getEntitySyncState={getEntitySyncState}
+                    onUploadPhoto={handleUploadPhoto}
+                    onDeletePhoto={handleDeletePhoto}
                 />
-
-                <div className="space-y-6">
-                    {selectedArea ? (
-                        <>
-                            <div className="card space-y-5">
-                                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                                    <div>
-                                        <h2 className="text-lg font-semibold">Detalle del área seleccionada</h2>
-                                        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                                            Ajusta medidas, estado y notas técnicas del ambiente.
-                                        </p>
-                                    </div>
-                                    {canEditExecutionContent && (
-                                        <button type="button" className="btn btn-danger flex items-center justify-center gap-2 sm:w-auto" onClick={() => handleDeleteArea(selectedArea)} disabled={busyAction === `delete-area-${selectedArea.id}`}>
-                                            <CustomIcon name="trash" size="xs" tone="rose" />
-                                            Eliminar área
-                                        </button>
-                                    )}
-                                </div>
-
-                                <form onSubmit={handleSaveSelectedArea} className="space-y-4">
-                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                                        <InputField label="Nombre del área" value={areaForm.name} onChange={(value) => setAreaForm((current) => ({ ...current, name: value }))} />
-                                        <InputField label="Categoría" value={areaForm.category} onChange={(value) => setAreaForm((current) => ({ ...current, category: value }))} />
-                                        <div>
-                                            <label className="mb-2 block text-sm font-medium">Estado</label>
-                                            <select className="input" value={areaForm.status} onChange={(event) => setAreaForm((current) => ({ ...current, status: event.target.value as ExecutionAreaStatus }))}>
-                                                {areaStatusOptions.map((option) => <option key={option} value={option}>{areaStatusLabels[option]}</option>)}
-                                            </select>
-                                        </div>
-                                        <InputField label="Largo (m)" type="number" step="0.01" min="0" value={areaForm.lengthM} onChange={(value) => setAreaForm((current) => ({ ...current, lengthM: value }))} />
-                                        <InputField label="Ancho (m)" type="number" step="0.01" min="0" value={areaForm.widthM} onChange={(value) => setAreaForm((current) => ({ ...current, widthM: value }))} />
-                                        <InputField label="Altura libre (m)" type="number" step="0.01" min="0" value={areaForm.ceilingHeightM} onChange={(value) => setAreaForm((current) => ({ ...current, ceilingHeightM: value }))} />
-                                    </div>
-
-                                    <div className="rounded-2xl bg-gray-50 px-4 py-3 text-sm text-gray-700 dark:bg-gray-900/50 dark:text-gray-200">
-                                        Área calculada automáticamente: <span className="font-semibold">{areaCalculated.toFixed(2)} m²</span>
-                                    </div>
-
-                                    <div>
-                                        <label className="mb-2 block text-sm font-medium">Notas del área</label>
-                                        <textarea className="input min-h-[120px]" value={areaForm.notes} onChange={(event) => setAreaForm((current) => ({ ...current, notes: event.target.value }))} placeholder="Estado de pisos, cielorraso, mobiliario fijo, ingreso, etc." />
-                                    </div>
-
-                                    {canEditExecutionContent && (
-                                        <button type="submit" className="btn btn-primary flex items-center gap-2" disabled={busyAction === 'save-area'}>
-                                            {busyAction === 'save-area' ? <CustomIcon name="sync" size="xs" tone="white" spin /> : <CustomIcon name="save" size="xs" tone="white" />}
-                                            Guardar área
-                                        </button>
-                                    )}
-                                </form>
-                            </div>
-
-                            <div className="grid grid-cols-1 gap-6 2xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-                                <div className="card space-y-5">
-                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                        <div>
-                                            <h2 className="text-lg font-semibold">Observaciones por área</h2>
-                                            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                                                Registra hallazgos, severidad, valor métrico y recomendación técnica.
-                                            </p>
-                                        </div>
-                                        {editingObservationId && (
-                                            <button type="button" className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400" onClick={() => {
-                                                setEditingObservationId(null);
-                                                setObservationForm(emptyObservationForm);
-                                            }}>
-                                                Cancelar edición
-                                            </button>
-                                        )}
-                                    </div>
-
-                                    <form onSubmit={handleObservationSubmit} className="space-y-4">
-                                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                            <InputField label="Título" value={observationForm.title} onChange={(value) => setObservationForm((current) => ({ ...current, title: value }))} />
-                                            <div>
-                                                <label className="mb-2 block text-sm font-medium">Severidad</label>
-                                                <select className="input" value={observationForm.severity} onChange={(event) => setObservationForm((current) => ({ ...current, severity: event.target.value as ObservationSeverity }))}>
-                                                    {observationSeverityOptions.map((option) => <option key={option} value={option}>{option}</option>)}
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label className="mb-2 block text-sm font-medium">Tipo</label>
-                                                <select className="input" value={observationForm.type} onChange={(event) => setObservationForm((current) => ({ ...current, type: event.target.value as ObservationType }))}>
-                                                    {observationTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label className="mb-2 block text-sm font-medium">Estado</label>
-                                                <select className="input" value={observationForm.status} onChange={(event) => setObservationForm((current) => ({ ...current, status: event.target.value as ObservationResolutionStatus }))}>
-                                                    {observationStatusOptions.map((option) => <option key={option} value={option}>{option}</option>)}
-                                                </select>
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <label className="mb-2 block text-sm font-medium">Descripción técnica</label>
-                                            <textarea className="input min-h-[110px]" value={observationForm.description} onChange={(event) => setObservationForm((current) => ({ ...current, description: event.target.value }))} placeholder="Describe el hallazgo, su ubicación, el alcance del daño o la desviación detectada." />
-                                        </div>
-
-                                        <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_180px_160px]">
-                                            <div>
-                                                <label className="mb-2 block text-sm font-medium">Recomendación</label>
-                                                <input className="input" value={observationForm.recommendation} onChange={(event) => setObservationForm((current) => ({ ...current, recommendation: event.target.value }))} placeholder="Acción correctiva sugerida" />
-                                            </div>
-                                            <InputField label="Valor métrico" type="number" step="0.01" min="0" value={observationForm.metricValue} onChange={(value) => setObservationForm((current) => ({ ...current, metricValue: value }))} />
-                                            <InputField label="Unidad" value={observationForm.metricUnit} onChange={(value) => setObservationForm((current) => ({ ...current, metricUnit: value }))} placeholder="m², %, und" />
-                                        </div>
-
-                                        {canEditExecutionContent && (
-                                            <button type="submit" className="btn btn-primary flex items-center gap-2" disabled={busyAction === 'save-observation'}>
-                                                {busyAction === 'save-observation' ? <CustomIcon name="sync" size="xs" tone="white" spin /> : <CustomIcon name="plus" size="xs" tone="white" />}
-                                                {editingObservationId ? 'Guardar observación' : 'Agregar observación'}
-                                            </button>
-                                        )}
-                                    </form>
-
-                                    <div className="space-y-3">
-                                        {selectedAreaObservations.length === 0 ? (
-                                            <EmptyPanel message="No hay observaciones registradas para esta área." compact />
-                                        ) : selectedAreaObservations.map((observation) => (
-                                            <article key={observation.id} className="rounded-2xl border border-gray-200 p-4 dark:border-gray-700">
-                                                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                                    <div>
-                                                        <div className="flex flex-wrap items-center gap-2">
-                                                            <h3 className="font-semibold text-gray-900 dark:text-white">{observation.title}</h3>
-                                                            <span className={`badge ${severityBadges[observation.severity]}`}><CustomIcon name={observationSeverityIconMap[observation.severity] ?? 'warning'} size="xs" tone="white" />{observation.severity}</span>
-                                                        </div>
-                                                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                                                    {observation.type} · {observation.status}
-                                                </p>
-                                                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                                                    {getEntitySyncState('observation', observation.id) === 'pending' && 'Pendiente de sincronizar'}
-                                                    {getEntitySyncState('observation', observation.id) === 'failed' && 'Error al sincronizar'}
-                                                    {getEntitySyncState('observation', observation.id) === 'synced' && 'Guardado'}
-                                                </p>
-                                            </div>
-                                                    {canEditExecutionContent && (
-                                                        <div className="flex items-center gap-2">
-                                                            <button type="button" className="rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600" onClick={() => handleEditObservation(observation)}>
-                                                                Editar
-                                                            </button>
-                                                            <button type="button" className="rounded-lg border border-red-300 px-3 py-2 text-sm text-red-600 dark:border-red-800 dark:text-red-300" onClick={() => handleDeleteObservation(observation.id)}>
-                                                                Eliminar
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <p className="mt-3 text-sm text-gray-700 dark:text-gray-200">{observation.description}</p>
-                                                {observation.recommendation && (
-                                                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-                                                        <span className="font-medium text-gray-900 dark:text-white">Recomendación:</span> {observation.recommendation}
-                                                    </p>
-                                                )}
-                                                {(observation.metricValue !== null && observation.metricValue !== undefined) && (
-                                                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-                                                        <span className="font-medium text-gray-900 dark:text-white">Métrica:</span> {observation.metricValue} {observation.metricUnit || ''}
-                                                    </p>
-                                                )}
-                                            </article>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="space-y-6">
-                                    <div className="card space-y-5">
-                                        <div>
-                                            <h2 className="text-lg font-semibold">Fotos del área</h2>
-                                            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                                                Agrega evidencia visual del ambiente o de una observación puntual.
-                                            </p>
-                                        </div>
-
-                                        <form onSubmit={(event) => handlePhotoSubmit(event, areaPhotoForm, 'area')} className="space-y-4">
-                                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                                <div>
-                                                    <label className="mb-2 block text-sm font-medium">Tipo de foto</label>
-                                                    <select className="input" value={areaPhotoForm.type} onChange={(event) => setAreaPhotoForm((current) => ({
-                                                        ...current,
-                                                        type: event.target.value as ExecutionPhotoType,
-                                                        observationId: event.target.value === 'observacion' ? current.observationId : '',
-                                                    }))}>
-                                                        {areaPhotoTypeOptions.map((option) => <option key={option} value={option}>{photoTypeLabels[option]}</option>)}
-                                                    </select>
-                                                </div>
-
-                                                {areaPhotoForm.type === 'observacion' && (
-                                                    <div>
-                                                        <label className="mb-2 block text-sm font-medium">Observación asociada</label>
-                                                        <select className="input" value={areaPhotoForm.observationId} onChange={(event) => setAreaPhotoForm((current) => ({ ...current, observationId: event.target.value }))}>
-                                                            <option value="">Selecciona observación</option>
-                                                            {selectedAreaObservations.map((observation) => (
-                                                                <option key={observation.id} value={observation.id}>{observation.title}</option>
-                                                            ))}
-                                                        </select>
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            <input className="input" placeholder="Comentario o referencia" value={areaPhotoForm.caption} onChange={(event) => setAreaPhotoForm((current) => ({ ...current, caption: event.target.value }))} />
-                                            <input type="file" accept="image/*" className="input px-3 py-2" onChange={(event) => setAreaPhotoForm((current) => ({ ...current, file: event.target.files?.[0] || null }))} />
-
-                                            {canEditExecutionContent && (
-                                                <button type="submit" className="btn btn-secondary flex items-center gap-2" disabled={busyAction === 'photo-area'}>
-                                                    {busyAction === 'photo-area' ? <CustomIcon name="sync" size="xs" tone="cream" spin /> : <CustomIcon name={photoTypeIconMap[areaPhotoForm.type] ?? 'camera'} size="xs" tone="cream" />}
-                                                    Agregar foto del área
-                                                </button>
-                                            )}
-                                        </form>
-
-                                        <div className="space-y-3">
-                                            {selectedAreaPhotos.length === 0 ? (
-                                                <EmptyPanel message="No hay fotos asociadas a esta área." compact />
-                                            ) : selectedAreaPhotos.map((photo) => (
-                                                <PhotoCard key={photo.id} photo={photo} syncStatus={getEntitySyncState('photo', photo.id)} onDelete={handleDeletePhoto} isDeleting={deletingPhotoId === photo.id} />
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <form onSubmit={handleSaveSummary} className="card space-y-5">
-                                        <div>
-                                            <h2 className="text-lg font-semibold">Recomendaciones finales</h2>
-                                            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                                                Redacta la conclusión general de la visita y la salida técnica para revisión.
-                                            </p>
-                                        </div>
-
-                                        <div>
-                                            <label className="mb-2 block text-sm font-medium">Conclusión general</label>
-                                            <textarea className="input min-h-[130px]" value={summaryForm.generalConclusion} onChange={(event) => setSummaryForm((current) => ({ ...current, generalConclusion: event.target.value }))} placeholder="Resume el estado global del departamento, el nivel de riesgo y el criterio técnico principal." />
-                                        </div>
-
-                                        <div>
-                                            <label className="mb-2 block text-sm font-medium">Recomendaciones finales</label>
-                                            <textarea className="input min-h-[130px]" value={summaryForm.finalRecommendations} onChange={(event) => setSummaryForm((current) => ({ ...current, finalRecommendations: event.target.value }))} placeholder="Indica acciones correctivas, prioridad de intervención y sugerencias para revisión posterior." />
-                                        </div>
-
-                                        <div>
-                                            <label className="mb-2 block text-sm font-medium">Estado del informe</label>
-                                            <select className="input" value={summaryForm.reportStatus} onChange={(event) => setSummaryForm((current) => ({ ...current, reportStatus: event.target.value as ExecutionReportStatus }))}>
-                                                <option value="borrador">Borrador</option>
-                                                <option value="listo_para_revision">Listo para revisión</option>
-                                                {canApproveReport && <option value="aprobado">Aprobado</option>}
-                                            </select>
-                                        </div>
-
-                                        {canEditExecutionContent && (
-                                            <button type="submit" className="btn btn-primary flex items-center gap-2" disabled={busyAction === 'save-summary'}>
-                                                {busyAction === 'save-summary' ? <CustomIcon name="sync" size="xs" tone="white" spin /> : <CustomIcon name="save" size="xs" tone="white" />}
-                                                Guardar resumen
-                                            </button>
-                                        )}
-                                    </form>
-                                </div>
-                            </div>
-                        </>
-                    ) : (
-                        <div className="card">
-                            <EmptyPanel message={areas.length === 0
-                                ? 'Crea áreas por defecto o agrega un ambiente manual para comenzar la ejecución técnica.'
-                                : 'Selecciona un área para registrar medidas, observaciones y fotos.'}
-                            />
-                        </div>
-                    )}
-                </div>
-            </div>
+                <ModuleFotoPlano
+                    photos={photos}
+                    busyAction={busyAction}
+                    canEdit={canEditExecutionContent}
+                    getEntitySyncState={getEntitySyncState}
+                    onUploadPhoto={handleUploadPhoto}
+                    onDeletePhoto={handleDeletePhoto}
+                />
+                <ModuleAreas
+                    areas={areas}
+                    busyAction={busyAction}
+                    canEdit={canEditExecutionContent}
+                    getEntitySyncState={getEntitySyncState}
+                    onCreateDefaultAreas={handleCreateDefaultAreas}
+                    onCreateArea={handleCreateArea}
+                    onDeleteArea={handleDeleteArea}
+                />
+                <ModuleObsMetrica
+                    observations={observations}
+                    canEdit={canEditExecutionContent}
+                    onSaveMetric={handleSaveMetric}
+                />
+                <ModuleObservaciones
+                    areas={areas}
+                    observations={observations}
+                    busyAction={busyAction}
+                    canEdit={canEditExecutionContent}
+                    getEntitySyncState={getEntitySyncState}
+                    onSaveObservation={handleSaveObservation}
+                    onDeleteObservation={handleDeleteObservation}
+                />
+                <ModuleConsideraciones
+                    summaryForm={summaryForm}
+                    inspection={inspection}
+                    busyAction={busyAction}
+                    canEdit={canEditExecutionContent}
+                    canApproveReport={canApproveReport}
+                    onSummaryChange={setSummaryForm}
+                    onSaveSummary={handleSaveSummary}
+                />
+            </ModuleGrid>
         </div>
     );
 };
-
-const PhotoCard = memo(({ photo, syncStatus, onDelete, isDeleting }: { photo: InspectionExecutionData['photos'][number]; syncStatus?: 'pending' | 'failed' | 'synced'; onDelete?: (photoId: string) => void; isDeleting?: boolean }) => (
-    <article className="relative overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800/80">
-        {onDelete && (
-            <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); onDelete(photo.id); }}
-                disabled={isDeleting}
-                className="absolute right-2 top-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-red-500/90 text-white shadow-md transition-colors hover:bg-red-600 disabled:opacity-50"
-                title="Eliminar foto"
-            >
-                <CustomIcon name="trash" size="xs" tone="white" />
-            </button>
-        )}
-        <img src={photo.url} alt={photo.caption || photoTypeLabels[photo.type]} loading="lazy" className="h-36 w-full object-cover sm:h-44" />
-        <div className="space-y-2 p-4">
-            <div className="flex items-center justify-between gap-3">
-                <span className="badge badge-info"><CustomIcon name={photoTypeIconMap[photo.type] ?? 'camera'} size="xs" tone="white" />{photoTypeLabels[photo.type]}</span>
-                <span className="text-xs text-gray-500 dark:text-gray-400">{new Date(photo.createdAt).toLocaleDateString('es-PE')}</span>
-            </div>
-            <p className="text-sm text-gray-700 dark:text-gray-200">{photo.caption || 'Sin descripción adicional'}</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-                {syncStatus === 'pending' && 'Pendiente de sincronizar'}
-                {syncStatus === 'failed' && 'Error al sincronizar'}
-                {(syncStatus === 'synced' || !syncStatus) && 'Guardado'}
-            </p>
-        </div>
-    </article>
-));
-PhotoCard.displayName = 'PhotoCard';
-
-const EmptyPanel = memo(({ message, compact = false }: { message: string; compact?: boolean }) => (
-    <div className={`rounded-2xl border border-dashed border-gray-300 bg-gray-50 text-center text-gray-500 dark:border-gray-600 dark:bg-gray-900/40 dark:text-gray-400 ${compact ? 'p-5' : 'p-8'}`}>
-        <div className="mb-3 flex justify-center"><CustomIcon name="image" size={compact ? 'sm' : 'md'} tone="mist" /></div>
-        {message}
-    </div>
-));
-EmptyPanel.displayName = 'EmptyPanel';
-
-const InputField = ({
-    label,
-    value,
-    onChange,
-    type = 'text',
-    step,
-    min,
-    placeholder,
-}: {
-    label: string;
-    value: string;
-    onChange: (value: string) => void;
-    type?: string;
-    step?: string;
-    min?: string;
-    placeholder?: string;
-}) => (
-    <div>
-        <label className="mb-2 block text-sm font-medium">{label}</label>
-        <input
-            className="input"
-            type={type}
-            step={step}
-            min={min}
-            value={value}
-            placeholder={placeholder}
-            onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(event.target.value)}
-        />
-    </div>
-);

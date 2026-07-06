@@ -234,7 +234,7 @@ export const InspectionDetail = () => {
                     </button>
                     <div>
                         <div className="flex flex-wrap items-center gap-3">
-                            <p className="section-eyebrow">Detalle operativo</p>
+                            <p className="section-eyebrow">Detalle de inspección</p>
                             {isOfflineData && (
                                 <span className="badge badge-warning">
                                     <CustomIcon name="database" size="xs" tone="white" />
