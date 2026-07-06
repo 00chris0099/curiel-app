@@ -79,7 +79,7 @@ export const Profile = () => {
     ].filter(Boolean) as Array<{ title: string; value: string; icon: 'user-gear' | 'bell' | 'users' | 'clipboard-check' | 'calendar' | 'settings' | 'buildings'; tone: 'cream' | 'mist' | 'blue' | 'sage' }>;
 
     return (
-        <div className="mx-auto max-w-5xl space-y-6">
+        <div className="mx-auto max-w-5xl space-y-6 pb-10 animate-in fade-in duration-300">
             <section className="card overflow-hidden">
                 <div className="flex flex-col gap-6 md:flex-row md:items-center">
                     <div className="flex h-28 w-28 items-center justify-center rounded-[32px] bg-[#17324a] text-3xl font-bold text-white shadow-[0_20px_44px_rgba(23,50,74,0.2)]">
@@ -87,8 +87,8 @@ export const Profile = () => {
                     </div>
                     <div className="flex-1">
                         <p className="section-eyebrow">Perfil profesional</p>
-                        <h1 className="mt-2 font-display text-3xl text-slate-900 dark:text-slate-100">{user?.fullName}</h1>
-                        <p className="mt-2 text-slate-600 dark:text-slate-400">{user?.email}</p>
+                        <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{user?.fullName}</h1>
+                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{user?.email}</p>
                         <div className="mt-4 flex flex-wrap items-center gap-3">
                             <span className={`badge ${user?.role ? roleColors[user.role] : ''}`}>
                                 <CustomIcon name={roleIconMap[user?.role || 'inspector'] ?? 'clipboard-check'} size="xs" tone="white" />

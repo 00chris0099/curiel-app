@@ -100,11 +100,11 @@ export const Evaluations = () => {
     if (isLoading) return <Loader />;
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 pb-10 animate-in fade-in duration-300">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h1 className="font-display text-3xl font-bold text-slate-900 dark:text-slate-100">Evaluaciones</h1>
-                    <p className="mt-1 text-slate-500 dark:text-slate-400">Historial de evaluaciones semanales de inspectores y arquitectos</p>
+                    <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Evaluaciones</h1>
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Historial de evaluaciones semanales de inspectores y arquitectos</p>
                 </div>
             </div>
 
@@ -123,14 +123,14 @@ export const Evaluations = () => {
             </div>
 
             {/* Evaluations Table */}
-            <div className="rounded-2xl bg-white dark:bg-slate-800 shadow-sm ring-1 ring-slate-200/80 dark:ring-slate-700 overflow-hidden">
+            <div className="rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 overflow-hidden">
                 {evaluations.length === 0 ? (
                     <div className="p-8 text-center text-slate-500 dark:text-slate-400">No hay evaluaciones registradas</div>
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 text-left text-xs font-medium uppercase text-slate-500 dark:text-slate-400">
+                                <tr className="border-b border-gray-100 bg-gray-50 dark:border-gray-800 dark:bg-gray-800/50 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
                                     <th className="px-4 py-3">Evaluado</th>
                                     <th className="px-4 py-3">Semana</th>
                                     <th className="px-4 py-3">Score</th>
@@ -141,7 +141,7 @@ export const Evaluations = () => {
                                     <th className="px-4 py-3">Acciones</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100">
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                                 {evaluations.map((ev) => (
                                     <tr key={ev.id} className="hover:bg-slate-50">
                                         <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{ev.evaluatedUser?.fullName ?? '-'}</td>
@@ -194,7 +194,7 @@ export const Evaluations = () => {
             {/* Edit Modal */}
             {isEditing && selectedEvaluation && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                    <div className="mx-4 w-full max-w-lg rounded-2xl bg-white dark:bg-slate-800 p-6 shadow-xl">
+                    <div className="mx-4 w-full max-w-lg rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 p-6 shadow-xl">
                         <h3 className="font-display text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">
                             Editar Evaluacion
                         </h3>

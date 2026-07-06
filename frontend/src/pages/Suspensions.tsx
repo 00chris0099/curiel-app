@@ -83,11 +83,11 @@ export const Suspensions = () => {
     if (isLoading) return <Loader />;
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 pb-10 animate-in fade-in duration-300">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h1 className="font-display text-3xl font-bold text-slate-900 dark:text-slate-100">Suspensiones</h1>
-                    <p className="mt-1 text-slate-500 dark:text-slate-400">Gestion de suspensiones de inspectores</p>
+                    <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Suspensiones</h1>
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Gestion de suspensiones de inspectores</p>
                 </div>
                 <button onClick={() => setShowForm(!showForm)} className="inline-flex items-center gap-2 rounded-2xl bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700">
                     {showForm ? 'Cancelar' : '+ Nueva Suspension'}
@@ -95,7 +95,7 @@ export const Suspensions = () => {
             </div>
 
             {showForm && (
-                <form onSubmit={handleSubmit} className="rounded-2xl bg-white dark:bg-slate-800 p-6 shadow-sm ring-1 ring-slate-200/80 dark:ring-slate-700 space-y-4">
+                <form onSubmit={handleSubmit} className="rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 p-6 space-y-4">
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Inspector *</label>
@@ -141,14 +141,14 @@ export const Suspensions = () => {
                 </select>
             </div>
 
-            <div className="rounded-2xl bg-white dark:bg-slate-800 shadow-sm ring-1 ring-slate-200/80 dark:ring-slate-700 overflow-hidden">
+            <div className="rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 overflow-hidden">
                 {suspensions.length === 0 ? (
                     <div className="p-8 text-center text-slate-500 dark:text-slate-400">No hay suspensiones registradas</div>
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 text-left text-xs font-medium uppercase text-slate-500 dark:text-slate-400">
+                                <tr className="border-b border-gray-100 bg-gray-50 dark:border-gray-800 dark:bg-gray-800/50 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
                                     <th className="px-4 py-3">Inspector</th>
                                     <th className="px-4 py-3">Motivo</th>
                                     <th className="px-4 py-3">Gravedad</th>
@@ -158,7 +158,7 @@ export const Suspensions = () => {
                                     <th className="px-4 py-3">Acciones</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100">
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                                 {suspensions.map((s) => (
                                     <tr key={s.id} className="hover:bg-slate-50">
                                         <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{s.inspector?.fullName ?? '-'}</td>

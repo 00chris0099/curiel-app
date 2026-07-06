@@ -106,11 +106,11 @@ export const SupervisorDashboard = () => {
     if (isLoading) return <Loader />;
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 pb-10 animate-in fade-in duration-300">
             {/* Header */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h1 className="font-display text-3xl font-bold text-slate-900 dark:text-slate-100">
+                    <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
                         Panel del Supervisor
                     </h1>
                 </div>
@@ -124,14 +124,14 @@ export const SupervisorDashboard = () => {
                     { label: 'Completadas (mes)', value: dashboardKpis?.completedThisMonth ?? 0, bg: 'bg-green-100', icon: 'clipboard-check' as const, iconColor: 'text-green-600' },
                     { label: 'Tasa Cancelacion', value: `${dashboardKpis?.cancellationRate ?? 0}%`, bg: 'bg-yellow-100', icon: 'warning-circle' as const, iconColor: 'text-yellow-600' },
                 ] as const).map((stat) => (
-                    <div key={stat.label} className="rounded-2xl border border-slate-100 bg-white p-3 text-center dark:border-slate-700 dark:bg-slate-800 sm:p-5 sm:text-left">
+                    <div key={stat.label} className="rounded-lg border border-gray-200 bg-white p-3 text-center dark:border-gray-800 dark:bg-gray-900 sm:p-5 sm:text-left">
                         <div className="flex flex-col items-center gap-1.5 sm:flex-row sm:items-center sm:gap-3">
                             <div className={`hidden h-8 w-8 items-center justify-center rounded-lg sm:flex ${stat.bg}`}>
                                 <CustomIcon name={stat.icon} className={`h-4 w-4 ${stat.iconColor}`} />
                             </div>
                             <div>
-                                <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">{stat.label}</p>
-                                <p className="text-xl font-extrabold text-slate-900 sm:text-2xl dark:text-slate-100">{stat.value}</p>
+                                <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400">{stat.label}</p>
+                                <p className="text-xl font-extrabold text-gray-900 sm:text-2xl dark:text-white">{stat.value}</p>
                             </div>
                         </div>
                     </div>
@@ -145,14 +145,14 @@ export const SupervisorDashboard = () => {
                     { label: 'Arquitectos', value: dashboardKpis?.activeArchitects ?? 0, bg: 'bg-indigo-100', icon: 'users' as const, iconColor: 'text-indigo-600' },
                     { label: 'Tiempo Prom.', value: `${dashboardKpis?.avgTimeGeneral ?? 0}h`, bg: 'bg-teal-100', icon: 'clipboard-check' as const, iconColor: 'text-teal-600' },
                 ] as const).map((stat) => (
-                    <div key={stat.label} className="rounded-2xl border border-slate-100 bg-white p-3 text-center dark:border-slate-700 dark:bg-slate-800 sm:p-5 sm:text-left">
+                    <div key={stat.label} className="rounded-lg border border-gray-200 bg-white p-3 text-center dark:border-gray-800 dark:bg-gray-900 sm:p-5 sm:text-left">
                         <div className="flex flex-col items-center gap-1.5 sm:flex-row sm:items-center sm:gap-3">
                             <div className={`hidden h-8 w-8 items-center justify-center rounded-lg sm:flex ${stat.bg}`}>
                                 <CustomIcon name={stat.icon} className={`h-4 w-4 ${stat.iconColor}`} />
                             </div>
                             <div>
-                                <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">{stat.label}</p>
-                                <p className="text-xl font-extrabold text-slate-900 sm:text-2xl dark:text-slate-100">{stat.value}</p>
+                                <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400">{stat.label}</p>
+                                <p className="text-xl font-extrabold text-gray-900 sm:text-2xl dark:text-white">{stat.value}</p>
                             </div>
                         </div>
                     </div>
@@ -161,8 +161,8 @@ export const SupervisorDashboard = () => {
 
             {/* Productividad Diaria */}
             {dashboardKpis?.dailyProductivity && dashboardKpis.dailyProductivity.length > 0 && (
-                <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800 dark:ring-slate-700">
-                    <h2 className="font-display text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">
+                <div className="rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 p-6">
+                    <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white mb-4">
                         Productividad Diaria (ultima semana)
                     </h2>
                     <div className="flex items-end gap-2 h-40">
@@ -190,8 +190,8 @@ export const SupervisorDashboard = () => {
 
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
                 {/* Inspector Ranking */}
-                <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800 dark:ring-slate-700">
-                    <h2 className="font-display text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">
+                <div className="rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 p-6">
+                    <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white mb-4">
                         Ranking de Inspectores
                     </h2>
                     {inspectorRanking.length === 0 ? (
@@ -217,8 +217,8 @@ export const SupervisorDashboard = () => {
                 </div>
 
                 {/* Architect Ranking */}
-                <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800 dark:ring-slate-700">
-                    <h2 className="font-display text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">
+                <div className="rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 p-6">
+                    <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white mb-4">
                         Ranking de Arquitectos
                     </h2>
                     {architectRanking.length === 0 ? (
@@ -245,9 +245,9 @@ export const SupervisorDashboard = () => {
             </div>
 
             {/* Recent Alerts */}
-            <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800 dark:ring-slate-700">
+            <div className="rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 p-6">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
-                    <h2 className="font-display text-xl font-bold text-slate-900 dark:text-slate-100">
+                    <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
                         Alertas Recientes
                     </h2>
                     <select
@@ -267,7 +267,7 @@ export const SupervisorDashboard = () => {
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="border-b border-slate-200 dark:border-slate-700 text-left text-xs font-medium uppercase text-slate-500 dark:text-slate-400">
+                                <tr className="border-b border-gray-100 bg-gray-50 dark:border-gray-800 dark:bg-gray-800/50 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
                                     <th className="pb-3 pr-4">Titulo</th>
                                     <th className="pb-3 pr-4">Gravedad</th>
                                     <th className="pb-3 pr-4">Estado</th>
@@ -275,7 +275,7 @@ export const SupervisorDashboard = () => {
                                     <th className="pb-3">Fecha</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                                 {filteredAlerts.map((alert) => (
                                     <tr key={alert.id} className="hover:bg-slate-50 dark:hover:bg-slate-700">
                                         <td className="py-3 pr-4 font-medium text-slate-900 dark:text-slate-100">{alert.title}</td>
@@ -292,8 +292,8 @@ export const SupervisorDashboard = () => {
             </div>
 
             {/* Recent Evaluations */}
-            <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800 dark:ring-slate-700">
-                <h2 className="font-display text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">
+            <div className="rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 p-6">
+                <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white mb-4">
                     Evaluaciones Recientes
                 </h2>
                 {recentEvaluations.length === 0 ? (
@@ -302,7 +302,7 @@ export const SupervisorDashboard = () => {
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="border-b border-slate-200 dark:border-slate-700 text-left text-xs font-medium uppercase text-slate-500 dark:text-slate-400">
+                                <tr className="border-b border-gray-100 bg-gray-50 dark:border-gray-800 dark:bg-gray-800/50 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
                                     <th className="pb-3 pr-4">Evaluado</th>
                                     <th className="pb-3 pr-4">Semana</th>
                                     <th className="pb-3 pr-4">Score</th>
@@ -310,7 +310,7 @@ export const SupervisorDashboard = () => {
                                     <th className="pb-3">Estado</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                                 {recentEvaluations.map((ev) => (
                                     <tr key={ev.id} className="hover:bg-slate-50 dark:hover:bg-slate-700">
                                         <td className="py-3 pr-4 font-medium text-slate-900 dark:text-slate-100">{ev.evaluatedUser?.fullName ?? '-'}</td>

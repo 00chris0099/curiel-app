@@ -134,14 +134,14 @@ export const SupervisorActions = () => {
     if (isLoading) return <Loader />;
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 pb-10 animate-in fade-in duration-300">
             <div>
-                <h1 className="font-display text-3xl font-bold text-slate-900 dark:text-slate-100">Acciones de Supervisor</h1>
-                <p className="mt-1 text-slate-500 dark:text-slate-400">Cancelar, eliminar o rechazar inspecciones</p>
+                <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Acciones de Supervisor</h1>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Cancelar, eliminar o rechazar inspecciones</p>
             </div>
 
             {showForm && selectedInspection && (
-                <form onSubmit={handleSubmit} className="rounded-2xl bg-white dark:bg-slate-800 p-6 shadow-sm ring-1 ring-slate-200/80 dark:ring-slate-700 space-y-4">
+                <form onSubmit={handleSubmit} className="rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 p-6 space-y-4">
                     <h3 className="font-display text-lg font-bold text-slate-900 dark:text-slate-100">{actionTitle()}</h3>
                     <p className="text-sm text-slate-500 dark:text-slate-400">Inspeccion: {selectedInspection.projectName} ({selectedInspection.status})</p>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -174,14 +174,14 @@ export const SupervisorActions = () => {
                 </form>
             )}
 
-            <div className="rounded-2xl bg-white dark:bg-slate-800 shadow-sm ring-1 ring-slate-200/80 dark:ring-slate-700 overflow-hidden">
+            <div className="rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 overflow-hidden">
                 {inspections.length === 0 ? (
                     <div className="p-8 text-center text-slate-500 dark:text-slate-400">No hay inspecciones</div>
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 text-left text-xs font-medium uppercase text-slate-500 dark:text-slate-400">
+                                <tr className="border-b border-gray-100 bg-gray-50 dark:border-gray-800 dark:bg-gray-800/50 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
                                     <th className="px-4 py-3">Proyecto</th>
                                     <th className="px-4 py-3">Estado</th>
                                     <th className="px-4 py-3">Inspector</th>
@@ -189,7 +189,7 @@ export const SupervisorActions = () => {
                                     <th className="px-4 py-3">Acciones</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100">
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                                 {inspections.map((insp) => (
                                     <tr key={insp.id} className="hover:bg-slate-50">
                                         <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{insp.projectName}</td>

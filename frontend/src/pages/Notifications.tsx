@@ -57,12 +57,12 @@ export const Notifications = () => {
     }
 
     return (
-        <div className="space-y-4 pb-10 sm:space-y-6">
+        <div className="space-y-4 sm:space-y-6 pb-10 animate-in fade-in duration-300">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <p className="section-eyebrow">Centro de avisos</p>
-                    <h1 className="mt-2 font-display text-2xl text-slate-900 dark:text-slate-100 sm:text-3xl">Notificaciones</h1>
-                    <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 sm:text-base">Revisa asignaciones, cambios de estado y avisos del sistema.</p>
+                    <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Notificaciones</h1>
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Revisa asignaciones, cambios de estado y avisos del sistema.</p>
                 </div>
                 <button type="button" className="btn btn-secondary flex items-center gap-3 self-start" onClick={handleMarkAll}>
                     <CustomIcon name="check-circle" size="xs" tone="sage" />
@@ -83,7 +83,7 @@ export const Notifications = () => {
                         key={notification.id}
                         type="button"
                         onClick={() => handleMarkAsRead(notification)}
-                        className={`w-full rounded-2xl border px-4 py-4 text-left transition-colors hover:bg-white dark:border-slate-700 dark:hover:bg-slate-800 sm:rounded-[24px] sm:px-5 sm:py-5 ${notification.readAt ? 'border-slate-200 bg-[#fbfbfa] dark:bg-slate-800/50' : 'border-[#eadfc8] bg-[#f5efe1]/70 dark:border-amber-800/30 dark:bg-amber-900/20'}`}
+                        className={`w-full rounded-lg border px-4 py-4 text-left transition-colors hover:bg-white dark:border-gray-800 dark:hover:bg-gray-800 sm:px-5 sm:py-5 ${notification.readAt ? 'border-gray-200 bg-[#fbfbfa] dark:bg-gray-900/50' : 'border-[#eadfc8] bg-[#f5efe1]/70 dark:border-amber-800/30 dark:bg-amber-900/20'}`}
                     >
                         <div className="flex gap-3">
                             <CustomIcon name={notification.readAt ? 'clipboard-check' : 'bell'} size="sm" tone={notification.readAt ? 'white' : 'cream'} />
