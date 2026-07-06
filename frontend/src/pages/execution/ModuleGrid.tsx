@@ -83,16 +83,22 @@ export const ModuleGrid = memo(({ modules, children }: ModuleGridProps) => {
             {/* Desktop: accordion inline */}
             <div className="hidden lg:block">
                 {activeDef && (
-                    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-900 animate-in fade-in slide-in-from-top-2 duration-200">
-                        <div className="mb-4 flex items-center justify-between">
+                    <div className="rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900 animate-in fade-in duration-200">
+                        <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3 dark:border-gray-800">
                             <div className="flex items-center gap-2">
                                 <CustomIcon name={activeDef.icon} size="sm" tone="cream" />
                                 <h3 className="font-bold text-gray-900 dark:text-white">{activeDef.title}</h3>
+                                {activeDef.count > 0 && (
+                                    <span className="rounded-full bg-primary-100 px-2 py-0.5 text-[10px] font-bold text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">
+                                        {activeDef.count}
+                                    </span>
+                                )}
                             </div>
                             <button
                                 type="button"
                                 onClick={() => setActiveModule(null)}
                                 className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800"
+                                aria-label="Cerrar modulo"
                             >
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <line x1="18" y1="6" x2="6" y2="18" />
@@ -100,7 +106,9 @@ export const ModuleGrid = memo(({ modules, children }: ModuleGridProps) => {
                                 </svg>
                             </button>
                         </div>
-                        <div>{children[activeIndex]}</div>
+                        <div className="max-h-[70vh] overflow-y-auto p-5">
+                            {children[activeIndex]}
+                        </div>
                     </div>
                 )}
             </div>

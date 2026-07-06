@@ -50,7 +50,12 @@ export default defineConfig({
               }
             }
           }
-        ]
+        ],
+        navigateFallback: null,
+        cleanupOutdatedCaches: true,
+      },
+      devOptions: {
+        enabled: false,
       }
     })
   ],
