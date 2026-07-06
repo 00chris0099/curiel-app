@@ -156,6 +156,7 @@ export const ModuleAreas = memo(({
                                             onClick={(e) => { e.stopPropagation(); onDeleteArea(area); }}
                                             disabled={busyAction === `delete-area-${area.id}`}
                                             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-red-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
+                                            aria-label={`Eliminar area ${area.name}`}
                                         >
                                             <CustomIcon name="trash" size="xs" tone="rose" />
                                         </button>

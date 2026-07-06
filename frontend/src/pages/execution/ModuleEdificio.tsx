@@ -68,6 +68,7 @@ export const ModuleEdificio = memo(({
                                 onClick={() => handleDelete(mainPhoto.id)}
                                 disabled={deletingId === mainPhoto.id}
                                 className="flex h-8 w-8 items-center justify-center rounded-lg text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-900/20"
+                                aria-label="Eliminar foto del edificio"
                             >
                                 <CustomIcon name="trash" size="xs" tone="rose" />
                             </button>
