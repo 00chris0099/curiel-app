@@ -20,31 +20,29 @@ export const Navbar = ({ onMenuClick }: NavbarProps) => {
     };
 
     return (
-        <nav className="fixed inset-x-0 top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-900/90">
-            <div className="flex h-16 items-center justify-between gap-2 px-3 sm:h-20 sm:px-6 lg:px-8">
-                <div className="flex min-w-0 items-center gap-2 sm:gap-4">
+        <nav className="fixed inset-x-0 top-0 z-40 border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
+            <div className="flex h-14 items-center justify-between gap-2 px-4 sm:h-[3.5rem] sm:px-6 lg:px-8">
+                <div className="flex min-w-0 items-center gap-2">
                     <button
                         onClick={onMenuClick}
-                        className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 bg-white p-2.5 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 active:scale-[0.98] dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 sm:rounded-2xl sm:px-3 sm:gap-2 lg:hidden"
+                        className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 lg:hidden"
                         aria-label="Abrir menu lateral"
                     >
                         <CustomIcon name="dashboard" size="xs" tone="blue" variant="plain" />
-                        <span className="hidden sm:inline">Menu</span>
                     </button>
 
                     <div className="min-w-0">
-                        <img src="/icon.jpeg" alt="CURIEL" className="h-8 w-8 rounded-lg object-cover sm:h-10 sm:w-10" />
+                        <img src="/icon.jpeg" alt="CURIEL" className="h-7 w-7 rounded-lg object-cover sm:h-8 sm:w-8" />
                     </div>
                 </div>
 
-                <div className="flex min-w-0 items-center justify-end gap-1.5 sm:gap-3">
+                <div className="flex min-w-0 items-center justify-end gap-1 sm:gap-2">
                     <button
                         onClick={toggleTheme}
-                        className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 bg-white p-2.5 transition-colors hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 sm:rounded-2xl sm:px-3 sm:gap-2"
+                        className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800"
                         aria-label="Cambiar tema"
                     >
-                        <CustomIcon name="settings" size="xs" tone={isDark ? 'blue' : 'cream'} variant="plain" />
-                        <span className="hidden sm:inline">{isDark ? 'Modo claro' : 'Modo suave'}</span>
+                        <CustomIcon name={isDark ? 'house' : 'settings'} size="xs" tone={isDark ? 'blue' : 'cream'} variant="plain" />
                     </button>
 
                     <NotificationDropdown />
@@ -56,27 +54,26 @@ export const Navbar = ({ onMenuClick }: NavbarProps) => {
                     <div className="relative">
                         <button
                             onClick={() => setShowUserMenu(!showUserMenu)}
-                            className="flex min-h-11 items-center justify-center rounded-xl border border-slate-200 bg-white p-1.5 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 active:scale-[0.98] dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 sm:rounded-2xl sm:gap-3 sm:p-2"
+                            className="flex h-9 items-center gap-2 rounded-lg px-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
                             aria-label="Menu de usuario"
                             aria-expanded={showUserMenu}
                         >
-                            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#17324a] text-xs font-semibold text-white sm:h-10 sm:w-10 sm:rounded-2xl sm:text-sm">
+                            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#17324a] text-[10px] font-bold text-white">
                                 {user?.fullName?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                             </div>
                             <div className="hidden text-left md:block">
-                                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{user?.fullName}</p>
-                                <p className="text-xs capitalize text-slate-600 dark:text-slate-400">{user?.role}</p>
+                                <p className="text-xs font-semibold text-gray-900 dark:text-white">{user?.fullName}</p>
+                                <p className="text-[10px] capitalize text-gray-500 dark:text-gray-400">{user?.role}</p>
                             </div>
-                            <CustomIcon name="dots-three" size="xs" tone="mist" />
                         </button>
 
                         {showUserMenu && (
                             <>
                                 <div className="fixed inset-0 z-10" onClick={() => setShowUserMenu(false)} />
-                                <div className="absolute right-0 z-20 mt-3 w-56 max-w-[calc(100vw-1rem)] rounded-[24px] border border-slate-200 bg-white p-2 shadow-[0_24px_60px_rgba(23,50,74,0.16)] dark:border-slate-700 dark:bg-slate-800">
+                                <div className="absolute right-0 z-20 mt-2 w-48 rounded-xl border border-gray-200 bg-white p-1 shadow-lg dark:border-gray-700 dark:bg-gray-900">
                                     <a
                                         href="/profile"
-                                        className="flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700"
+                                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800"
                                         onClick={() => setShowUserMenu(false)}
                                     >
                                         <CustomIcon name="user-gear" size="xs" tone="cream" />
@@ -84,10 +81,10 @@ export const Navbar = ({ onMenuClick }: NavbarProps) => {
                                     </a>
                                     <button
                                         onClick={handleLogout}
-                                        className="flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-3 text-left text-sm font-medium text-red-700 transition-colors hover:bg-red-50"
+                                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
                                     >
-                                        <span>Cerrar sesion</span>
                                         <CustomIcon name="arrow-right" size="xs" tone="rose" />
+                                        Cerrar sesion
                                     </button>
                                 </div>
                             </>

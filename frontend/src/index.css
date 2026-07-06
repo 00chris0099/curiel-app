@@ -4,19 +4,19 @@
 
 @layer base {
   :root {
-    --surface-app: #f4f7fa;
-    --surface-panel: rgba(255, 255, 255, 0.9);
-    --surface-soft: #f8f8f6;
-    --surface-cream: #f5efe1;
-    --surface-mist: #eef3f7;
-    --surface-blue: #edf4fb;
-    --stroke-soft: rgba(23, 50, 74, 0.1);
-    --stroke-strong: rgba(23, 50, 74, 0.16);
+    --surface-app: #f9fafb;
+    --surface-panel: #ffffff;
+    --surface-soft: #f3f4f6;
+    --surface-cream: #f5f3ee;
+    --surface-mist: #f0f4f8;
+    --surface-blue: #eff6ff;
+    --stroke-soft: #e5e7eb;
+    --stroke-strong: #d1d5db;
     --ink-main: #17324a;
-    --ink-muted: #60748a;
-    --shadow-soft: 0 18px 48px rgba(23, 50, 74, 0.08);
-    --icon-wrapper-size: 56px;
-    --icon-image-size: 26px;
+    --ink-muted: #6b7280;
+    --shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+    --icon-wrapper-size: 48px;
+    --icon-image-size: 24px;
   }
 
   html {
@@ -33,41 +33,38 @@
     @apply text-gray-900 transition-colors;
     width: 100%;
     overflow-x: hidden;
-    background:
-      radial-gradient(circle at top left, rgba(255, 255, 255, 0.96), transparent 36%),
-      linear-gradient(180deg, #ffffff 0%, var(--surface-app) 52%, #eef3f7 100%);
+    background: #f9fafb;
     color: var(--ink-main);
     font-family: 'Manrope', 'Segoe UI', sans-serif;
   }
 
   .dark body {
-    background:
-      radial-gradient(circle at top left, rgba(15, 23, 42, 0.96), transparent 36%),
-      linear-gradient(180deg, #0f172a 0%, #1e293b 52%, #0f172a 100%);
+    background: #0f172a;
     color: #e2e8f0;
   }
 
   .dark {
     --surface-app: #0f172a;
-    --surface-panel: rgba(30, 41, 59, 0.9);
+    --surface-panel: #1e293b;
     --surface-soft: #1e293b;
     --surface-cream: #1e293b;
     --surface-mist: #1e293b;
     --surface-blue: #1e293b;
-    --stroke-soft: rgba(148, 163, 184, 0.12);
-    --stroke-strong: rgba(148, 163, 184, 0.2);
+    --stroke-soft: #334155;
+    --stroke-strong: #475569;
     --ink-main: #e2e8f0;
     --ink-muted: #94a3b8;
-    --shadow-soft: 0 18px 48px rgba(0, 0, 0, 0.3);
+    --shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.1);
   }
 
   h1,
   h2,
   h3,
   .font-display {
-    font-family: 'Fraunces', Georgia, serif;
-    letter-spacing: -0.03em;
+    font-family: 'Manrope', 'Segoe UI', sans-serif;
+    letter-spacing: -0.02em;
     text-wrap: balance;
+    font-weight: 700;
   }
 
   p,
@@ -79,87 +76,103 @@
 
 @layer components {
   .btn {
-    @apply inline-flex min-h-11 items-center justify-center rounded-2xl px-4 py-2.5 font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 active:translate-y-px active:scale-[0.99];
+    @apply inline-flex min-h-10 items-center justify-center rounded-xl px-4 py-2 font-semibold text-sm transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 active:scale-[0.98];
   }
 
   .btn-primary {
     @apply text-white focus:ring-primary-500;
-    background: linear-gradient(135deg, #17324a 0%, #294e6f 100%);
-    box-shadow: 0 12px 28px rgba(23, 50, 74, 0.18);
+    background: #17324a;
+  }
+
+  .btn-primary:hover {
+    background: #1d3d5c;
   }
 
   .btn-secondary {
-    @apply text-slate-700 focus:ring-slate-400;
-    background: rgba(255, 255, 255, 0.88);
-    border: 1px solid var(--stroke-soft);
+    @apply text-gray-700 focus:ring-gray-300;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+  }
+
+  .btn-secondary:hover {
+    background: #f9fafb;
   }
 
   .dark .btn-secondary {
     @apply text-slate-300;
-    background: rgba(30, 41, 59, 0.88);
-    border-color: var(--stroke-soft);
+    background: #1e293b;
+    border-color: #334155;
+  }
+
+  .dark .btn-secondary:hover {
+    background: #273548;
   }
 
   .btn-danger {
-    @apply text-red-700 focus:ring-red-400;
-    background: #fff4f2;
-    border: 1px solid rgba(185, 28, 28, 0.16);
+    @apply text-red-600 focus:ring-red-400;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
   }
 
   .dark .btn-danger {
-    @apply text-red-300;
-    background: rgba(127, 29, 29, 0.3);
-    border-color: rgba(239, 68, 68, 0.3);
+    @apply text-red-400;
+    background: rgba(127, 29, 29, 0.2);
+    border-color: rgba(239, 68, 68, 0.2);
   }
 
   .input {
-    @apply w-full min-h-11 rounded-2xl px-4 py-2.5 text-base text-gray-900 transition-all focus:ring-2 focus:ring-primary-500 focus:border-transparent sm:py-3;
-    background: rgba(255, 255, 255, 0.86);
-    border: 1px solid rgba(23, 50, 74, 0.12);
+    @apply w-full min-h-10 rounded-xl border px-3.5 py-2 text-sm text-gray-900 transition-all focus:border-primary-500 focus:ring-1 focus:ring-primary-500;
+    background: #ffffff;
+    border-color: #d1d5db;
     color: var(--ink-main);
   }
 
   .dark .input {
-    background: rgba(30, 41, 59, 0.86);
-    border-color: rgba(148, 163, 184, 0.15);
+    background: #0f172a;
+    border-color: #334155;
     color: var(--ink-main);
   }
 
   textarea.input {
-    min-height: 7rem;
-    line-height: 1.55;
+    min-height: 6rem;
+    line-height: 1.6;
   }
 
   .card {
-    @apply rounded-[24px] p-4 sm:rounded-[28px] sm:p-6;
-    background: var(--surface-panel);
-    border: 1px solid var(--stroke-soft);
-    box-shadow: var(--shadow-soft);
-    backdrop-filter: blur(14px);
+    @apply rounded-2xl border p-4 sm:p-5;
+    background: #ffffff;
+    border-color: #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  }
+
+  .dark .card {
+    background: #1e293b;
+    border-color: #334155;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   }
 
   .badge {
-    @apply inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold;
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold;
   }
 
   .badge-success {
-    @apply bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200;
+    @apply bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300;
   }
 
   .badge-warning {
-    @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200;
+    @apply bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300;
   }
 
   .badge-danger {
-    @apply bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200;
+    @apply bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300;
   }
 
   .badge-info {
-    @apply bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200;
+    @apply bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300;
   }
 
   .btn-icon {
-    @apply inline-flex min-h-10 min-w-10 items-center justify-center rounded-xl p-2.5 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 active:translate-y-px active:scale-[0.97];
+    @apply inline-flex min-h-10 min-w-10 items-center justify-center rounded-xl p-2 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 active:scale-[0.97];
   }
 
   .custom-icon {
@@ -213,12 +226,12 @@
   }
 
   .section-eyebrow {
-    @apply text-xs font-semibold uppercase tracking-[0.24em];
-    color: #5e7890;
+    @apply text-[10px] font-semibold uppercase tracking-[0.12em];
+    color: #9ca3af;
   }
 
   .dark .section-eyebrow {
-    color: #94a3b8;
+    color: #64748b;
   }
 
   .field-with-icon {
@@ -227,7 +240,7 @@
 
   .field-with-icon .input,
   .field-with-icon select {
-    padding-left: 3.75rem;
+    padding-left: 2.75rem;
   }
 
   .field-with-icon .custom-icon {
@@ -236,12 +249,12 @@
 
   @media (max-width: 480px) {
     .section-eyebrow {
-      letter-spacing: 0.18em;
+      letter-spacing: 0.1em;
     }
 
     .field-with-icon .input,
     .field-with-icon select {
-      padding-left: 3.5rem;
+      padding-left: 2.5rem;
     }
   }
 }
