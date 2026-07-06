@@ -219,7 +219,7 @@ export const InspectionDetail = () => {
             <div className="flex items-center gap-3">
                 <button
                     onClick={() => navigate('/inspections')}
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white transition-colors hover:bg-slate-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
                 >
                     <CustomIcon name="arrow-left" size="xs" tone="mist" />
                 </button>
@@ -234,7 +234,7 @@ export const InspectionDetail = () => {
                         </button>
                     )}
                     {canDownloadReport && (
-                        <button onClick={handleDownloadReport} disabled={isDownloadingReport} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800" title="Descargar informe">
+                        <button onClick={handleDownloadReport} disabled={isDownloadingReport} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white transition-colors hover:bg-slate-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700" title="Descargar informe">
                             <CustomIcon name={isDownloadingReport ? 'sync' : 'download'} size="xs" tone="cream" spin={isDownloadingReport} />
                         </button>
                     )}
