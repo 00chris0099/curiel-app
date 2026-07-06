@@ -46,15 +46,18 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#f9fafb] dark:bg-[#0f172a]">
-      <Navbar onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
-      <main className="min-h-screen px-4 pb-10 pt-[4rem] sm:px-6 sm:pt-[4.5rem] lg:ml-60 lg:px-8 lg:pt-[5rem]">
-        <div className="mx-auto w-full max-w-5xl">
-          {children}
-        </div>
-      </main>
+      <div className="lg:pl-64">
+        <Navbar onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
+
+        <main className="p-4 sm:p-6">
+          <div className="mx-auto w-full max-w-6xl">
+            {children}
+          </div>
+        </main>
+      </div>
     </div>
   );
 };
