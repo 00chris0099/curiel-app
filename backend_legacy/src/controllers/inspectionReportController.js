@@ -5,7 +5,7 @@ const { createAuditLog } = require('../middlewares/auditLog');
 const { buildInspectionReportHtml } = require('../pdf/inspectionReportTemplate');
 
 const downloadInspectionReport = asyncHandler(async (req, res) => {
-    const jobStatus = reportJobQueue.getJobStatus(req.params.id);
+    const jobStatus = reportJobQueue.getStatus(req.params.id);
     if (jobStatus && (jobStatus.status === 'pending' || jobStatus.status === 'processing')) {
         return res.status(202).json({
             success: true,
@@ -45,7 +45,7 @@ const downloadInspectionReport = asyncHandler(async (req, res) => {
 });
 
 const getReportJobStatus = asyncHandler(async (req, res) => {
-    const status = reportJobQueue.getJobStatus(req.params.id);
+    const status = reportJobQueue.getStatus(req.params.id);
     if (!status) {
         return res.json({
             success: true,
