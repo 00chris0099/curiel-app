@@ -1,17 +1,5 @@
 const config = require('../config');
 
-const REPORT_SECTION_DEFINITIONS = [
-    { title: 'ENTRADA Y PASADIZO', areaNames: ['Entrada'] },
-    { title: 'SALA Y COMEDOR', areaNames: ['Sala', 'Comedor'] },
-    { title: 'DORMITORIOS', areaNames: ['Dormitorio principal', 'Dormitorio secundario'] },
-    { title: 'BAÑOS', areaNames: ['Baño principal', 'Baño 2'] },
-    { title: 'COCINA', areaNames: ['Kitchenette'] },
-    { title: 'BALCÓN', areaNames: ['Balcón'] },
-    { title: 'ESTUDIO', areaNames: ['Estudio'] },
-    { title: 'CENTRO DE LAVADO', areaNames: ['Centro de lavado'] },
-    { title: 'MUROS Y VANOS', areaNames: ['Muros y vanos'] }
-];
-
 const escapeHtml = (value) => String(value || '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -42,29 +30,7 @@ const formatMetric = (value, suffix = '') => {
 const buildSectionModels = (areas, observations, photos) => {
     let observationCounter = 1;
 
-    const sections = REPORT_SECTION_DEFINITIONS.map((section) => {
-        const sectionAreas = areas.filter((area) => section.areaNames.includes(area.name));
-        const areaIds = sectionAreas.map((area) => area.id);
-        const sectionObservations = observations
-            .filter((obs) => areaIds.includes(obs.areaId))
-            .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
-            .map((obs) => ({
-                ...obs,
-                sequence: observationCounter++,
-                photos: photos.filter((p) => p.observationId === obs.id)
-            }));
-
-        return {
-            title: section.title,
-            areas: sectionAreas,
-            observations: sectionObservations
-        };
-    }).filter((section) => section.areas.length > 0 || section.observations.length > 0);
-
-    const remainingAreas = areas.filter(
-        (area) => !REPORT_SECTION_DEFINITIONS.some((s) => s.areaNames.includes(area.name))
-    );
-    remainingAreas.forEach((area) => {
+    return areas.map((area) => {
         const areaObservations = observations
             .filter((obs) => obs.areaId === area.id)
             .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
@@ -74,14 +40,12 @@ const buildSectionModels = (areas, observations, photos) => {
                 photos: photos.filter((p) => p.observationId === obs.id)
             }));
 
-        sections.push({
+        return {
             title: area.name.toUpperCase(),
             areas: [area],
             observations: areaObservations
-        });
+        };
     });
-
-    return sections;
 };
 
 const buildObservationPhotos = (photos) => {
@@ -206,24 +170,24 @@ const buildInspectionReportHtml = (reportData) => {
         /* ── Portada ── */
         .cover {
             page-break-after: always;
-            padding-top: 30mm;
+            padding-top: 20mm;
         }
         .cover-title {
-            font-size: 28pt;
+            font-size: 26pt;
             font-weight: 700;
             color: #111827;
             letter-spacing: -0.02em;
-            margin-bottom: 8mm;
+            margin-bottom: 6mm;
         }
         .cover-subtitle {
             font-size: 10.5pt;
             color: #6b7280;
             max-width: 400px;
-            margin-bottom: 12mm;
+            margin-bottom: 8mm;
             line-height: 1.5;
         }
         .info-block {
-            margin-bottom: 10mm;
+            margin-bottom: 6mm;
         }
         .info-block-title {
             font-size: 10pt;
@@ -232,12 +196,12 @@ const buildInspectionReportHtml = (reportData) => {
             letter-spacing: 0.1em;
             color: #374151;
             border-bottom: 0.5pt solid #d1d5db;
-            padding-bottom: 4px;
-            margin-bottom: 6mm;
+            padding-bottom: 3px;
+            margin-bottom: 4mm;
         }
         .info-row {
             display: flex;
-            margin-bottom: 3mm;
+            margin-bottom: 2mm;
             font-size: 10.5pt;
         }
         .info-label {
@@ -250,19 +214,19 @@ const buildInspectionReportHtml = (reportData) => {
             color: #1a1a1a;
         }
         .cover-plan {
-            margin-top: 10mm;
+            margin-top: 6mm;
             border: 0.5pt solid #d1d5db;
             overflow: hidden;
         }
         .cover-plan img {
             width: 100%;
-            height: 280px;
+            height: 220px;
             object-fit: cover;
             display: block;
         }
         .cover-plan-placeholder {
             width: 100%;
-            height: 280px;
+            height: 220px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -285,15 +249,15 @@ const buildInspectionReportHtml = (reportData) => {
             page-break-after: always;
         }
         .section-title {
-            font-size: 20pt;
+            font-size: 18pt;
             font-weight: 700;
             color: #111827;
-            margin-bottom: 6mm;
+            margin-bottom: 4mm;
         }
         .metric-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 6mm;
+            margin-bottom: 4mm;
         }
         .metric-table th,
         .metric-table td {
@@ -329,35 +293,38 @@ const buildInspectionReportHtml = (reportData) => {
 
         /* ── Secciones por ambiente ── */
         .environment-section {
+            page-break-before: auto;
+        }
+        .environment-section:first-of-type {
             page-break-before: always;
         }
         .environment-title {
-            font-size: 18pt;
+            font-size: 16pt;
             font-weight: 700;
             text-transform: uppercase;
             color: #111827;
             letter-spacing: 0.02em;
-            margin-bottom: 8mm;
-            padding-bottom: 3mm;
+            margin-bottom: 5mm;
+            padding-bottom: 2mm;
             border-bottom: 0.5pt solid #d1d5db;
         }
         .observation-block {
-            margin-bottom: 8mm;
+            margin-bottom: 5mm;
             page-break-inside: avoid;
         }
         .observation-number {
             font-size: 10pt;
             font-weight: 700;
             color: #374151;
-            margin-bottom: 2mm;
+            margin-bottom: 1mm;
         }
         .obs-photo-block {
-            margin-bottom: 3mm;
+            margin-bottom: 2mm;
             page-break-inside: avoid;
         }
         .obs-photo-block img {
             width: 100%;
-            max-height: 260px;
+            max-height: 200px;
             object-fit: contain;
             display: block;
             border: 0.5pt solid #e5e7eb;
@@ -370,8 +337,8 @@ const buildInspectionReportHtml = (reportData) => {
         .observation-text {
             font-size: 10.5pt;
             color: #1a1a1a;
-            line-height: 1.45;
-            margin-bottom: 2mm;
+            line-height: 1.4;
+            margin-bottom: 1mm;
         }
         .observation-detail {
             font-size: 9.5pt;

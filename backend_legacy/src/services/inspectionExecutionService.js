@@ -15,8 +15,7 @@ const defaultAreas = [
     { name: 'Dormitorio principal', category: 'privado' },
     { name: 'Dormitorio secundario', category: 'privado' },
     { name: 'Baño principal', category: 'baño' },
-    { name: 'Baño 2', category: 'baño' },
-    { name: 'Muros y vanos', category: 'estructura/acabados' }
+    { name: 'Baño 2', category: 'baño' }
 ];
 
 class InspectionExecutionService {
@@ -370,6 +369,22 @@ class InspectionExecutionService {
             throw new AppError('Debes registrar al menos un área antes de finalizar la inspección', 400, 'AREAS_REQUIRED');
         }
 
+        const allAreas = await prisma.inspecciones.inspectionArea.findMany({
+            where: { inspectionId },
+            select: { id: true, name: true, calculatedAreaM2: true }
+        });
+
+        const murosArea = allAreas.find(a => a.name.toLowerCase() === 'muros y vanos');
+        if (!murosArea || !murosArea.calculatedAreaM2 || this._toNumber(murosArea.calculatedAreaM2) <= 0) {
+            throw new AppError('Debes registrar el área Muros y vanos con sus dimensiones antes de completar la inspección', 400, 'MURS_Y_VANOS_REQUIRED');
+        }
+
+        const totalArea = allAreas.reduce((sum, a) => sum + this._toNumber(a.calculatedAreaM2), 0);
+        const murosAreaM2 = this._toNumber(murosArea.calculatedAreaM2);
+        const murosPercentage = totalArea > 0 ? (murosAreaM2 / totalArea) * 100 : 0;
+
+        await this._upsertMurosObservation(inspectionId, murosArea.id, murosPercentage, murosAreaM2, totalArea);
+
         const summary = await this._recalculateSummary(inspectionId);
         if (!summary.generalConclusion && !summary.finalRecommendations) {
             throw new AppError('Completa la conclusión general o las recomendaciones finales antes de finalizar', 400, 'SUMMARY_REQUIRED');
@@ -516,6 +531,68 @@ class InspectionExecutionService {
     _assertInspectionEditable(inspection, userRole, isMasterAdmin) {
         if (!isMasterAdmin && userRole === 'inspector' && ['lista_revision', 'finalizada', 'cancelada'].includes(inspection.status)) {
             throw new AppError('La inspección ya no está disponible para edición del inspector', 400, 'INSPECTION_COMPLETED');
+        }
+    }
+
+    async _upsertMurosObservation(inspectionId, areaId, percentage, murosM2, totalM2) {
+        const isExceeded = percentage > 12;
+        const pctText = percentage.toFixed(1);
+
+        const title = isExceeded
+            ? 'Superficie de muros y vanos fuera de rango'
+            : 'Superficie de muros y vanos dentro de parámetros';
+
+        const description = isExceeded
+            ? `El área de muros y vanos representa el ${pctText}% del total del inmueble (${murosM2} m² de ${totalM2} m²). Esto supera el límite aceptable del 12%, lo que indica una proporción excesiva de superficie no habitable.`
+            : `El área de muros y vanos representa el ${pctText}% del total del inmueble (${murosM2} m² de ${totalM2} m²). Se encuentra dentro del límite aceptable del 12%.`;
+
+        const severity = isExceeded ? 'critica' : 'leve';
+        const recommendation = isExceeded
+            ? 'Revisar la distribución espacial del inmueble. Evaluar si la proporción de muros y vanos es funcional o representa un déficit de superficie habitable. Considerar ajustes en la distribución de ambientes.'
+            : null;
+
+        const existing = await prisma.inspecciones.inspectionObservation.findFirst({
+            where: {
+                inspectionId,
+                areaId,
+                title: 'Superficie de muros y vanos fuera de rango'
+            }
+        });
+
+        const existingLeve = await prisma.inspecciones.inspectionObservation.findFirst({
+            where: {
+                inspectionId,
+                areaId,
+                title: 'Superficie de muros y vanos dentro de parámetros'
+            }
+        });
+
+        const toDelete = isExceeded ? existingLeve : existing;
+        if (toDelete) {
+            await prisma.inspecciones.inspectionObservation.delete({ where: { id: toDelete.id } });
+        }
+
+        const upsertTitle = title;
+        const currentObs = isExceeded ? existing : existingLeve;
+
+        if (currentObs) {
+            await prisma.inspecciones.inspectionObservation.update({
+                where: { id: currentObs.id },
+                data: { description, severity, recommendation }
+            });
+        } else {
+            await prisma.inspecciones.inspectionObservation.create({
+                data: {
+                    inspectionId,
+                    areaId,
+                    title: upsertTitle,
+                    description,
+                    severity,
+                    type: 'estructura',
+                    recommendation,
+                    status: 'activa'
+                }
+            });
         }
     }
 

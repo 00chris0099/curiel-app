@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { getApiErrorMessage } from '../api/axios';
+import { apiClient } from '../api/axios';
 import { CustomIcon } from '../components/CustomIcon';
 import apiKeyService, { type ApiKey } from '../services/apiKey.service';
 
@@ -14,6 +15,9 @@ export const Config = () => {
     const [newKeyData, setNewKeyData] = useState<{ key: string; name: string } | null>(null);
     const [formData, setFormData] = useState({ name: '', type: 'api_key', description: '', expiresAt: '' });
     const [filter, setFilter] = useState<'all' | 'active' | 'revoked'>('all');
+    const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
+    const [isUploadingSignature, setIsUploadingSignature] = useState(false);
+    const signatureInputRef = useRef<HTMLInputElement>(null);
 
     const loadKeys = useCallback(async () => {
         setIsLoading(true);
@@ -31,6 +35,61 @@ export const Config = () => {
     useEffect(() => {
         loadKeys();
     }, [loadKeys]);
+
+    const loadSignature = useCallback(async () => {
+        try {
+            const response = await apiClient.get('/admin/settings/signature');
+            setSignatureUrl(response.data.data?.url || null);
+        } catch {
+            // silently ignore — signature might not exist yet
+        }
+    }, []);
+
+    useEffect(() => {
+        loadSignature();
+    }, [loadSignature]);
+
+    const handleUploadSignature = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (file.type !== 'image/png') {
+            toast.error('Solo se aceptan archivos PNG');
+            return;
+        }
+
+        if (file.size > 2 * 1024 * 1024) {
+            toast.error('El archivo no puede superar 2MB');
+            return;
+        }
+
+        setIsUploadingSignature(true);
+        try {
+            const formData = new FormData();
+            formData.append('signature', file);
+            await apiClient.put('/admin/settings/signature', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            toast.success('Firma actualizada');
+            loadSignature();
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, 'Error al subir firma'));
+        } finally {
+            setIsUploadingSignature(false);
+            if (signatureInputRef.current) signatureInputRef.current.value = '';
+        }
+    };
+
+    const handleDeleteSignature = async () => {
+        if (!confirm('¿Eliminar la firma del administrador?')) return;
+        try {
+            await apiClient.delete('/admin/settings/signature');
+            setSignatureUrl(null);
+            toast.success('Firma eliminada');
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, 'Error al eliminar firma'));
+        }
+    };
 
     const filteredKeys = keys.filter((k) => {
         if (filter === 'active') return k.isActive && !k.isExpired;
@@ -109,8 +168,62 @@ export const Config = () => {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Configuracion</h1>
-                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">API Keys y tokens para servicios externos.</p>
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">API Keys, tokens y configuracion del administrador.</p>
                 </div>
+            </div>
+
+            {/* Firma del administrador */}
+            <div className="rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+                <div className="flex items-center gap-3 mb-4">
+                    <CustomIcon name="note-pencil" size="sm" tone="cream" />
+                    <div>
+                        <h2 className="text-sm font-bold text-gray-900 dark:text-white">Firma del Administrador</h2>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Imagen que aparece al final de los informes de inspeccion.</p>
+                    </div>
+                </div>
+
+                {signatureUrl ? (
+                    <div className="flex items-center gap-4">
+                        <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800">
+                            <img src={signatureUrl} alt="Firma del admin" className="h-16 w-auto object-contain" />
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => signatureInputRef.current?.click()}
+                                disabled={isUploadingSignature}
+                                className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                            >
+                                {isUploadingSignature ? 'Subiendo...' : 'Cambiar firma'}
+                            </button>
+                            <button
+                                onClick={handleDeleteSignature}
+                                className="rounded-lg px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+                            >
+                                Eliminar
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <button
+                        onClick={() => signatureInputRef.current?.click()}
+                        disabled={isUploadingSignature}
+                        className="flex items-center gap-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-sm text-gray-500 transition-colors hover:border-gray-400 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:border-gray-600 w-full justify-center"
+                    >
+                        <CustomIcon name="plus" size="xs" tone="mist" />
+                        {isUploadingSignature ? 'Subiendo...' : 'Subir firma (PNG, max 2MB)'}
+                    </button>
+                )}
+
+                <input
+                    ref={signatureInputRef}
+                    type="file"
+                    accept="image/png"
+                    className="hidden"
+                    onChange={handleUploadSignature}
+                />
+            </div>
+
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <button onClick={() => setShowCreateModal(true)} className="btn btn-primary flex items-center gap-2">
                     <CustomIcon name="plus" size="xs" tone="white" />
                     Crear {typeConfig.title}
