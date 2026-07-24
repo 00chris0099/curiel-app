@@ -57,11 +57,11 @@ const getReportJobStatus = asyncHandler(async (req, res) => {
 
 const getReportPreview = asyncHandler(async (req, res) => {
     const inspectionId = req.params.id;
+    const { prisma } = require('../lib/databases');
 
-    const inspection = await require('../lib/databases').prisma.inspecciones.inspection.findUnique({
+    const inspection = await prisma.inspecciones.inspection.findUnique({
         where: { id: inspectionId },
         include: {
-            inspector: true,
             statusHistory: { orderBy: { createdAt: 'desc' }, take: 1 }
         }
     });
@@ -71,22 +71,22 @@ const getReportPreview = asyncHandler(async (req, res) => {
     }
 
     const [areas, observations, photos, summary, signatures] = await Promise.all([
-        require('../lib/databases').prisma.inspecciones.inspectionArea.findMany({
+        prisma.inspecciones.inspectionArea.findMany({
             where: { inspectionId },
             orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }]
         }),
-        require('../lib/databases').prisma.inspecciones.inspectionObservation.findMany({
+        prisma.inspecciones.inspectionObservation.findMany({
             where: { inspectionId },
             orderBy: [{ areaId: 'asc' }, { createdAt: 'asc' }]
         }),
-        require('../lib/databases').prisma.media.photo.findMany({
+        prisma.media.photo.findMany({
             where: { inspectionId },
             orderBy: { createdAt: 'asc' }
         }),
-        require('../lib/databases').prisma.inspecciones.inspectionSummary.findUnique({
+        prisma.inspecciones.inspectionSummary.findUnique({
             where: { inspectionId }
         }),
-        require('../lib/databases').prisma.media.signature.findMany({
+        prisma.media.signature.findMany({
             where: { inspectionId }
         })
     ]);
