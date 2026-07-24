@@ -36,12 +36,14 @@ export const SupervisorActions = () => {
     }, [loadInspections]);
 
     const cancellationReasons = [
-        { value: 'cliente_reprogramo', label: 'Cliente reprogramo' },
+        { value: 'cliente_reprogramo', label: 'Cliente reprogramó la visita' },
         { value: 'cliente_no_responde', label: 'Cliente no responde' },
-        { value: 'cliente_cancelo_servicio', label: 'Cliente cancelo servicio' },
-        { value: 'clima_adverso', label: 'Clima adverso' },
-        { value: 'inspector_indisponible', label: 'Inspector indisponible' },
-        { value: 'acceso_restringido', label: 'Acceso restringido' },
+        { value: 'cliente_cancelo_servicio', label: 'Cliente canceló el servicio' },
+        { value: 'inspector_no_disponible', label: 'Inspector no disponible' },
+        { value: 'direccion_incorrecta', label: 'Dirección incorrecta' },
+        { value: 'pago_no_confirmado', label: 'Pago no confirmado' },
+        { value: 'acceso_no_autorizado', label: 'Acceso no autorizado' },
+        { value: 'problema_interno', label: 'Problema interno' },
         { value: 'otro', label: 'Otro' },
     ];
 
@@ -55,8 +57,10 @@ export const SupervisorActions = () => {
     const rejectionReasons = [
         { value: 'faltan_fotos', label: 'Faltan fotos' },
         { value: 'faltan_observaciones', label: 'Faltan observaciones' },
-        { value: 'calidad_incompleta', label: 'Calidad incompleta' },
-        { value: 'datos_incorrectos', label: 'Datos incorrectos' },
+        { value: 'mediciones_incompletas', label: 'Mediciones incompletas' },
+        { value: 'recomendaciones_insuficientes', label: 'Recomendaciones insuficientes' },
+        { value: 'error_datos_inmueble', label: 'Error en datos del inmueble' },
+        { value: 'informe_poco_claro', label: 'Informe poco claro' },
         { value: 'otro', label: 'Otro' },
     ];
 

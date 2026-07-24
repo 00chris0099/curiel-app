@@ -289,6 +289,16 @@ const inspectionService = {
         }
     },
 
+    async previewReport(id: string): Promise<string> {
+        const response = await apiClient.get<string>(`/inspections/${id}/report/preview`);
+        return response.data;
+    },
+
+    async getReportJobStatus(id: string): Promise<{ status: string; retries: number; error?: string }> {
+        const response = await apiClient.get(`/inspections/${id}/report/status`);
+        return response.data.data;
+    },
+
     async deletePhoto(photoId: string): Promise<void> {
         await apiClient.delete(`/photos/${photoId}`);
     },

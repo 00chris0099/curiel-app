@@ -6,6 +6,7 @@ const { prisma } = require('../lib/databases');
 const { AppError } = require('../middlewares/errorHandler');
 const { buildInspectionReportHtml } = require('../pdf/inspectionReportTemplate');
 const { uploadPdf } = require('../utils/cloudinaryStorage');
+const pdfCacheService = require('./pdfCacheService');
 
 const severityOrder = {
     critica: 0,
@@ -100,6 +101,26 @@ class InspectionReportService {
         const serializedPhotos = photos.map(p => ({ ...p }));
         const inspectorSignature = signatures.find(s => s.signatureType === 'inspector') || null;
 
+        const contentHash = pdfCacheService.computeContentHash({
+            areas: sortedAreas,
+            observations: sortedObservations,
+            photos: serializedPhotos,
+            summary,
+            metadata
+        });
+
+        const cached = await pdfCacheService.getCachedReport(inspectionId);
+        if (cached && cached.contentHash === contentHash) {
+            logger.info('PDF cache hit', { inspectionId });
+            return {
+                buffer: null,
+                filename: this._buildFileName(inspection),
+                cloudUrl: cached.cloudUrl,
+                cloudExpiresAt: cached.expiresAt,
+                fromCache: true
+            };
+        }
+
         const recommendationGroups = this._buildRecommendationGroups(sortedObservations, summary);
         const html = buildInspectionReportHtml({
             inspection: { ...inspection },
@@ -141,8 +162,7 @@ class InspectionReportService {
             const pdfBinary = await page.pdf({
                 format: 'A4',
                 printBackground: true,
-                preferCSSPageSize: true,
-                margin: { top: '0mm', right: '0mm', bottom: '0mm', left: '0mm' }
+                preferCSSPageSize: true
             });
 
             const pdfBuffer = Buffer.from(pdfBinary);
@@ -166,6 +186,8 @@ class InspectionReportService {
                 cloudUrl = cloudResult.url;
                 cloudExpiresAt = cloudResult.expiresAt;
                 logger.info('PDF subido a Cloudinary', { url: cloudUrl });
+
+                await pdfCacheService.saveCache(inspectionId, cloudUrl, contentHash);
             } catch (cloudError) {
                 logger.warn('Fallo subida a Cloudinary, PDF disponible solo localmente', { error: cloudError.message });
             }
@@ -242,38 +264,83 @@ class InspectionReportService {
             acabados: []
         };
 
+        const seen = new Set();
+
         const pushRecommendation = (group, text) => {
-            if (!groups[group].includes(text)) {
-                groups[group].push(text);
-            }
+            if (!text || seen.has(text)) return;
+            seen.add(text);
+            groups[group].push(text);
         };
 
-        observations.forEach((observation) => {
-            const text = `${observation.title || ''} ${observation.description || ''}`.toLowerCase();
-            const defaultRecommendation = observation.recommendation;
+        const classifyByType = (type) => {
+            const map = {
+                estructura: 'estructura',
+                sanitario: 'instalaciones',
+                electrico: 'instalaciones',
+                acabados: 'acabados',
+                carpinteria: 'acabados',
+                pintura: 'pintura'
+            };
+            return map[type] || null;
+        };
 
-            if (text.includes('fisura') || text.includes('grieta') || observation.type === 'estructura') {
-                pushRecommendation('estructura', defaultRecommendation || 'Resanar y sellar fisuras, evaluar continuidad del agrietamiento y repintar la superficie intervenida.');
+        const classifyByKeywords = (text) => {
+            if (/fisura|grieta|agriet|rajad|colaps|desnivel|asent|hundim|deformac| estructural/.test(text)) return 'estructura';
+            if (/humedad|filtraci|inund|goter|sanitari|desag[uü]|tuberi|v[aá]lvula|cloaca|sumidero|agua/.test(text)) return 'instalaciones';
+            if (/el[eé]ctric|cable|cortocircuito|poder|tomacorriente|luminari|interruptor|breaker|fusible/.test(text)) return 'instalaciones';
+            if (/pintura|vetada|mancha|descascar|peeling|oxid|corrosi|color|repint|imprim/.test(text)) return 'pintura';
+            if (/puerta|ventana|cierre|bisagra|cerrad|cristal|vidrio|persiana|cortina|carpinter|madera/.test(text)) return 'acabados';
+            if (/piso|azulejo|cer[aá]mic|porcelanat|baldosa| alfombra|laminado|ENCHAP|revestim/.test(text)) return 'acabados';
+            if (/pared|tabique|friso|cielo|techo|losa/.test(text)) return 'estructura';
+            return null;
+        };
+
+        const getSeverityRecommendation = (severity, group) => {
+            const severityMap = {
+                critica: {
+                    estructura: 'Se requiere evaluación estructural inmediata por profesional especializado. No habitar until verificar la integridad del elemento afectado.',
+                    instalaciones: 'Interrumpir el uso de la instalación afectada hasta su reparación completa. Solicitar revisión profesional urgente.',
+                    pintura: 'Evaluar el daño subyacente antes de proceder con repintado. Si afecta la impermeabilización, escalar a equipo especializado.',
+                    acabados: 'Reemplazar el elemento dañado. No es posible reparación parcial por el nivel de deterioro.'
+                },
+                alta: {
+                    estructura: 'Resanar y sellar grietas, evaluar continuidad del daño y monitorear posibles propagaciones. Documentar con fotografías periódicas.',
+                    instalaciones: 'Identificar el origen del problema, ejecutar reparación por técnico calificado y verificar funcionamiento post-reparación.',
+                    pintura: 'Preparar superficie, corregir la causa subyacente (humedad, filtración) y aplicar sistema de pintura compatible.',
+                    acabados: 'Ajustar, nivelar o reemplazar piezas dañadas. Verificar alineación y funcionamiento de mecanismos.'
+                },
+                media: {
+                    estructura: ' Registrar y monitorear. Programar reparación en próxima etapa de mantenimiento si la tendencia se mantiene.',
+                    instalaciones: 'Programar reparación y verificar que no exista daño colateral. Mantener vigilancia durante período de observación.',
+                    pintura: 'Programar reaplicación de acabado en próxima etapa de mantenimiento. Verificar que la causa original esté controlada.',
+                    acabados: 'Programar ajuste o reemplazo en próxima etapa de mantenimiento. Documentar estado actual.'
+                },
+                leve: {
+                    estructura: 'Observar y registrar. Incluir en plan de mantenimiento preventivo.',
+                    instalaciones: 'Verificar funcionamiento y programar mantenimiento preventivo. Documentar para seguimiento.',
+                    pintura: 'Incluir en plan de retoque de mantenimiento. No requiere intervención inmediata.',
+                    acabados: 'Incluir en plan de mantenimiento estético. No afecta funcionalidad.'
+                }
+            };
+            return severityMap[severity]?.[group] || null;
+        };
+
+        observations.forEach((obs) => {
+            const text = `${obs.title || ''} ${obs.description || ''}`.toLowerCase();
+            const userRec = obs.recommendation;
+
+            let group = classifyByType(obs.type);
+            if (!group) group = classifyByKeywords(text);
+            if (!group) {
+                if (userRec) group = 'acabados';
+                else return;
             }
 
-            if (text.includes('humedad') || text.includes('filtraci') || observation.type === 'sanitario') {
-                pushRecommendation('instalaciones', defaultRecommendation || 'Identificar el origen de humedad o filtración, ejecutar sellado impermeable y verificar redes sanitarias involucradas.');
-            }
+            const severityRec = getSeverityRecommendation(obs.severity, group);
+            const recommendation = userRec || severityRec;
 
-            if (text.includes('pintura') || text.includes('vetada') || text.includes('mancha') || text.includes('descascar')) {
-                pushRecommendation('pintura', defaultRecommendation || 'Preparar superficie, corregir base afectada y aplicar repintado homogéneo con acabado compatible.');
-            }
-
-            if (observation.type === 'electrico') {
-                pushRecommendation('instalaciones', defaultRecommendation || 'Revisar circuito, accesorios y protecciones eléctricas; corregir instalación con técnico calificado.');
-            }
-
-            if (observation.type === 'acabados' || observation.type === 'carpinteria' || text.includes('puerta') || text.includes('ventana')) {
-                pushRecommendation('acabados', defaultRecommendation || 'Ajustar terminaciones, nivelar piezas y reemplazar elementos dañados para restituir el acabado final.');
-            }
-
-            if (observation.type === 'otro' && defaultRecommendation) {
-                pushRecommendation('acabados', defaultRecommendation);
+            if (recommendation) {
+                pushRecommendation(group, recommendation);
             }
         });
 
@@ -285,15 +352,12 @@ class InspectionReportService {
 
             lines.forEach((line) => {
                 const normalized = line.toLowerCase();
-                if (normalized.includes('pint')) {
-                    pushRecommendation('pintura', line);
-                } else if (normalized.includes('estruc') || normalized.includes('fisura') || normalized.includes('grieta')) {
-                    pushRecommendation('estructura', line);
-                } else if (normalized.includes('eléct') || normalized.includes('electr') || normalized.includes('sanitar') || normalized.includes('humedad')) {
-                    pushRecommendation('instalaciones', line);
-                } else {
-                    pushRecommendation('acabados', line);
-                }
+                let group = 'acabados';
+                if (/pint|repint|color|acabado de superficie/.test(normalized)) group = 'pintura';
+                else if (/estruc|fisura|grieta|pared|techo|losa|asent/.test(normalized)) group = 'estructura';
+                else if (/el[eé]ct|electr|sanit|humedad|tuberi|agua|desag/.test(normalized)) group = 'instalaciones';
+
+                pushRecommendation(group, line);
             });
         }
 

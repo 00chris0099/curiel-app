@@ -2,6 +2,7 @@ const { prisma } = require('../lib/databases');
 const { uploadToCloudinary } = require('../utils/cloudinary');
 const { AppError } = require('../middlewares/errorHandler');
 const notificationService = require('./notificationService');
+const pdfCacheService = require('./pdfCacheService');
 
 const defaultAreas = [
     { name: 'Entrada', category: 'interior' },
@@ -89,6 +90,7 @@ class InspectionExecutionService {
     async createArea(inspectionId, areaData, userId, userRole, isMasterAdmin = false) {
         const inspection = await this._getInspectionWithAccess(inspectionId, userId, userRole, isMasterAdmin);
         this._assertInspectionEditable(inspection, userRole, isMasterAdmin);
+        await pdfCacheService.invalidateCache(inspectionId);
 
         const maxResult = await prisma.inspecciones.inspectionArea.aggregate({
             _max: { sortOrder: true },
@@ -121,6 +123,7 @@ class InspectionExecutionService {
     async updateArea(inspectionId, areaId, areaData, userId, userRole, isMasterAdmin = false) {
         const inspection = await this._getInspectionWithAccess(inspectionId, userId, userRole, isMasterAdmin);
         this._assertInspectionEditable(inspection, userRole, isMasterAdmin);
+        await pdfCacheService.invalidateCache(inspectionId);
 
         await this._getAreaOrThrow(areaId, inspectionId);
 
@@ -158,6 +161,7 @@ class InspectionExecutionService {
     async deleteArea(inspectionId, areaId, userId, userRole, isMasterAdmin = false) {
         const inspection = await this._getInspectionWithAccess(inspectionId, userId, userRole, isMasterAdmin);
         this._assertInspectionEditable(inspection, userRole, isMasterAdmin);
+        await pdfCacheService.invalidateCache(inspectionId);
 
         await this._getAreaOrThrow(areaId, inspectionId);
 
@@ -182,6 +186,7 @@ class InspectionExecutionService {
     async createObservation(inspectionId, observationData, userId, userRole, isMasterAdmin = false) {
         const inspection = await this._getInspectionWithAccess(inspectionId, userId, userRole, isMasterAdmin);
         this._assertInspectionEditable(inspection, userRole, isMasterAdmin);
+        await pdfCacheService.invalidateCache(inspectionId);
         await this._getAreaOrThrow(observationData.areaId, inspectionId);
 
         const observation = await prisma.inspecciones.inspectionObservation.create({
@@ -211,6 +216,7 @@ class InspectionExecutionService {
     async updateObservation(inspectionId, observationId, observationData, userId, userRole, isMasterAdmin = false) {
         const inspection = await this._getInspectionWithAccess(inspectionId, userId, userRole, isMasterAdmin);
         this._assertInspectionEditable(inspection, userRole, isMasterAdmin);
+        await pdfCacheService.invalidateCache(inspectionId);
 
         await this._getObservationOrThrow(observationId, inspectionId);
 
@@ -245,11 +251,12 @@ class InspectionExecutionService {
     async deleteObservation(inspectionId, observationId, userId, userRole, isMasterAdmin = false) {
         const inspection = await this._getInspectionWithAccess(inspectionId, userId, userRole, isMasterAdmin);
         this._assertInspectionEditable(inspection, userRole, isMasterAdmin);
+        await pdfCacheService.invalidateCache(inspectionId);
 
         const observation = await this._getObservationOrThrow(observationId, inspectionId);
 
         await prisma.inspecciones.$transaction(async (tx) => {
-            await prisma.media.photo.updateMany({
+            await tx.media.photo.updateMany({
                 where: { observationId, inspectionId },
                 data: { observationId: null }
             });
@@ -268,6 +275,7 @@ class InspectionExecutionService {
     async createPhoto(inspectionId, payload, file, userId, userRole, isMasterAdmin = false) {
         const inspection = await this._getInspectionWithAccess(inspectionId, userId, userRole, isMasterAdmin);
         this._assertInspectionEditable(inspection, userRole, isMasterAdmin);
+        await pdfCacheService.invalidateCache(inspectionId);
 
         let areaId = payload.areaId || null;
         let observationId = payload.observationId || null;
@@ -333,6 +341,7 @@ class InspectionExecutionService {
         if (!isMasterAdmin && userRole === 'inspector' && ['lista_revision', 'finalizada', 'cancelada'].includes(inspection.status)) {
             throw new AppError('La inspección ya no puede ser editada por el inspector', 400, 'INSPECTION_COMPLETED');
         }
+        await pdfCacheService.invalidateCache(inspectionId);
 
         await this._recalculateSummary(inspectionId);
 
@@ -498,6 +507,8 @@ class InspectionExecutionService {
                 lightObservations
             }
         });
+
+        await pdfCacheService.invalidateCache(inspectionId);
 
         return summary;
     }

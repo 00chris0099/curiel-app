@@ -50,6 +50,22 @@ router.get(
     inspectionReportController.downloadInspectionReport
 );
 
+// GET /api/v1/inspections/:id/report/status - Estado del trabajo de generación
+router.get(
+    '/:id/report/status',
+    authorize('admin', 'arquitecto', 'supervisor', 'inspector'),
+    requireInspectionReportAccess,
+    inspectionReportController.getReportJobStatus
+);
+
+// GET /api/v1/inspections/:id/report/preview - Vista previa HTML del informe
+router.get(
+    '/:id/report/preview',
+    authorize('admin', 'arquitecto', 'supervisor', 'inspector'),
+    requireInspectionReportAccess,
+    inspectionReportController.getReportPreview
+);
+
 // GET /api/v1/inspections/:id - Obtener inspeccion por ID
 router.get(
     '/:id',

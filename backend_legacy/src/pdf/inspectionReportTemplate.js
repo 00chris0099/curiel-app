@@ -1,36 +1,16 @@
 const config = require('../config');
 
 const REPORT_SECTION_DEFINITIONS = [
-    { title: 'Entrada y pasadizo', areaNames: ['Entrada'] },
-    { title: 'Sala y comedor', areaNames: ['Sala', 'Comedor'] },
-    { title: 'Dormitorios', areaNames: ['Dormitorio principal', 'Dormitorio secundario'] },
-    { title: 'Baños', areaNames: ['Baño principal', 'Baño 2'] },
-    { title: 'Cocina', areaNames: ['Kitchenette'] },
-    { title: 'Balcón', areaNames: ['Balcón'] },
-    { title: 'Estudio', areaNames: ['Estudio'] },
-    { title: 'Centro de lavado', areaNames: ['Centro de lavado'] },
-    { title: 'Muros y vanos', areaNames: ['Muros y vanos'] }
+    { title: 'ENTRADA Y PASADIZO', areaNames: ['Entrada'] },
+    { title: 'SALA Y COMEDOR', areaNames: ['Sala', 'Comedor'] },
+    { title: 'DORMITORIOS', areaNames: ['Dormitorio principal', 'Dormitorio secundario'] },
+    { title: 'BAÑOS', areaNames: ['Baño principal', 'Baño 2'] },
+    { title: 'COCINA', areaNames: ['Kitchenette'] },
+    { title: 'BALCÓN', areaNames: ['Balcón'] },
+    { title: 'ESTUDIO', areaNames: ['Estudio'] },
+    { title: 'CENTRO DE LAVADO', areaNames: ['Centro de lavado'] },
+    { title: 'MUROS Y VANOS', areaNames: ['Muros y vanos'] }
 ];
-
-const severityLabels = {
-    leve: 'Leve',
-    media: 'Media',
-    alta: 'Alta',
-    critica: 'Crítico'
-};
-
-const severityClasses = {
-    leve: 'badge-success',
-    media: 'badge-warning',
-    alta: 'badge-alert',
-    critica: 'badge-critical'
-};
-
-const reportStatusLabels = {
-    borrador: 'Borrador',
-    listo_para_revision: 'Listo para revisión',
-    aprobado: 'Aprobado'
-};
 
 const escapeHtml = (value) => String(value || '')
     .replace(/&/g, '&amp;')
@@ -43,7 +23,7 @@ const formatDate = (value) => value ? new Date(value).toLocaleDateString('es-PE'
     year: 'numeric',
     month: 'long',
     day: 'numeric'
-}) : '-';
+}) : '---';
 
 const formatDateTime = (value) => value ? new Date(value).toLocaleString('es-PE', {
     year: 'numeric',
@@ -51,13 +31,10 @@ const formatDateTime = (value) => value ? new Date(value).toLocaleString('es-PE'
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit'
-}) : '-';
+}) : '---';
 
 const formatMetric = (value, suffix = '') => {
-    if (value === null || value === undefined || value === '') {
-        return '-';
-    }
-
+    if (value === null || value === undefined || value === '') return '---';
     const numeric = Number(value);
     return `${numeric.toFixed(2)}${suffix}`;
 };
@@ -69,181 +46,61 @@ const buildSectionModels = (areas, observations, photos) => {
         const sectionAreas = areas.filter((area) => section.areaNames.includes(area.name));
         const areaIds = sectionAreas.map((area) => area.id);
         const sectionObservations = observations
-            .filter((observation) => areaIds.includes(observation.areaId))
-            .sort((left, right) => new Date(left.createdAt) - new Date(right.createdAt))
-            .map((observation) => ({
-                ...observation,
+            .filter((obs) => areaIds.includes(obs.areaId))
+            .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+            .map((obs) => ({
+                ...obs,
                 sequence: observationCounter++,
-                photos: photos.filter((photo) => photo.observationId === observation.id)
+                photos: photos.filter((p) => p.observationId === obs.id)
             }));
-
-        const sectionPhotos = photos.filter((photo) => areaIds.includes(photo.areaId));
-        const primaryPhoto = sectionPhotos[0] || sectionObservations.find((item) => item.photos[0])?.photos[0] || null;
 
         return {
             title: section.title,
             areas: sectionAreas,
-            observations: sectionObservations,
-            primaryPhoto,
-            sectionPhotos
+            observations: sectionObservations
         };
     }).filter((section) => section.areas.length > 0 || section.observations.length > 0);
 
-    const remainingAreas = areas.filter((area) => !REPORT_SECTION_DEFINITIONS.some((section) => section.areaNames.includes(area.name)));
+    const remainingAreas = areas.filter(
+        (area) => !REPORT_SECTION_DEFINITIONS.some((s) => s.areaNames.includes(area.name))
+    );
     remainingAreas.forEach((area) => {
         const areaObservations = observations
-            .filter((observation) => observation.areaId === area.id)
-            .sort((left, right) => new Date(left.createdAt) - new Date(right.createdAt))
-            .map((observation) => ({
-                ...observation,
+            .filter((obs) => obs.areaId === area.id)
+            .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+            .map((obs) => ({
+                ...obs,
                 sequence: observationCounter++,
-                photos: photos.filter((photo) => photo.observationId === observation.id)
+                photos: photos.filter((p) => p.observationId === obs.id)
             }));
 
-        const areaPhotos = photos.filter((photo) => photo.areaId === area.id);
-
         sections.push({
-            title: area.name,
+            title: area.name.toUpperCase(),
             areas: [area],
-            observations: areaObservations,
-            primaryPhoto: areaPhotos[0] || areaObservations.find((item) => item.photos[0])?.photos[0] || null,
-            sectionPhotos: areaPhotos
+            observations: areaObservations
         });
     });
 
     return sections;
 };
 
-const buildRecommendationsMarkup = (recommendations) => {
-    const groups = ['pintura', 'estructura', 'instalaciones', 'acabados'];
-
-    return groups.map((group) => {
-        const items = recommendations[group] || [];
-        if (!items.length) {
-            return '';
-        }
-
-        return `
-            <div class="recommendation-group">
-                <h4>${escapeHtml(group.charAt(0).toUpperCase() + group.slice(1))}</h4>
-                <ul>
-                    ${items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}
-                </ul>
-            </div>
-        `;
-    }).join('');
-};
-
-const placeholderImage = (label) => `
-    <div class="image-placeholder">
-        <span>${escapeHtml(label)}</span>
-    </div>
-`;
-
-const buildPhotoGrid = (photos, columnsClass = 'photo-grid') => {
-    if (!photos.length) {
-        return placeholderImage('Sin evidencia fotográfica disponible');
+const buildObservationPhotos = (photos) => {
+    if (!photos || !photos.length) {
+        return `<p style="color:#9ca3af; font-style:italic; font-size:10pt;">Sin evidencia fotográfica.</p>`;
     }
-
-    return `
-        <div class="${columnsClass}">
-            ${photos.map((photo) => `
-                <figure class="photo-card">
-                    <img src="${photo.url}" alt="${escapeHtml(photo.caption || 'Fotografía de inspección')}" />
-                    <figcaption>${escapeHtml(photo.caption || 'Registro fotográfico')}</figcaption>
-                </figure>
-            `).join('')}
+    return photos.map((photo) => `
+        <div class="obs-photo-block">
+            <img src="${photo.url}" alt="${escapeHtml(photo.caption || 'Evidencia fotográfica')}" />
+            ${photo.caption ? `<p class="obs-photo-caption">${escapeHtml(photo.caption)}</p>` : ''}
         </div>
-    `;
-};
-
-const buildSectionsMarkup = (sections) => {
-    return sections.map((section) => {
-        const observationMarkup = section.observations.length
-            ? section.observations.map((observation) => `
-                <article class="observation-card">
-                    <div class="observation-head">
-                        <div>
-                            <p class="observation-index">Observación ${observation.sequence}</p>
-                            <h4>${escapeHtml(observation.title)}</h4>
-                        </div>
-                        <span class="badge ${severityClasses[observation.severity] || 'badge-warning'}">${escapeHtml(severityLabels[observation.severity] || observation.severity)}</span>
-                    </div>
-                    <p class="observation-description">${escapeHtml(observation.description)}</p>
-                    <p class="observation-meta"><strong>Tipo:</strong> ${escapeHtml(observation.type)}${observation.metricValue ? ` · <strong>Métrica:</strong> ${escapeHtml(formatMetric(observation.metricValue, observation.metricUnit ? ` ${observation.metricUnit}` : ''))}` : ''}</p>
-                    ${observation.recommendation ? `<p class="observation-meta"><strong>Recomendación:</strong> ${escapeHtml(observation.recommendation)}</p>` : ''}
-                    ${buildPhotoGrid(observation.photos, 'photo-grid compact')}
-                </article>
-            `).join('')
-            : '<div class="empty-state">No se registraron observaciones técnicas en esta sección.</div>';
-
-        return `
-            <section class="report-section page-break">
-                <div class="section-header">
-                    <div>
-                        <p class="eyebrow">Inspección por ambientes</p>
-                        <h2>${escapeHtml(section.title)}</h2>
-                    </div>
-                    <div class="section-area-summary">
-                        ${section.areas.map((area) => `
-                            <span>${escapeHtml(area.name)} · ${escapeHtml(formatMetric(area.calculatedAreaM2, ' m²'))}</span>
-                        `).join('')}
-                    </div>
-                </div>
-                <div class="section-hero">
-                    ${section.primaryPhoto ? `<img src="${section.primaryPhoto.url}" alt="${escapeHtml(section.primaryPhoto.caption || section.title)}" />` : placeholderImage(`Sin imagen principal de ${section.title}`)}
-                </div>
-                <div class="observations-grid">
-                    ${observationMarkup}
-                </div>
-            </section>
-        `;
-    }).join('');
-};
-
-const buildMetricRows = (areas, totalArea) => `
-    ${areas.map((area) => `
-        <tr>
-            <td>${escapeHtml(area.name)}</td>
-            <td>${escapeHtml(formatMetric(area.calculatedAreaM2, ' m²'))}</td>
-        </tr>
-    `).join('')}
-    <tr class="total-row">
-        <td>TOTAL</td>
-        <td>${escapeHtml(formatMetric(totalArea, ' m²'))}</td>
-    </tr>
-`;
-
-const buildInspectorSignatureBlock = (inspector, signature) => {
-    const roleLabel = inspector?.roles?.[0]?.name || inspector?.role || 'inspector';
-    const capValue = inspector?.capNumber || inspector?.cap || inspector?.registrationNumber || null;
-
-    return `
-        <div class="signature-card">
-            <div class="signature-image-wrap">
-                ${signature?.signatureUrl
-            ? `<img src="${signature.signatureUrl}" alt="Firma del inspector" class="signature-image" />`
-            : '<div class="signature-placeholder">Firma pendiente</div>'}
-            </div>
-            <div class="signature-line"></div>
-            <p class="signature-name">${escapeHtml(inspector?.fullName || inspector?.firstName || 'Inspector asignado')}</p>
-            <p class="signature-role">${escapeHtml(roleLabel)}</p>
-            ${roleLabel === 'arquitecto' ? `<p class="signature-cap">CAP: ${escapeHtml(capValue || 'No registrado')}</p>` : ''}
-        </div>
-    `;
+    `).join('');
 };
 
 const buildCoverLogo = (logoUrl) => {
     if (logoUrl) {
-        return `<img src="${logoUrl}" alt="Logo CURIEL" class="brand-logo" />`;
+        return `<img src="${logoUrl}" alt="Logo CURIEL" style="height:32px; width:auto;" />`;
     }
-
-    return `
-        <svg class="brand-logo" viewBox="0 0 220 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="CURIEL">
-            <rect width="220" height="64" rx="18" fill="#f97316" />
-            <text x="24" y="40" font-size="28" font-family="Arial, sans-serif" font-weight="700" fill="#ffffff">CURIEL</text>
-        </svg>
-    `;
+    return `<span style="font-size:18pt; font-weight:700; letter-spacing:0.05em; color:#1f2937;">CURIEL</span>`;
 };
 
 const buildInspectionReportHtml = (reportData) => {
@@ -260,520 +117,533 @@ const buildInspectionReportHtml = (reportData) => {
         generatedAt
     } = reportData;
 
-    const buildingPhoto = photos.find((photo) => photo.type === 'edificio') || null;
-    const planPhoto = photos.find((photo) => photo.type === 'plano') || null;
+    const buildingPhoto = photos.find((p) => p.type === 'edificio') || null;
+    const planPhoto = photos.find((p) => p.type === 'plano') || null;
     const totalArea = areas.reduce((sum, area) => sum + Number(area.calculatedAreaM2 || 0), 0);
     const sections = buildSectionModels(areas, observations, photos);
-    const automaticRecommendationsMarkup = buildRecommendationsMarkup(recommendations);
-    const manualRecommendations = (summary?.finalRecommendations || '')
+    const inspectorName = inspection.inspector?.fullName
+        || `${inspection.inspector?.firstName || ''} ${inspection.inspector?.lastName || ''}`.trim()
+        || 'Sin asignar';
+    const inspectorRole = inspection.inspector?.roles?.[0]?.name || inspection.inspector?.role || 'inspector';
+    const capValue = inspection.inspector?.capNumber || inspection.inspector?.cap || inspection.inspector?.registrationNumber || null;
+    const district = metadata.district || inspection.state || 'Lima';
+    const address = metadata.exactAddress || inspection.address;
+    const buildingName = metadata.buildingName || 'No registrado';
+    const apartmentNumber = metadata.apartmentNumber || 'No registrado';
+    const serviceType = metadata.serviceType || inspection.inspectionType;
+
+    const allRecommendations = [];
+    const groups = ['pintura', 'estructura', 'instalaciones', 'acabados'];
+    groups.forEach((group) => {
+        const items = recommendations[group] || [];
+        items.forEach((item) => allRecommendations.push(item));
+    });
+    const manualRecs = (summary?.finalRecommendations || '')
         .split(/\n+/)
-        .map((item) => item.trim())
+        .map((l) => l.trim())
         .filter(Boolean);
+    manualRecs.forEach((item) => allRecommendations.push(item));
 
     return `
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8" />
-    <title>Informe de inspección ${escapeHtml(inspection.projectName)}</title>
+    <title>Informe de Inspección - ${escapeHtml(inspection.projectName)}</title>
     <style>
         @page {
             size: A4;
-            margin: 28mm 16mm 24mm;
+            margin: 20mm;
+            @top-left {
+                content: "";
+            }
+            @top-right {
+                content: "";
+            }
         }
-        * { box-sizing: border-box; }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
             font-family: Arial, Helvetica, sans-serif;
-            color: #1f2937;
-            margin: 0;
+            color: #1a1a1a;
+            font-size: 10.5pt;
+            line-height: 1.35;
             background: #ffffff;
-            font-size: 12px;
-            line-height: 1.55;
         }
-        .cover {
-            min-height: 240mm;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 8mm 2mm 4mm;
-        }
-        .cover-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 16px;
-        }
-        .brand-logo {
-            width: 190px;
-            height: auto;
-        }
-        .tagline {
-            margin: 18px 0 0;
-            color: #f97316;
-            font-weight: 700;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-            font-size: 12px;
-        }
-        .cover-title {
-            margin: 12px 0 10px;
-            font-size: 34px;
-            line-height: 1.1;
-            letter-spacing: -0.03em;
-        }
-        .cover-subtitle {
-            color: #6b7280;
-            max-width: 420px;
-            font-size: 14px;
-        }
-        .cover-meta {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 14px;
-            margin-top: 28px;
-        }
-        .meta-card {
-            border: 1px solid #e5e7eb;
-            border-radius: 16px;
-            padding: 14px 16px;
-            background: #fff7ed;
-        }
-        .meta-card span {
-            display: block;
-            color: #9ca3af;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            font-size: 10px;
-            margin-bottom: 6px;
-        }
-        .cover-footer {
+
+        /* ── Header repetido en todas las páginas ── */
+        .page-header {
+            position: running(header);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-top: 1px solid #e5e7eb;
-            padding-top: 16px;
+            padding-bottom: 8px;
+            border-bottom: 0.5pt solid #d1d5db;
+            margin-bottom: 16px;
+            font-size: 9pt;
             color: #6b7280;
         }
-        .page-break {
-            page-break-before: always;
+        .page-header .header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
-        .section-shell {
-            margin-top: 18px;
+        .page-header .header-tagline {
+            font-size: 8pt;
+            color: #9ca3af;
+            letter-spacing: 0.05em;
         }
-        .section-block {
-            margin-bottom: 20px;
-            border: 1px solid #e5e7eb;
-            border-radius: 18px;
-            padding: 18px;
-            background: #ffffff;
+        .page-header .header-page {
+            font-size: 9pt;
+            color: #6b7280;
         }
-        .section-block h2 {
-            margin: 0 0 14px;
-            font-size: 20px;
+
+        /* ── Portada ── */
+        .cover {
+            page-break-after: always;
+            padding-top: 30mm;
         }
-        .eyebrow {
-            color: #f97316;
+        .cover-title {
+            font-size: 28pt;
+            font-weight: 700;
+            color: #111827;
+            letter-spacing: -0.02em;
+            margin-bottom: 8mm;
+        }
+        .cover-subtitle {
+            font-size: 10.5pt;
+            color: #6b7280;
+            max-width: 400px;
+            margin-bottom: 12mm;
+            line-height: 1.5;
+        }
+        .info-block {
+            margin-bottom: 10mm;
+        }
+        .info-block-title {
+            font-size: 10pt;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.12em;
-            font-size: 10px;
-            margin: 0 0 8px;
+            letter-spacing: 0.1em;
+            color: #374151;
+            border-bottom: 0.5pt solid #d1d5db;
+            padding-bottom: 4px;
+            margin-bottom: 6mm;
         }
-        .info-grid {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 12px;
+        .info-row {
+            display: flex;
+            margin-bottom: 3mm;
+            font-size: 10.5pt;
         }
-        .info-item {
-            background: #f9fafb;
-            border-radius: 14px;
-            padding: 12px;
-            border: 1px solid #edf2f7;
+        .info-label {
+            width: 140px;
+            flex-shrink: 0;
+            font-weight: 700;
+            color: #374151;
         }
-        .info-item span {
-            display: block;
-            color: #9ca3af;
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            margin-bottom: 4px;
+        .info-value {
+            color: #1a1a1a;
         }
-        .plan-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 16px;
-        }
-        .plan-card {
-            border: 1px solid #e5e7eb;
-            border-radius: 16px;
+        .cover-plan {
+            margin-top: 10mm;
+            border: 0.5pt solid #d1d5db;
             overflow: hidden;
+        }
+        .cover-plan img {
+            width: 100%;
+            height: 280px;
+            object-fit: cover;
+            display: block;
+        }
+        .cover-plan-placeholder {
+            width: 100%;
+            height: 280px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #9ca3af;
+            font-style: italic;
             background: #f9fafb;
         }
-        .plan-card h3 {
-            margin: 0;
-            padding: 12px 14px;
-            font-size: 14px;
-            border-bottom: 1px solid #e5e7eb;
-            background: #ffffff;
+        .cover-footer {
+            margin-top: auto;
+            padding-top: 10mm;
+            border-top: 0.5pt solid #d1d5db;
+            display: flex;
+            justify-content: space-between;
+            font-size: 9pt;
+            color: #9ca3af;
         }
-        .plan-card img, .section-hero img, .photo-card img {
-            width: 100%;
-            display: block;
-            object-fit: cover;
+
+        /* ── Tabla de áreas ── */
+        .metric-section {
+            page-break-after: always;
         }
-        .plan-card img {
-            height: 230px;
+        .section-title {
+            font-size: 20pt;
+            font-weight: 700;
+            color: #111827;
+            margin-bottom: 6mm;
         }
         .metric-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 8px;
+            margin-bottom: 6mm;
         }
         .metric-table th,
         .metric-table td {
-            padding: 10px 12px;
-            border-bottom: 1px solid #e5e7eb;
+            padding: 3mm 4mm;
+            border-bottom: 0.5pt solid #e5e7eb;
             text-align: left;
+            font-size: 10.5pt;
         }
         .metric-table th {
-            background: #fff7ed;
-            color: #9a3412;
-            font-size: 11px;
+            font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.08em;
+            font-size: 9pt;
+            letter-spacing: 0.05em;
+            color: #6b7280;
+            border-bottom: 1pt solid #d1d5db;
+        }
+        .metric-table td:last-child {
+            text-align: right;
+        }
+        .metric-table th:last-child {
+            text-align: right;
         }
         .metric-table .total-row td {
             font-weight: 700;
-            background: #f9fafb;
+            border-top: 1pt solid #d1d5db;
+            border-bottom: 1pt solid #d1d5db;
         }
-        .report-section {
-            margin-bottom: 18px;
+        .metric-note {
+            font-size: 9.5pt;
+            color: #6b7280;
+            font-style: italic;
         }
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 18px;
-            margin-bottom: 16px;
+
+        /* ── Secciones por ambiente ── */
+        .environment-section {
+            page-break-before: always;
         }
-        .section-header h2 {
-            margin: 0;
-            font-size: 22px;
+        .environment-title {
+            font-size: 18pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #111827;
+            letter-spacing: 0.02em;
+            margin-bottom: 8mm;
+            padding-bottom: 3mm;
+            border-bottom: 0.5pt solid #d1d5db;
         }
-        .section-area-summary {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            justify-content: flex-end;
+        .observation-block {
+            margin-bottom: 8mm;
+            page-break-inside: avoid;
         }
-        .section-area-summary span {
-            border-radius: 999px;
-            padding: 6px 10px;
-            background: #f9fafb;
-            border: 1px solid #e5e7eb;
-            font-size: 11px;
+        .observation-number {
+            font-size: 10pt;
+            font-weight: 700;
+            color: #374151;
+            margin-bottom: 2mm;
+        }
+        .obs-photo-block {
+            margin-bottom: 3mm;
+            page-break-inside: avoid;
+        }
+        .obs-photo-block img {
+            width: 100%;
+            max-height: 260px;
+            object-fit: contain;
+            display: block;
+            border: 0.5pt solid #e5e7eb;
+        }
+        .obs-photo-caption {
+            font-size: 9pt;
+            color: #6b7280;
+            margin-top: 1mm;
+        }
+        .observation-text {
+            font-size: 10.5pt;
+            color: #1a1a1a;
+            line-height: 1.45;
+            margin-bottom: 2mm;
+        }
+        .observation-detail {
+            font-size: 9.5pt;
+            color: #6b7280;
+        }
+        .observation-detail strong {
             color: #374151;
         }
-        .section-hero {
-            border-radius: 20px;
-            overflow: hidden;
-            border: 1px solid #e5e7eb;
-            margin-bottom: 18px;
-            min-height: 220px;
-            background: #f9fafb;
-        }
-        .section-hero img {
-            height: 260px;
-        }
-        .observations-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 16px;
-        }
-        .observation-card {
-            border: 1px solid #e5e7eb;
-            border-radius: 18px;
-            padding: 16px;
-            background: #ffffff;
-        }
-        .observation-head {
-            display: flex;
-            justify-content: space-between;
-            gap: 14px;
-            align-items: flex-start;
-            margin-bottom: 10px;
-        }
-        .observation-head h4 {
-            margin: 4px 0 0;
-            font-size: 16px;
-        }
-        .observation-index {
-            margin: 0;
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: #f97316;
-            font-weight: 700;
-        }
-        .observation-description {
-            margin: 0 0 8px;
-        }
-        .observation-meta {
-            margin: 4px 0 10px;
-            color: #4b5563;
-        }
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 82px;
-            padding: 6px 10px;
-            border-radius: 999px;
-            font-size: 10px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-        }
-        .badge-success { background: #dcfce7; color: #166534; }
-        .badge-warning { background: #fef3c7; color: #92400e; }
-        .badge-alert { background: #fed7aa; color: #c2410c; }
-        .badge-critical { background: #fee2e2; color: #b91c1c; }
-        .photo-grid {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 12px;
-        }
-        .photo-grid.compact {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-        .photo-card {
-            margin: 0;
-            overflow: hidden;
-            border-radius: 16px;
-            border: 1px solid #e5e7eb;
-            background: #ffffff;
-        }
-        .photo-card img {
-            height: 150px;
-        }
-        .photo-card figcaption {
-            padding: 10px;
-            font-size: 11px;
-            color: #4b5563;
-        }
-        .image-placeholder {
-            width: 100%;
-            min-height: 180px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
+        .no-observations {
             color: #9ca3af;
-            background: repeating-linear-gradient(135deg, #f9fafb, #f9fafb 12px, #f3f4f6 12px, #f3f4f6 24px);
-            border-radius: 16px;
-            border: 1px dashed #d1d5db;
-            text-align: center;
+            font-style: italic;
+            font-size: 10pt;
+            padding: 4mm 0;
         }
-        .recommendations-shell {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 18px;
+
+        /* ── Recomendaciones ── */
+        .recommendations-section {
+            page-break-before: always;
         }
-        .recommendation-group {
-            border: 1px solid #e5e7eb;
-            border-radius: 16px;
-            padding: 16px;
-            background: #ffffff;
+        .recommendations-list {
+            list-style: disc;
+            padding-left: 6mm;
         }
-        .recommendation-group h4 {
-            margin: 0 0 10px;
-            font-size: 14px;
-            color: #ea580c;
+        .recommendations-list li {
+            margin-bottom: 3mm;
+            font-size: 10.5pt;
+            line-height: 1.45;
         }
-        .recommendation-group ul,
-        .manual-recommendations ul {
-            margin: 0;
-            padding-left: 18px;
+
+        /* ── Cierre ── */
+        .closing-section {
+            page-break-before: always;
         }
-        .recommendation-group li,
-        .manual-recommendations li {
-            margin-bottom: 8px;
+        .closing-conclusion {
+            font-size: 10.5pt;
+            line-height: 1.5;
+            margin-bottom: 8mm;
+            text-align: justify;
         }
-        .manual-recommendations {
-            margin-top: 18px;
-            border: 1px solid #e5e7eb;
-            border-radius: 16px;
-            padding: 16px;
-            background: #fff7ed;
+        .closing-note {
+            font-size: 9pt;
+            color: #9ca3af;
+            font-style: italic;
+            margin-bottom: 12mm;
         }
-        .manual-recommendations h4 {
-            margin: 0 0 10px;
-            font-size: 14px;
-            color: #9a3412;
+        .closing-info {
+            margin-bottom: 8mm;
         }
-        .signature-grid {
-            display: grid;
-            grid-template-columns: 1.2fr 0.8fr;
-            gap: 20px;
-            align-items: end;
-        }
-        .signature-card {
-            max-width: 320px;
-        }
-        .signature-image-wrap {
-            min-height: 110px;
-            display: flex;
-            align-items: flex-end;
-            justify-content: flex-start;
-            padding-bottom: 10px;
+        .signature-block {
+            margin-top: 12mm;
+            page-break-inside: avoid;
         }
         .signature-image {
-            max-height: 90px;
-            max-width: 240px;
+            max-height: 80px;
+            max-width: 200px;
             object-fit: contain;
+            margin-bottom: 2mm;
         }
         .signature-placeholder {
             color: #9ca3af;
             font-style: italic;
+            font-size: 9.5pt;
+            margin-bottom: 2mm;
         }
         .signature-line {
-            border-top: 1px solid #1f2937;
-            margin-bottom: 8px;
+            border-top: 0.5pt solid #1a1a1a;
+            width: 220px;
+            margin-bottom: 2mm;
         }
-        .signature-name,
-        .signature-role,
-        .signature-cap {
-            margin: 4px 0;
+        .signature-name {
+            font-size: 10.5pt;
+            font-weight: 700;
+            color: #1a1a1a;
         }
-        .footer-note {
+        .signature-role {
+            font-size: 9.5pt;
             color: #6b7280;
         }
-        .empty-state {
-            border: 1px dashed #d1d5db;
-            border-radius: 16px;
-            padding: 18px;
-            text-align: center;
-            color: #9ca3af;
-            background: #f9fafb;
+        .signature-cap {
+            font-size: 9.5pt;
+            color: #6b7280;
         }
     </style>
 </head>
 <body>
+
+    <!-- ═══════════ PORTADA ═══════════ -->
     <section class="cover">
         <div>
-            <div class="cover-top">
-                <div>
-                    ${buildCoverLogo(logoUrl)}
-                    <p class="tagline">${escapeHtml(config.pdf.companyTagline)}</p>
+            <div style="margin-bottom: 12mm;">
+                ${buildCoverLogo(logoUrl)}
+            </div>
+
+            <h1 class="cover-title">INFORME DE INSPECCIÓN</h1>
+            <p class="cover-subtitle">
+                Informe técnico profesional elaborado con criterios inmobiliarios, métricos y fotográficos para revisión técnica integral del inmueble.
+            </p>
+
+            <div class="info-block">
+                <p class="info-block-title">Información General</p>
+                <div class="info-row">
+                    <span class="info-label">Cliente</span>
+                    <span class="info-value">${escapeHtml(inspection.clientName)}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Dirección</span>
+                    <span class="info-value">${escapeHtml(address)}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Distrito</span>
+                    <span class="info-value">${escapeHtml(district)}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Provincia</span>
+                    <span class="info-value">Lima</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Edificio</span>
+                    <span class="info-value">${escapeHtml(buildingName)}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Fecha de inspección</span>
+                    <span class="info-value">${escapeHtml(formatDate(inspection.scheduledDate))}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Inmueble</span>
+                    <span class="info-value">${escapeHtml(apartmentNumber)}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Servicio</span>
+                    <span class="info-value">${escapeHtml(serviceType)}</span>
                 </div>
             </div>
-            <h1 class="cover-title">INFORME DE INSPECCIÓN</h1>
-            <p class="cover-subtitle">Informe técnico profesional para inspección de departamentos en Lima, elaborado con criterios inmobiliarios, métricos y fotográficos para revisión técnica integral.</p>
 
-            <div class="cover-meta">
-                <div class="meta-card">
-                    <span>Cliente</span>
-                    <strong>${escapeHtml(inspection.clientName)}</strong>
-                </div>
-                <div class="meta-card">
-                    <span>Inspección</span>
-                    <strong>${escapeHtml(inspection.projectName)}</strong>
-                </div>
-                <div class="meta-card">
-                    <span>Distrito</span>
-                    <strong>${escapeHtml(metadata.district || inspection.state || 'Lima')}</strong>
-                </div>
-                <div class="meta-card">
-                    <span>Fecha</span>
-                    <strong>${escapeHtml(formatDate(inspection.scheduledDate))}</strong>
-                </div>
+            <div class="cover-plan">
+                ${buildingPhoto
+                    ? `<img src="${buildingPhoto.url}" alt="Plano de ubicación" />`
+                    : `<div class="cover-plan-placeholder">Plano de ubicación no disponible</div>`
+                }
             </div>
         </div>
 
         <div class="cover-footer">
             <span>Generado: ${escapeHtml(formatDateTime(generatedAt))}</span>
-            <span>Estado del informe: ${escapeHtml(reportStatusLabels[summary?.reportStatus] || 'Borrador')}</span>
+            <span>${escapeHtml(config.pdf.companyTagline)}</span>
         </div>
     </section>
 
-    <section class="section-shell page-break">
-        <div class="section-block">
-            <p class="eyebrow">1. Información general</p>
-            <h2>Ficha de inspección</h2>
-            <div class="info-grid">
-                <div class="info-item"><span>Cliente</span><strong>${escapeHtml(inspection.clientName)}</strong></div>
-                <div class="info-item"><span>Dirección</span><strong>${escapeHtml(metadata.exactAddress || inspection.address)}</strong></div>
-                <div class="info-item"><span>Distrito</span><strong>${escapeHtml(metadata.district || inspection.state || 'Lima')}</strong></div>
-                <div class="info-item"><span>Provincia</span><strong>Lima</strong></div>
-                <div class="info-item"><span>Edificio</span><strong>${escapeHtml(metadata.buildingName || 'No registrado')}</strong></div>
-                <div class="info-item"><span>Fecha de inspección</span><strong>${escapeHtml(formatDate(inspection.scheduledDate))}</strong></div>
-                <div class="info-item"><span>Departamento</span><strong>${escapeHtml(metadata.apartmentNumber || 'No registrado')}</strong></div>
-                <div class="info-item"><span>Inspector</span><strong>${escapeHtml(inspection.inspector?.fullName || `${inspection.inspector?.firstName || ''} ${inspection.inspector?.lastName || ''}`.trim() || 'Sin asignar')}</strong></div>
-                <div class="info-item"><span>Servicio</span><strong>${escapeHtml(metadata.serviceType || inspection.inspectionType)}</strong></div>
-            </div>
-        </div>
-
-        <div class="section-block">
-            <p class="eyebrow">2. Plano de ubicación</p>
-            <h2>Registro visual inicial</h2>
-            <div class="plan-grid">
-                <div class="plan-card">
-                    <h3>Edificio / fachada</h3>
-                    ${buildingPhoto ? `<img src="${buildingPhoto.url}" alt="Foto del edificio" />` : placeholderImage('Sin foto del edificio')}
-                </div>
-                <div class="plan-card">
-                    <h3>Plano del departamento</h3>
-                    ${planPhoto ? `<img src="${planPhoto.url}" alt="Plano del inmueble" />` : placeholderImage('Sin foto del plano')}
-                </div>
-            </div>
-        </div>
-
-        <div class="section-block">
-            <p class="eyebrow">3. Inspección métrica</p>
-            <h2>Tabla de áreas medidas</h2>
-            <table class="metric-table">
-                <thead>
+    <!-- ═══════════ INSPECCIÓN MÉTRICA ═══════════ -->
+    <section class="metric-section">
+        <h2 class="section-title">INSPECCIÓN MÉTRICA</h2>
+        <table class="metric-table">
+            <thead>
+                <tr>
+                    <th>Ambiente</th>
+                    <th>Área (m²)</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${areas.map((area) => `
                     <tr>
-                        <th>Área</th>
-                        <th>m²</th>
+                        <td>${escapeHtml(area.name)}</td>
+                        <td>${escapeHtml(formatMetric(area.calculatedAreaM2))}</td>
                     </tr>
-                </thead>
-                <tbody>
-                    ${buildMetricRows(areas, totalArea)}
-                </tbody>
-            </table>
-        </div>
+                `).join('')}
+                <tr class="total-row">
+                    <td>TOTAL</td>
+                    <td>${escapeHtml(formatMetric(totalArea))}</td>
+                </tr>
+            </tbody>
+        </table>
+        <p class="metric-note">
+            El área total corresponde a la suma de las mediciones individuales de cada ambiente inspeccionado.
+        </p>
     </section>
 
-    ${buildSectionsMarkup(sections)}
+    <!-- ═══════════ SECCIONES POR AMBIENTE ═══════════ -->
+    ${sections.map((section) => {
+        const observationBlocks = section.observations.length
+            ? section.observations.map((obs) => `
+                <div class="observation-block">
+                    <p class="observation-number">Observación ${obs.sequence}</p>
+                    ${buildObservationPhotos(obs.photos)}
+                    <p class="observation-text">${escapeHtml(obs.description)}</p>
+                    <p class="observation-detail">
+                        <strong>Tipo:</strong> ${escapeHtml(obs.type)}
+                        ${obs.severity ? ` · <strong>Severidad:</strong> ${escapeHtml(obs.severity)}` : ''}
+                        ${obs.metricValue ? ` · <strong>Métrica:</strong> ${escapeHtml(formatMetric(obs.metricValue, obs.metricUnit ? ` ${obs.metricUnit}` : ''))}` : ''}
+                        ${obs.recommendation ? ` · <strong>Recomendación:</strong> ${escapeHtml(obs.recommendation)}` : ''}
+                    </p>
+                </div>
+            `).join('')
+            : '<p class="no-observations">No se registraron observaciones técnicas en esta sección.</p>';
 
-    <section class="page-break section-block">
-        <p class="eyebrow">4. Recomendaciones</p>
-        <h2>Acciones sugeridas</h2>
-        <div class="recommendations-shell">
-            ${automaticRecommendationsMarkup || '<div class="empty-state">No se generaron recomendaciones automáticas.</div>'}
-        </div>
-        ${manualRecommendations.length ? `
-            <div class="manual-recommendations">
-                <h4>Recomendaciones complementarias del inspector</h4>
-                <ul>
-                    ${manualRecommendations.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}
-                </ul>
+        return `
+            <section class="environment-section">
+                <h2 class="environment-title">${escapeHtml(section.title)}</h2>
+                ${section.areas.length > 1 ? `
+                    <p class="observation-detail" style="margin-bottom:6mm;">
+                        ${section.areas.map((a) => `${escapeHtml(a.name)}: ${escapeHtml(formatMetric(a.calculatedAreaM2))} m²`).join(' · ')}
+                    </p>
+                ` : ''}
+                ${observationBlocks}
+            </section>
+        `;
+    }).join('')}
+
+    <!-- ═══════════ RECOMENDACIONES ═══════════ -->
+    <section class="recommendations-section">
+        <h2 class="section-title">RECOMENDACIONES</h2>
+        ${allRecommendations.length
+            ? `<ul class="recommendations-list">
+                ${allRecommendations.map((rec) => `<li>${escapeHtml(rec)}</li>`).join('')}
+            </ul>`
+            : '<p class="no-observations">No se generaron recomendaciones automáticas.</p>'
+        }
+    </section>
+
+    <!-- ═══════════ CIERRE TÉCNICO ═══════════ -->
+    <section class="closing-section">
+        <h2 class="section-title">CIERRE TÉCNICO</h2>
+
+        <div class="closing-info">
+            <p class="info-block-title">Información del Inmueble</p>
+            <div class="info-row">
+                <span class="info-label">Cliente</span>
+                <span class="info-value">${escapeHtml(inspection.clientName)}</span>
             </div>
-        ` : ''}
-    </section>
-
-    <section class="page-break section-block">
-        <p class="eyebrow">5. Cierre técnico</p>
-        <h2>Conclusión y firma</h2>
-        <div class="signature-grid">
-            <div>
-                <p>${escapeHtml(summary?.generalConclusion || 'Sin conclusión general registrada.')}</p>
-                <p class="footer-note">Este informe consolida hallazgos observados en la fecha de inspección y debe complementarse con las acciones correctivas señaladas para el inmueble evaluado.</p>
+            <div class="info-row">
+                <span class="info-label">Dirección</span>
+                <span class="info-value">${escapeHtml(address)}</span>
             </div>
-            ${buildInspectorSignatureBlock(inspection.inspector, inspectorSignature)}
+            <div class="info-row">
+                <span class="info-label">Distrito</span>
+                <span class="info-value">${escapeHtml(district)}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Provincia</span>
+                <span class="info-value">Lima</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Fecha</span>
+                <span class="info-value">${escapeHtml(formatDate(inspection.scheduledDate))}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Inmueble</span>
+                <span class="info-value">${escapeHtml(apartmentNumber)}</span>
+            </div>
+        </div>
+
+        <p class="closing-conclusion">
+            ${escapeHtml(summary?.generalConclusion || 'Sin conclusión general registrada.')}
+        </p>
+        <p class="closing-note">
+            Este informe consolida los hallazgos observados en la fecha de inspección y debe complementarse con las acciones correctivas correspondientes para el inmueble evaluado.
+        </p>
+
+        <div class="signature-block">
+            <p style="font-size:9.5pt; color:#6b7280; margin-bottom:4mm;">
+                El presente informe fue realizado e inspeccionado por:
+            </p>
+            ${inspectorSignature?.signatureUrl
+                ? `<img src="${inspectorSignature.signatureUrl}" alt="Firma del inspector" class="signature-image" />`
+                : `<div class="signature-placeholder">Firma pendiente</div>`
+            }
+            <div class="signature-line"></div>
+            <p class="signature-name">${escapeHtml(inspectorName)}</p>
+            <p class="signature-role">${escapeHtml(inspectorRole)}</p>
+            ${inspectorRole === 'arquitecto' ? `<p class="signature-cap">CAP: ${escapeHtml(capValue || 'No registrado')}</p>` : ''}
         </div>
     </section>
+
 </body>
 </html>
     `;

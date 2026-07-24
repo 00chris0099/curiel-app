@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { getApiErrorMessage } from '../api/axios';
 import { CustomIcon } from '../components/CustomIcon';
 import { Loader } from '../components/Loader';
+import { ReportPreview } from '../components/inspections/ReportPreview';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import inspectionService from '../services/inspection.service';
 import { useAuthStore } from '../store/authStore';
@@ -45,6 +46,7 @@ export const InspectionDetail = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isUpdating, setIsUpdating] = useState(false);
     const [isDownloadingReport, setIsDownloadingReport] = useState(false);
+    const [showPreview, setShowPreview] = useState(false);
     const [statusAction, setStatusAction] = useState<StatusActionConfig | null>(null);
     const [statusModal, setStatusModal] = useState<StatusModalState>(emptyStatusModalState);
 
@@ -234,9 +236,14 @@ export const InspectionDetail = () => {
                         </button>
                     )}
                     {canDownloadReport && (
-                        <button onClick={handleDownloadReport} disabled={isDownloadingReport} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white transition-colors hover:bg-slate-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700" aria-label="Descargar informe" title="Descargar informe">
-                            <CustomIcon name={isDownloadingReport ? 'sync' : 'download'} size="xs" tone="cream" spin={isDownloadingReport} />
-                        </button>
+                        <>
+                            <button onClick={() => setShowPreview(true)} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white transition-colors hover:bg-slate-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700" aria-label="Vista previa del informe" title="Vista previa del informe">
+                                <CustomIcon name="eye" size="xs" tone="cream" />
+                            </button>
+                            <button onClick={handleDownloadReport} disabled={isDownloadingReport} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white transition-colors hover:bg-slate-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700" aria-label="Descargar informe" title="Descargar informe">
+                                <CustomIcon name={isDownloadingReport ? 'sync' : 'download'} size="xs" tone="cream" spin={isDownloadingReport} />
+                            </button>
+                        </>
                     )}
                 </div>
             </div>
@@ -343,6 +350,13 @@ export const InspectionDetail = () => {
                     </div>
                 </div>
             )}
+
+            <ReportPreview
+                inspectionId={id || ''}
+                projectName={inspection.projectName}
+                isOpen={showPreview}
+                onClose={() => setShowPreview(false)}
+            />
         </div>
     );
 };

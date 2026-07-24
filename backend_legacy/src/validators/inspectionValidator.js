@@ -65,7 +65,22 @@ const updateInspectionSchema = Joi.object({
     clientId: Joi.string().uuid().optional().allow(null),
     latitude: Joi.number().min(-90).max(90).optional().allow(null),
     longitude: Joi.number().min(-180).max(180).optional().allow(null)
-});
+}).min(1);
+
+const validReasonCodes = [
+    // cancelación
+    'cliente_reprogramo', 'cliente_no_responde', 'cliente_cancelo_servicio',
+    'inspector_no_disponible', 'direccion_incorrecta', 'pago_no_confirmado',
+    'acceso_no_autorizado', 'problema_interno',
+    // reprogramación
+    'cliente_solicito_cambio', 'inspector_solicito_cambio', 'falta_acceso',
+    'emergencia', 'conflicto_horario',
+    // corrección
+    'faltan_fotos', 'faltan_observaciones', 'mediciones_incompletas',
+    'recomendaciones_insuficientes', 'error_datos_inmueble', 'informe_poco_claro',
+    // genérico
+    'otro'
+];
 
 const updateStatusSchema = Joi.object({
     status: Joi.string()
@@ -75,7 +90,9 @@ const updateStatusSchema = Joi.object({
             'any.only': 'El estado debe ser pendiente, en_proceso, lista_revision, finalizada, cancelada o reprogramada',
             'any.required': 'El estado es requerido'
         }),
-    reasonCode: Joi.string().optional().allow('', null),
+    reasonCode: Joi.string().valid(...validReasonCodes).optional().allow('', null).messages({
+        'any.only': 'El código de motivo no es válido'
+    }),
     reasonLabel: Joi.string().optional().allow('', null),
     comment: Joi.string().optional().allow('', null),
     notifyClient: Joi.boolean().optional(),

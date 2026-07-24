@@ -185,6 +185,9 @@ model InspectionSummary {
   generalConclusion    String?      @map("general_conclusion") @db.Text
   finalRecommendations String?      @map("final_recommendations") @db.Text
   reportStatus         ReportStatus @default(borrador) @map("report_status")
+  cachedReportUrl      String?      @map("cached_report_url") @db.Text
+  cachedReportAt       DateTime?    @map("cached_report_at") @db.Timestamptz(6)
+  reportContentHash    String?      @map("report_content_hash") @db.VarChar(64)
   createdAt            DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt            DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
 

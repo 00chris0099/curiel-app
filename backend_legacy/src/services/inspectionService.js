@@ -3,6 +3,7 @@ const { AppError } = require('../middlewares/errorHandler');
 const { triggerN8nWebhook } = require('../utils/n8n');
 const notificationService = require('./notificationService');
 const inspectionReportService = require('./inspectionReportService');
+const reportJobQueue = require('./reportJobQueue');
 const logger = require('../utils/logger');
 
 const inspectionStatuses = ['pendiente', 'en_proceso', 'lista_revision', 'finalizada', 'cancelada', 'reprogramada'];
@@ -555,33 +556,28 @@ class InspectionService {
                 category: 'inspection'
             }, [inspection.inspectorId]);
 
-            let reportUrl = null;
-            let reportExpiresAt = null;
+            reportJobQueue.enqueue(inspection.id, async (id) => {
+                const result = await inspectionReportService.generateInspectionReport(id, inspection.inspectorId, 'admin', true);
 
-            try {
-                const reportResult = await inspectionReportService.generateInspectionReport(
-                    inspection.id, inspection.inspectorId, 'admin', true
-                );
-                reportUrl = reportResult.cloudUrl;
-                reportExpiresAt = reportResult.cloudExpiresAt;
-            } catch (reportError) {
-                logger.warn('No se pudo generar el informe automatico', { error: reportError.message, inspectionId: inspection.id });
-            }
+                if (result.cloudUrl) {
+                    triggerN8nWebhook('inspectionCompleted', {
+                        event: 'inspection_finalized',
+                        inspection: {
+                            id: inspection.id,
+                            projectName: inspection.projectName,
+                            clientName: inspection.clientName,
+                            clientEmail: inspection.clientEmail,
+                            inspectorId: inspection.inspectorId,
+                            status: inspection.status
+                        },
+                        report: {
+                            downloadUrl: result.cloudUrl,
+                            expiresAt: result.cloudExpiresAt,
+                        },
+                    });
+                }
 
-            triggerN8nWebhook('inspectionCompleted', {
-                event: 'inspection_finalized',
-                inspection: {
-                    id: inspection.id,
-                    projectName: inspection.projectName,
-                    clientName: inspection.clientName,
-                    clientEmail: inspection.clientEmail,
-                    inspectorId: inspection.inspectorId,
-                    status: inspection.status
-                },
-                report: reportUrl ? {
-                    downloadUrl: reportUrl,
-                    expiresAt: reportExpiresAt,
-                } : null,
+                return result;
             });
         }
     }
