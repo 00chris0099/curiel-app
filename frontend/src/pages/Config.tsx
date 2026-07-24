@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { getApiErrorMessage } from '../api/axios';
-import { apiClient } from '../api/axios';
+import apiClient, { getApiErrorMessage } from '../api/axios';
 import { CustomIcon } from '../components/CustomIcon';
 import apiKeyService, { type ApiKey } from '../services/apiKey.service';
 
