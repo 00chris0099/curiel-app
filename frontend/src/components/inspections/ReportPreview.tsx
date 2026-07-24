@@ -73,7 +73,7 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
             <div className="flex h-[90vh] w-full max-w-5xl flex-col rounded-2xl bg-white shadow-2xl dark:bg-gray-900">
                 <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-gray-700">
                     <div className="flex items-center gap-3">
-                        <CustomIcon name="eye" size="xs" tone="cream" />
+                        <CustomIcon name="file-pdf" size="xs" tone="cream" />
                         <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                             Vista previa del informe
                         </h2>
@@ -90,7 +90,7 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
                             onClick={onClose}
                             className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white transition-colors hover:bg-slate-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
                         >
-                            <CustomIcon name="x" size="xs" tone="mist" />
+                            <CustomIcon name="x-circle" size="xs" tone="mist" />
                         </button>
                     </div>
                 </div>
@@ -108,7 +108,7 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
                     {error && (
                         <div className="flex h-full items-center justify-center">
                             <div className="flex flex-col items-center gap-3 text-center">
-                                <CustomIcon name="alert-triangle" size="md" tone="cream" />
+                                <CustomIcon name="warning-circle" size="md" tone="cream" />
                                 <p className="text-sm text-slate-600 dark:text-slate-400">{error}</p>
                                 <button
                                     onClick={loadPreview}
