@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useRef, useState } from 'react';
-import { Canvas } from 'fabric';
+import { Canvas, FabricImage } from 'fabric';
 import { useEditorCanvas } from '../../hooks/useEditorCanvas';
 import { useTextTool } from '../../hooks/useTextTool';
 import { useShapeTool } from '../../hooks/useShapeTool';
@@ -18,7 +18,7 @@ interface EditorCanvasProps {
 type ShapeType = 'rect' | 'circle' | 'line' | 'arrow';
 
 export function EditorCanvas({ onCanvasReady }: EditorCanvasProps) {
-  const { viewport, selection } = useEditorStore();
+  const { viewport, selection, pages, currentPageIndex } = useEditorStore();
   const containerRef = useRef<HTMLDivElement>(null);
   const [toolbarPosition, setToolbarPosition] = useState<{ x: number; y: number } | null>(null);
   const [toolbarVisible, setToolbarVisible] = useState(false);
@@ -45,6 +45,40 @@ export function EditorCanvas({ onCanvasReady }: EditorCanvasProps) {
       onCanvasReady(getCanvas);
     }
   }, []);
+
+  // Render PDF page background when pages or current page changes
+  useEffect(() => {
+    const canvas = getCanvas();
+    if (!canvas || pages.length === 0) return;
+
+    const page = pages[currentPageIndex];
+    if (!page?.backgroundDataUrl) return;
+
+    // Resize canvas to match page dimensions
+    canvas.setDimensions({ width: page.width, height: page.height });
+
+    FabricImage.fromURL(page.backgroundDataUrl).then((img) => {
+      img.set({
+        left: 0,
+        top: 0,
+        selectable: false,
+        evented: false,
+        hoverCursor: 'default',
+        excludeFromExport: false,
+      });
+      // Remove existing background images first
+      const objects = canvas.getObjects();
+      const bgImages = objects.filter((obj) => (obj as unknown as Record<string, unknown>)._isPdfBg === true);
+      bgImages.forEach((obj) => canvas.remove(obj));
+
+      (img as unknown as Record<string, unknown>)._isPdfBg = true;
+      canvas.add(img);
+      canvas.sendObjectToBack(img);
+      canvas.renderAll();
+    }).catch((err) => {
+      console.error('[EditorCanvas] Failed to render PDF background:', err);
+    });
+  }, [pages, currentPageIndex, getCanvas]);
 
   useEffect(() => {
     setZoom(viewport.zoom);

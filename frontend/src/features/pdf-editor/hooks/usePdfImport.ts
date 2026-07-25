@@ -3,9 +3,10 @@ import { getPdfDocument, renderPageToCanvas, getPageDimensions } from '../utils'
 import { useEditorStore } from '../store';
 import type { Page } from '../types';
 import { generateId } from '../utils';
+import type { PDFDocumentProxy } from 'pdfjs-dist';
 
 export function usePdfImport() {
-  const [pdfDoc, setPdfDoc] = useState<Awaited<ReturnType<typeof getPdfDocument>> | null>(null);
+  const [pdfDoc, setPdfDoc] = useState<PDFDocumentProxy | null>(null);
   const { setPages, setLoading, setError } = useEditorStore();
 
   const loadPdf = useCallback(
@@ -20,11 +21,24 @@ export function usePdfImport() {
         const pages: Page[] = [];
         for (let i = 0; i < doc.numPages; i++) {
           const dims = await getPageDimensions(doc, i);
+
+          // Render page to a temp canvas and get data URL
+          let backgroundDataUrl: string | undefined;
+          try {
+            const tempCanvas = document.createElement('canvas');
+            const scale = 2;
+            await renderPageToCanvas(doc, i, tempCanvas, scale);
+            backgroundDataUrl = tempCanvas.toDataURL('image/png');
+          } catch {
+            // If render fails, page will show without background
+          }
+
           pages.push({
             id: generateId(),
             index: i,
             width: dims.width,
             height: dims.height,
+            backgroundDataUrl,
             rotation: 0,
             isVisible: true,
             isDirty: false,

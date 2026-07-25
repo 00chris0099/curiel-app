@@ -22,6 +22,7 @@ export interface Page {
   height: number;
   pdfBytes?: Uint8Array;
   fabricJson?: string;
+  backgroundDataUrl?: string;
   rotation: number;
   isVisible: boolean;
   isDirty: boolean;
