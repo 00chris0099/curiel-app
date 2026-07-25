@@ -6,14 +6,8 @@ let isInitialized = false;
 export function initPdfWorker(): void {
   if (isInitialized) return;
 
-  try {
-    const workerUrl = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
-    pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
-  } catch {
-    // Fallback: use CDN worker
-    const version = pdfjsLib.version || '5.3.31';
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.worker.min.mjs`;
-  }
+  const version = pdfjsLib.version || '6.1.200';
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.worker.min.mjs`;
 
   isInitialized = true;
 }
