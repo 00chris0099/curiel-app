@@ -8,20 +8,22 @@ import { useAutosave } from '../hooks/useAutosave';
 import { pdfDraftService, pdfVersionService } from '../services/pdfApi';
 import { useEditorStore } from '../store';
 import type { Canvas as FabricCanvas } from 'fabric';
-import { ArrowLeft, Upload, FileText, History, Loader2 } from 'lucide-react';
+import { ArrowLeft, Upload, FileText, History, Loader2, AlertTriangle } from 'lucide-react';
 
 type EditorView = 'editor' | 'versions';
+type LoadState = 'loading' | 'loaded' | 'empty' | 'error';
 
 export function PdfEditorPage() {
   const { id: inspectionId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { loadPdfFromFile } = usePdfImport();
-  const { pages, markClean, setDocument, isLoading, error } = useEditorStore();
+  const { loadPdf } = usePdfImport();
+  const { pages, markClean, setDocument, setError } = useEditorStore();
 
   const [view, setView] = useState<EditorView>('editor');
-  const [isLoadingDraft, setIsLoadingDraft] = useState(true);
-  const [hasLoaded, setHasLoaded] = useState(false);
+  const [loadState, setLoadState] = useState<LoadState>('loading');
+  const [loadMessage, setLoadMessage] = useState('Cargando...');
   const [inspectionName, setInspectionName] = useState('');
+  const [loadError, setLoadError] = useState('');
   const canvasRef = useRef<(() => FabricCanvas | null) | null>(null);
 
   const handleCanvasRef = useCallback((getCanvas: () => FabricCanvas | null) => {
@@ -58,46 +60,84 @@ export function PdfEditorPage() {
   }, []);
 
   useEffect(() => {
-    if (!inspectionId || hasLoaded) return;
+    if (!inspectionId) return;
 
-    const loadDraft = async () => {
-      setIsLoadingDraft(true);
+    let cancelled = false;
+
+    const loadInitial = async () => {
+      setLoadState('loading');
+
+      // Step 1: Fetch inspection name
       try {
+        const { default: inspectionService } = await import('../../../services/inspection.service');
+        const inspection = await inspectionService.getInspectionById(inspectionId);
+        if (!cancelled) setInspectionName(inspection.projectName);
+      } catch {
+        if (!cancelled) setInspectionName('Inspección');
+      }
+
+      // Step 2: Try to restore draft
+      try {
+        setLoadMessage('Buscando borrador...');
         const draft = await pdfDraftService.getDraft(inspectionId);
+        if (cancelled) return;
+
         if (draft?.snapshotJson) {
           setDocument(`draft-${inspectionId}`, inspectionId);
+          // Wait for canvas to be ready
+          await new Promise<void>((resolve) => {
+            const check = () => {
+              if (canvasRef.current?.()) {
+                resolve();
+              } else {
+                setTimeout(check, 100);
+              }
+            };
+            check();
+          });
+          if (cancelled) return;
+
           const canvas = canvasRef.current?.();
           if (canvas) {
             await canvas.loadFromJSON(draft.snapshotJson as Parameters<FabricCanvas['loadFromJSON']>[0]);
             canvas.renderAll();
           }
           markClean();
+          setLoadState('loaded');
           toast.success('Borrador restaurado');
+          return;
         }
       } catch {
-        // no draft available, user will upload a file
-      } finally {
-        setIsLoadingDraft(false);
-        setHasLoaded(true);
+        // no draft, continue to try report
       }
-    };
 
-    loadDraft();
-  }, [inspectionId, hasLoaded, setDocument, markClean]);
-
-  useEffect(() => {
-    if (!inspectionId) return;
-    const fetchName = async () => {
+      // Step 3: Try to download the inspection's generated PDF report
       try {
+        setLoadMessage('Descargando informe de la inspección...');
         const { default: inspectionService } = await import('../../../services/inspection.service');
-        const inspection = await inspectionService.getInspectionById(inspectionId);
-        setInspectionName(inspection.projectName);
+        const blob = await inspectionService.downloadReport(inspectionId);
+        if (cancelled) return;
+
+        const arrayBuffer = await blob.arrayBuffer();
+        if (cancelled) return;
+
+        setDocument(`inspection-${inspectionId}`, inspectionId);
+        await loadPdf(arrayBuffer);
+        if (cancelled) return;
+
+        setLoadState('loaded');
+        toast.success('Informe cargado en el editor');
       } catch {
-        setInspectionName('Inspección');
+        if (cancelled) return;
+        // No report available, show upload state
+        setLoadState('empty');
       }
     };
-    fetchName();
-  }, [inspectionId]);
+
+    loadInitial();
+
+    return () => { cancelled = true; };
+  }, [inspectionId, setDocument, markClean, loadPdf]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -105,7 +145,16 @@ export function PdfEditorPage() {
       if (inspectionId) {
         setDocument(`inspection-${inspectionId}`, inspectionId);
       }
-      await loadPdfFromFile(file);
+      try {
+        await loadPdf(await file.arrayBuffer());
+        setLoadState('loaded');
+        toast.success('PDF cargado');
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Error al cargar PDF';
+        setLoadError(message);
+        setLoadState('error');
+        setError(message);
+      }
     }
   };
 
@@ -180,12 +229,40 @@ export function PdfEditorPage() {
 
       {/* Editor area */}
       <div className="flex-1 relative overflow-hidden">
-        {isLoadingDraft ? (
+        {loadState === 'loading' ? (
           <div className="h-full flex flex-col items-center justify-center gap-4 bg-gray-50 dark:bg-gray-900">
             <Loader2 size={32} className="animate-spin text-primary-600" />
-            <p className="text-sm text-gray-500 dark:text-gray-400">Cargando borrador...</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{loadMessage}</p>
           </div>
-        ) : pages.length === 0 && !isLoading ? (
+        ) : loadState === 'error' ? (
+          <div className="h-full flex flex-col items-center justify-center gap-4 bg-gray-50 dark:bg-gray-900 px-4">
+            <div className="w-16 h-16 rounded-2xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+              <AlertTriangle size={32} className="text-red-500" />
+            </div>
+            <div className="text-center">
+              <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
+                Error al cargar PDF
+              </h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md">
+                {loadError}
+              </p>
+            </div>
+            <input
+              type="file"
+              accept=".pdf"
+              onChange={handleFileUpload}
+              className="hidden"
+              id="pdf-upload-error"
+            />
+            <label
+              htmlFor="pdf-upload-error"
+              className="flex items-center gap-2 px-6 py-3 text-sm font-medium text-white bg-primary-600 rounded-xl hover:bg-primary-700 cursor-pointer transition-colors"
+            >
+              <Upload size={16} />
+              Seleccionar PDF manualmente
+            </label>
+          </div>
+        ) : loadState === 'empty' ? (
           <div className="h-full flex flex-col items-center justify-center gap-6 bg-gray-50 dark:bg-gray-900 px-4">
             <div className="w-20 h-20 rounded-2xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
               <FileText size={36} className="text-primary-600" />
@@ -195,7 +272,9 @@ export function PdfEditorPage() {
                 Editor de PDF
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md">
-                Sube un archivo PDF para comenzar a editarlo. Puedes agregar texto, imágenes, formas, firmas y más.
+                No se encontró un informe generado para esta inspección.
+                <br />
+                Sube un archivo PDF para comenzar a editarlo.
               </p>
             </div>
             <input
@@ -212,9 +291,6 @@ export function PdfEditorPage() {
               <Upload size={16} />
               Seleccionar PDF
             </label>
-            {error && (
-              <p className="text-sm text-red-500 dark:text-red-400 mt-2">{error}</p>
-            )}
           </div>
         ) : (
           <EditorShell
@@ -233,15 +309,6 @@ export function PdfEditorPage() {
           />
         )}
       </div>
-
-      {/* Hidden file input for initial upload */}
-      <input
-        type="file"
-        accept=".pdf"
-        onChange={handleFileUpload}
-        className="hidden"
-        id="pdf-upload-hidden"
-      />
     </div>
   );
 }
