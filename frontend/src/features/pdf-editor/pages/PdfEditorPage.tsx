@@ -5,6 +5,7 @@ import { EditorShell } from '../components/EditorShell';
 import { VersionHistoryPanel } from '../components/Panels/VersionHistoryPanel';
 import { usePdfImport } from '../hooks/usePdfImport';
 import { useAutosave } from '../hooks/useAutosave';
+import { useIsMobile } from '../hooks/useMediaQuery';
 import { pdfDraftService, pdfVersionService } from '../services/pdfApi';
 import { useEditorStore } from '../store';
 import type { Canvas as FabricCanvas } from 'fabric';
@@ -16,6 +17,7 @@ type LoadState = 'loading' | 'loaded' | 'empty' | 'error';
 export function PdfEditorPage() {
   const { id: inspectionId } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { loadPdf } = usePdfImport();
   const { pages, markClean, setDocument, setError } = useEditorStore();
 
@@ -118,11 +120,9 @@ export function PdfEditorPage() {
         const blob = await inspectionService.downloadReport(inspectionId);
         if (cancelled) return;
 
-        console.log('[PdfEditor] Report blob:', blob.size, 'bytes, type:', blob.type);
         const arrayBuffer = await blob.arrayBuffer();
         if (cancelled) return;
 
-        console.log('[PdfEditor] ArrayBuffer:', arrayBuffer.byteLength, 'bytes');
         setDocument(`inspection-${inspectionId}`, inspectionId);
         const doc = await loadPdf(arrayBuffer);
         if (cancelled) return;
@@ -137,7 +137,6 @@ export function PdfEditorPage() {
         toast.success('Informe cargado en el editor');
       } catch (err) {
         if (cancelled) return;
-        console.error('[PdfEditor] Error loading report:', err);
         setLoadError(err instanceof Error ? err.message : 'No se pudo cargar el informe');
         setLoadState('empty');
       }
@@ -175,148 +174,224 @@ export function PdfEditorPage() {
     />
   ) : undefined;
 
-  return (
-    <div className="h-screen flex flex-col">
-      {/* Top bar */}
-      <div className="flex items-center gap-3 px-4 py-2 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shrink-0">
+  // Loading state
+  if (loadState === 'loading') {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center gap-4 bg-gray-50 dark:bg-gray-900 px-4">
+        <div className="w-16 h-16 rounded-2xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
+          <Loader2 size={32} className="animate-spin text-primary-600" />
+        </div>
+        <div className="text-center">
+          <p className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
+            {loadMessage}
+          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Esto puede tomar unos segundos
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (loadState === 'error') {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center gap-4 bg-gray-50 dark:bg-gray-900 px-4">
+        <div className="w-16 h-16 rounded-2xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+          <AlertTriangle size={32} className="text-red-500" />
+        </div>
+        <div className="text-center">
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
+            Error al cargar PDF
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md">
+            {loadError}
+          </p>
+        </div>
+        <input
+          type="file"
+          accept=".pdf"
+          onChange={handleFileUpload}
+          className="hidden"
+          id="pdf-upload-error"
+        />
+        <label
+          htmlFor="pdf-upload-error"
+          className="flex items-center gap-2 px-6 py-3 text-sm font-medium text-white bg-primary-600 rounded-xl hover:bg-primary-700 cursor-pointer transition-colors"
+        >
+          <Upload size={16} />
+          Seleccionar PDF manualmente
+        </label>
         <button
           onClick={() => navigate(`/inspections/${inspectionId}`)}
-          className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+          className="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
         >
-          <ArrowLeft size={16} />
-          <span className="hidden sm:inline">Volver</span>
+          Volver a la inspección
         </button>
-
-        <div className="h-5 w-px bg-gray-200 dark:bg-gray-700" />
-
-        <FileText size={16} className="text-primary-600 shrink-0" />
-        <h1 className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">
-          {inspectionName || 'Editor PDF'}
-        </h1>
-
-        <div className="flex-1" />
-
-        {pages.length > 0 && (
-          <div className="flex items-center gap-2">
-            <input
-              type="file"
-              accept=".pdf"
-              onChange={handleFileUpload}
-              className="hidden"
-              id="pdf-upload-replace"
-            />
-            <label
-              htmlFor="pdf-upload-replace"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer transition-colors"
-            >
-              <Upload size={12} />
-              Reemplazar PDF
-            </label>
-
-            <button
-              onClick={() => handleSaveVersion()}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-primary-600 bg-primary-50 dark:bg-primary-900/20 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/30 transition-colors"
-            >
-              <History size={12} />
-              Guardar versión
-            </button>
-
-            <button
-              onClick={() => setView(view === 'versions' ? 'editor' : 'versions')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                view === 'versions'
-                  ? 'text-white bg-primary-600'
-                  : 'text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'
-              }`}
-            >
-              <History size={12} />
-              Historial
-            </button>
-          </div>
-        )}
       </div>
+    );
+  }
+
+  // Empty state
+  if (loadState === 'empty') {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center gap-6 bg-gray-50 dark:bg-gray-900 px-4">
+        <div className="w-20 h-20 rounded-2xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
+          <FileText size={36} className="text-primary-600" />
+        </div>
+        <div className="text-center">
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
+            Editor de PDF
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md">
+            No se encontró un informe generado para esta inspección.
+            <br />
+            Sube un archivo PDF para comenzar a editarlo.
+          </p>
+        </div>
+        <input
+          type="file"
+          accept=".pdf"
+          onChange={handleFileUpload}
+          className="hidden"
+          id="pdf-upload-initial"
+        />
+        <label
+          htmlFor="pdf-upload-initial"
+          className="flex items-center gap-2 px-6 py-3 text-sm font-medium text-white bg-primary-600 rounded-xl hover:bg-primary-700 cursor-pointer transition-colors shadow-lg shadow-primary-600/25"
+        >
+          <Upload size={16} />
+          Seleccionar PDF
+        </label>
+        <button
+          onClick={() => navigate(`/inspections/${inspectionId}`)}
+          className="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+        >
+          Volver a la inspección
+        </button>
+      </div>
+    );
+  }
+
+  // Editor state
+  return (
+    <div className="h-screen flex flex-col">
+      {/* Top bar - hidden on mobile since EditorShell has its own toolbar */}
+      {!isMobile && (
+        <div className="flex items-center gap-3 px-4 py-2 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shrink-0">
+          <button
+            onClick={() => navigate(`/inspections/${inspectionId}`)}
+            className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+          >
+            <ArrowLeft size={16} />
+            <span className="hidden sm:inline">Volver</span>
+          </button>
+
+          <div className="h-5 w-px bg-gray-200 dark:bg-gray-700" />
+
+          <FileText size={16} className="text-primary-600 shrink-0" />
+          <h1 className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">
+            {inspectionName || 'Editor PDF'}
+          </h1>
+
+          <div className="flex-1" />
+
+          {pages.length > 0 && (
+            <div className="flex items-center gap-2">
+              <input
+                type="file"
+                accept=".pdf"
+                onChange={handleFileUpload}
+                className="hidden"
+                id="pdf-upload-replace"
+              />
+              <label
+                htmlFor="pdf-upload-replace"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer transition-colors"
+              >
+                <Upload size={12} />
+                Reemplazar PDF
+              </label>
+
+              <button
+                onClick={() => handleSaveVersion()}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-primary-600 bg-primary-50 dark:bg-primary-900/20 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/30 transition-colors"
+              >
+                <History size={12} />
+                Guardar versión
+              </button>
+
+              <button
+                onClick={() => setView(view === 'versions' ? 'editor' : 'versions')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                  view === 'versions'
+                    ? 'text-white bg-primary-600'
+                    : 'text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                <History size={12} />
+                Historial
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Mobile top bar */}
+      {isMobile && (
+        <div className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shrink-0">
+          <button
+            onClick={() => navigate(`/inspections/${inspectionId}`)}
+            className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400"
+          >
+            <ArrowLeft size={18} />
+          </button>
+          <FileText size={14} className="text-primary-600 shrink-0" />
+          <h1 className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate flex-1">
+            {inspectionName || 'Editor PDF'}
+          </h1>
+          {pages.length > 0 && (
+            <div className="flex items-center gap-1">
+              <input
+                type="file"
+                accept=".pdf"
+                onChange={handleFileUpload}
+                className="hidden"
+                id="pdf-upload-replace-mobile"
+              />
+              <label
+                htmlFor="pdf-upload-replace-mobile"
+                className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 cursor-pointer"
+              >
+                <Upload size={14} />
+              </label>
+              <button
+                onClick={() => handleSaveVersion()}
+                className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400"
+              >
+                <History size={14} />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Editor area */}
       <div className="flex-1 relative overflow-hidden">
-        {loadState === 'loading' ? (
-          <div className="h-full flex flex-col items-center justify-center gap-4 bg-gray-50 dark:bg-gray-900">
-            <Loader2 size={32} className="animate-spin text-primary-600" />
-            <p className="text-sm text-gray-500 dark:text-gray-400">{loadMessage}</p>
-          </div>
-        ) : loadState === 'error' ? (
-          <div className="h-full flex flex-col items-center justify-center gap-4 bg-gray-50 dark:bg-gray-900 px-4">
-            <div className="w-16 h-16 rounded-2xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-              <AlertTriangle size={32} className="text-red-500" />
-            </div>
-            <div className="text-center">
-              <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
-                Error al cargar PDF
-              </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md">
-                {loadError}
-              </p>
-            </div>
-            <input
-              type="file"
-              accept=".pdf"
-              onChange={handleFileUpload}
-              className="hidden"
-              id="pdf-upload-error"
-            />
-            <label
-              htmlFor="pdf-upload-error"
-              className="flex items-center gap-2 px-6 py-3 text-sm font-medium text-white bg-primary-600 rounded-xl hover:bg-primary-700 cursor-pointer transition-colors"
-            >
-              <Upload size={16} />
-              Seleccionar PDF manualmente
-            </label>
-          </div>
-        ) : loadState === 'empty' ? (
-          <div className="h-full flex flex-col items-center justify-center gap-6 bg-gray-50 dark:bg-gray-900 px-4">
-            <div className="w-20 h-20 rounded-2xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
-              <FileText size={36} className="text-primary-600" />
-            </div>
-            <div className="text-center">
-              <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
-                Editor de PDF
-              </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md">
-                No se encontró un informe generado para esta inspección.
-                <br />
-                Sube un archivo PDF para comenzar a editarlo.
-              </p>
-            </div>
-            <input
-              type="file"
-              accept=".pdf"
-              onChange={handleFileUpload}
-              className="hidden"
-              id="pdf-upload-initial"
-            />
-            <label
-              htmlFor="pdf-upload-initial"
-              className="flex items-center gap-2 px-6 py-3 text-sm font-medium text-white bg-primary-600 rounded-xl hover:bg-primary-700 cursor-pointer transition-colors shadow-lg shadow-primary-600/25"
-            >
-              <Upload size={16} />
-              Seleccionar PDF
-            </label>
-          </div>
-        ) : (
-          <EditorShell
-            onSave={saveNow}
-            onExport={() => {}}
-            rightPanelContent={versionPanel}
-            rightPanelKey={view === 'versions' ? 'custom' : undefined}
-            onRightPanelChange={(key) => {
-              if (key === 'custom' && view !== 'versions') {
-                setView('versions');
-              } else if (key !== 'custom' && view === 'versions') {
-                setView('editor');
-              }
-            }}
-            onCanvasRef={handleCanvasRef}
-          />
-        )}
+        <EditorShell
+          onSave={saveNow}
+          onExport={() => {}}
+          rightPanelContent={versionPanel}
+          rightPanelKey={view === 'versions' ? 'custom' : undefined}
+          onRightPanelChange={(key) => {
+            if (key === 'custom' && view !== 'versions') {
+              setView('versions');
+            } else if (key !== 'custom' && view === 'versions') {
+              setView('editor');
+            }
+          }}
+          onCanvasRef={handleCanvasRef}
+        />
       </div>
     </div>
   );

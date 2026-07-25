@@ -13,6 +13,7 @@ import { SignatureManager } from './Signature/SignatureManager';
 import { ExportDialog } from './Export/ExportDialog';
 import { ConfirmDialog } from './UI/ConfirmDialog';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { useIsMobile } from '../hooks/useMediaQuery';
 import {
   Layers,
   SlidersHorizontal,
@@ -22,6 +23,7 @@ import {
   PenTool,
   PanelLeftClose,
   PanelRightClose,
+  X,
 } from 'lucide-react';
 
 interface EditorShellProps {
@@ -34,13 +36,16 @@ interface EditorShellProps {
 }
 
 type RightPanel = 'properties' | 'layers' | 'image' | 'search' | 'signature' | 'custom';
+type MobilePanel = 'thumbnails' | 'properties' | null;
 
 export function EditorShell({ onSave, onExport, rightPanelContent, rightPanelKey, onRightPanelChange, onCanvasRef }: EditorShellProps) {
+  const isMobile = useIsMobile();
   const [internalPanel, setInternalPanel] = useState<RightPanel>('properties');
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
-  const [leftOpen, setLeftOpen] = useState(true);
-  const [rightOpen, setRightOpen] = useState(true);
+  const [leftOpen, setLeftOpen] = useState(!isMobile);
+  const [rightOpen, setRightOpen] = useState(!isMobile);
+  const [mobilePanel, setMobilePanel] = useState<MobilePanel>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
   const canvasRef = useRef<Canvas | null>(null);
 
@@ -146,6 +151,122 @@ export function EditorShell({ onSave, onExport, rightPanelContent, rightPanelKey
     </>
   );
 
+  // MOBILE LAYOUT
+  if (isMobile) {
+    return (
+      <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden">
+        <MainToolbar onSave={onSave} onExport={() => setShowExportDialog(true)} />
+
+        {/* Canvas - full screen */}
+        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+          <EditorCanvas onCanvasReady={handleCanvasReady} />
+        </div>
+
+        {/* Bottom toolbar - tool selector */}
+        <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-2 py-1.5 shrink-0">
+          <div className="flex items-center gap-1">
+            <ToolSelector compact />
+            <div className="flex-1" />
+            <button
+              onClick={() => setMobilePanel(mobilePanel === 'thumbnails' ? null : 'thumbnails')}
+              className={`p-2 rounded-lg transition-colors ${
+                mobilePanel === 'thumbnails'
+                  ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
+                  : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400'
+              }`}
+              title="Páginas"
+            >
+              <PanelLeftClose size={18} />
+            </button>
+            <button
+              onClick={() => setMobilePanel(mobilePanel === 'properties' ? null : 'properties')}
+              className={`p-2 rounded-lg transition-colors ${
+                mobilePanel === 'properties'
+                  ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
+                  : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400'
+              }`}
+              title="Propiedades"
+            >
+              <PanelRightClose size={18} />
+            </button>
+            <button
+              onClick={() => setShowShortcutsHelp(true)}
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400"
+              title="Ayuda"
+            >
+              <HelpCircle size={18} />
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile slide-up panel */}
+        {mobilePanel && (
+          <>
+            <div
+              className="fixed inset-0 bg-black/30 z-40"
+              onClick={() => setMobilePanel(null)}
+            />
+            <div className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-800 rounded-t-2xl shadow-2xl max-h-[60vh] flex flex-col">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 shrink-0">
+                <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                  {mobilePanel === 'thumbnails' ? 'Páginas' : 'Propiedades'}
+                </h3>
+                <button
+                  onClick={() => setMobilePanel(null)}
+                  className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                {mobilePanel === 'thumbnails' ? (
+                  <div className="h-48">
+                    <PageThumbnails />
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex border-b border-gray-200 dark:border-gray-700 overflow-x-auto shrink-0">
+                      {rightPanelTabs.map((tab) => (
+                        <button
+                          key={tab.key}
+                          onClick={() => setRightPanelKey(tab.key)}
+                          className={`flex items-center justify-center gap-1 px-3 py-2 text-xs whitespace-nowrap shrink-0 ${
+                            rightPanel === tab.key
+                              ? 'text-primary-600 border-b-2 border-primary-600'
+                              : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                          }`}
+                        >
+                          {tab.icon}
+                          {tab.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="overflow-y-auto">
+                      {renderRightPanelContent()}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+        <KeyboardShortcutsHelp isOpen={showShortcutsHelp} onClose={() => setShowShortcutsHelp(false)} />
+        <ExportDialog isOpen={showExportDialog} onClose={() => setShowExportDialog(false)} canvas={canvasRef.current} />
+        {confirmDialog && (
+          <ConfirmDialog
+            isOpen={true}
+            title={confirmDialog.title}
+            message={confirmDialog.message}
+            onConfirm={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }}
+            onCancel={() => setConfirmDialog(null)}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // DESKTOP/TABLET LAYOUT
   return (
     <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden">
       <MainToolbar onSave={onSave} onExport={() => setShowExportDialog(true)} />

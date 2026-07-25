@@ -9,7 +9,6 @@ import { useTouchGestures } from '../../hooks/useTouchGestures';
 import { useEditorStore } from '../../store';
 import { EDITOR_TOOLS } from '../../constants';
 import { CanvasToolbar } from './CanvasToolbar';
-import { Minimap } from './Minimap';
 
 interface EditorCanvasProps {
   onCanvasReady?: (getCanvas: () => Canvas | null) => void;
@@ -274,13 +273,6 @@ export function EditorCanvas({ onCanvasReady }: EditorCanvasProps) {
         position={toolbarPosition}
         visible={toolbarVisible}
         onRefresh={handleRefreshToolbar}
-      />
-
-      <Minimap
-        canvas={getCanvas()}
-        zoom={viewport.zoom}
-        viewportWidth={containerSize.width}
-        viewportHeight={containerSize.height}
       />
     </div>
   );
