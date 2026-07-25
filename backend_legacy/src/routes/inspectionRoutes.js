@@ -17,6 +17,7 @@ const {
 const inspectionController = require('../controllers/inspectionController');
 const inspectionExecutionRoutes = require('./inspectionExecutionRoutes');
 const inspectionReportController = require('../controllers/inspectionReportController');
+const pdfDraftController = require('../controllers/pdfDraftController');
 
 // Internal API key (n8n cron jobs) o JWT auth
 router.use(internalAuth);
@@ -101,5 +102,12 @@ router.delete(
     authorize('admin'),
     inspectionController.deleteInspection
 );
+
+// PDF Editor: Drafts y Versiones
+router.get('/:id/pdf-draft', pdfDraftController.getDraft);
+router.post('/:id/pdf-draft', pdfDraftController.saveDraft);
+router.get('/:id/pdf-versions', pdfDraftController.getVersions);
+router.post('/:id/pdf-versions', pdfDraftController.createVersion);
+router.post('/:id/pdf-versions/:version/restore', pdfDraftController.restoreVersion);
 
 module.exports = router;
