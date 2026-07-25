@@ -13,7 +13,6 @@ import { SignatureManager } from './Signature/SignatureManager';
 import { ExportDialog } from './Export/ExportDialog';
 import { ConfirmDialog } from './UI/ConfirmDialog';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
-import { useIsMobile, useIsTablet } from '../hooks/useMediaQuery';
 import {
   Layers,
   SlidersHorizontal,
@@ -23,7 +22,6 @@ import {
   PenTool,
   PanelLeftClose,
   PanelRightClose,
-  X,
 } from 'lucide-react';
 
 interface EditorShellProps {
@@ -41,14 +39,10 @@ export function EditorShell({ onSave, onExport, rightPanelContent, rightPanelKey
   const [internalPanel, setInternalPanel] = useState<RightPanel>('properties');
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
-  const [thumbnailsOpen, setThumbnailsOpen] = useState(true);
-  const [rightPanelOpen, setRightPanelOpen] = useState(true);
-  const [mobileDrawer, setMobileDrawer] = useState<'none' | 'thumbnails' | 'right'>('none');
+  const [leftOpen, setLeftOpen] = useState(true);
+  const [rightOpen, setRightOpen] = useState(true);
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
   const canvasRef = useRef<Canvas | null>(null);
-
-  const isMobile = useIsMobile();
-  const isTablet = useIsTablet();
 
   const rightPanel: RightPanel = (rightPanelKey as RightPanel) || internalPanel;
 
@@ -152,43 +146,68 @@ export function EditorShell({ onSave, onExport, rightPanelContent, rightPanelKey
     </>
   );
 
-  if (isMobile) {
-    return (
-      <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
-        <MainToolbar onSave={onSave} onExport={() => setShowExportDialog(true)} />
+  return (
+    <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden">
+      <MainToolbar onSave={onSave} onExport={() => setShowExportDialog(true)} />
 
-        <div className="flex-1 relative overflow-hidden">
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Left panel - Thumbnails */}
+        <div
+          className={`shrink-0 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-200 overflow-hidden ${
+            leftOpen ? 'w-40' : 'w-0 border-r-0'
+          }`}
+        >
+          <PageThumbnails />
+        </div>
+
+        {/* Center - Canvas */}
+        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+          {/* Toolbar row */}
+          <div className="px-3 py-1.5 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setLeftOpen(!leftOpen)}
+              className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 shrink-0"
+              title={leftOpen ? 'Ocultar páginas' : 'Mostrar páginas'}
+            >
+              <PanelLeftClose size={16} className={leftOpen ? '' : 'rotate-180'} />
+            </button>
+            <ToolSelector />
+            <div className="flex-1" />
+            <button
+              onClick={() => setShowShortcutsHelp(true)}
+              className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 shrink-0"
+              title="Atajos de teclado"
+            >
+              <HelpCircle size={16} />
+            </button>
+            <button
+              onClick={() => setRightOpen(!rightOpen)}
+              className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 shrink-0"
+              title={rightOpen ? 'Ocultar panel' : 'Mostrar panel'}
+            >
+              <PanelRightClose size={16} className={rightOpen ? '' : 'rotate-180'} />
+            </button>
+          </div>
           <EditorCanvas onCanvasReady={handleCanvasReady} />
+        </div>
 
-          {mobileDrawer === 'thumbnails' && (
-            <div className="absolute inset-y-0 left-0 z-30 w-48 bg-white dark:bg-gray-800 shadow-xl">
-              <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Páginas</span>
-                <button onClick={() => setMobileDrawer('none')} className="p-1 text-gray-400 hover:text-gray-600">
-                  <X size={14} />
-                </button>
-              </div>
-              <PageThumbnails />
-            </div>
-          )}
-
-          {mobileDrawer === 'right' && (
-            <div className="absolute inset-y-0 right-0 z-30 w-72 bg-white dark:bg-gray-800 shadow-xl flex flex-col">
-              <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Panel</span>
-                <button onClick={() => setMobileDrawer('none')} className="p-1 text-gray-400 hover:text-gray-600">
-                  <X size={14} />
-                </button>
-              </div>
-              <div className="flex border-b border-gray-200 dark:border-gray-700">
+        {/* Right panel - Properties */}
+        <div
+          className={`shrink-0 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden transition-all duration-200 ${
+            rightOpen ? 'w-64' : 'w-0 border-l-0'
+          }`}
+        >
+          {rightOpen && (
+            <>
+              <div className="flex border-b border-gray-200 dark:border-gray-700 overflow-x-auto shrink-0">
                 {rightPanelTabs.map((tab) => (
                   <button
                     key={tab.key}
                     onClick={() => setRightPanelKey(tab.key)}
-                    className={`flex-1 flex items-center justify-center gap-1 px-2 py-2 text-xs ${
+                    className={`flex items-center justify-center gap-1 px-3 py-2 text-xs whitespace-nowrap shrink-0 ${
                       rightPanel === tab.key
                         ? 'text-primary-600 border-b-2 border-primary-600'
-                        : 'text-gray-500'
+                        : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
                     }`}
                   >
                     {tab.icon}
@@ -199,157 +218,22 @@ export function EditorShell({ onSave, onExport, rightPanelContent, rightPanelKey
               <div className="flex-1 overflow-y-auto">
                 {renderRightPanelContent()}
               </div>
-            </div>
+            </>
           )}
-        </div>
-
-        <div className="flex items-center justify-around px-2 py-1.5 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-          <button
-            onClick={() => setMobileDrawer(mobileDrawer === 'thumbnails' ? 'none' : 'thumbnails')}
-            className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg ${mobileDrawer === 'thumbnails' ? 'text-primary-600 bg-primary-50 dark:bg-primary-900/20' : 'text-gray-500'}`}
-          >
-            <PanelLeftClose size={16} />
-            <span className="text-[10px]">Páginas</span>
-          </button>
-          <ToolSelector />
-          <button
-            onClick={() => setMobileDrawer(mobileDrawer === 'right' ? 'none' : 'right')}
-            className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg ${mobileDrawer === 'right' ? 'text-primary-600 bg-primary-50 dark:bg-primary-900/20' : 'text-gray-500'}`}
-          >
-            <PanelRightClose size={16} />
-            <span className="text-[10px]">Panel</span>
-          </button>
-        </div>
-
-        <KeyboardShortcutsHelp isOpen={showShortcutsHelp} onClose={() => setShowShortcutsHelp(false)} />
-        <ExportDialog isOpen={showExportDialog} onClose={() => setShowExportDialog(false)} canvas={canvasRef.current} />
-        {confirmDialog && (
-          <ConfirmDialog
-            isOpen={true}
-            title={confirmDialog.title}
-            message={confirmDialog.message}
-            onConfirm={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }}
-            onCancel={() => setConfirmDialog(null)}
-          />
-        )}
-      </div>
-    );
-  }
-
-  if (isTablet) {
-    return (
-      <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
-        <MainToolbar onSave={onSave} onExport={() => setShowExportDialog(true)} />
-
-        <div className="flex-1 flex overflow-hidden">
-          {thumbnailsOpen && (
-            <div className="w-40 shrink-0">
-              <PageThumbnails />
-            </div>
-          )}
-
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="px-3 py-1.5 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
-              <button
-                onClick={() => setThumbnailsOpen(!thumbnailsOpen)}
-                className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded"
-              >
-                <PanelLeftClose size={14} className={thumbnailsOpen ? '' : 'rotate-180'} />
-              </button>
-              <ToolSelector />
-              <div className="flex-1" />
-              <button
-                onClick={() => setShowShortcutsHelp(true)}
-                className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded"
-              >
-                <HelpCircle size={14} />
-              </button>
-              <button
-                onClick={() => setRightPanelOpen(!rightPanelOpen)}
-                className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded"
-              >
-                <PanelRightClose size={14} className={rightPanelOpen ? '' : 'rotate-180'} />
-              </button>
-            </div>
-            <EditorCanvas onCanvasReady={handleCanvasReady} />
-          </div>
-
-          {rightPanelOpen && (
-            <div className="w-60 shrink-0 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
-              <div className="flex border-b border-gray-200 dark:border-gray-700">
-                {rightPanelTabs.map((tab) => (
-                  <button
-                    key={tab.key}
-                    onClick={() => setRightPanelKey(tab.key)}
-                    className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-[11px] ${
-                      rightPanel === tab.key
-                        ? 'text-primary-600 border-b-2 border-primary-600'
-                        : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                    }`}
-                  >
-                    {tab.icon}
-                  </button>
-                ))}
-              </div>
-              <div className="flex-1 overflow-y-auto">
-                {renderRightPanelContent()}
-              </div>
-            </div>
-          )}
-        </div>
-
-        <KeyboardShortcutsHelp isOpen={showShortcutsHelp} onClose={() => setShowShortcutsHelp(false)} />
-        <ExportDialog isOpen={showExportDialog} onClose={() => setShowExportDialog(false)} canvas={canvasRef.current} />
-      </div>
-    );
-  }
-
-  return (
-    <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
-      <MainToolbar onSave={onSave} onExport={() => setShowExportDialog(true)} />
-
-      <div className="flex-1 flex overflow-hidden">
-        <PageThumbnails />
-
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="px-4 py-2 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-            <ToolSelector />
-            <button
-              onClick={() => setShowShortcutsHelp(true)}
-              className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded"
-              title="Atajos de teclado (?)"
-            >
-              <HelpCircle size={16} />
-            </button>
-          </div>
-          <EditorCanvas onCanvasReady={handleCanvasReady} />
-        </div>
-
-        <div className="w-72 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
-          <div className="flex border-b border-gray-200 dark:border-gray-700 flex-wrap">
-            {rightPanelTabs.map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setRightPanelKey(tab.key)}
-                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm ${
-                  rightPanel === tab.key
-                    ? 'text-primary-600 border-b-2 border-primary-600'
-                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                }`}
-              >
-                {tab.icon}
-                {tab.label}
-              </button>
-            ))}
-          </div>
-          <div className="flex-1 overflow-y-auto">
-            {renderRightPanelContent()}
-          </div>
         </div>
       </div>
 
       <KeyboardShortcutsHelp isOpen={showShortcutsHelp} onClose={() => setShowShortcutsHelp(false)} />
       <ExportDialog isOpen={showExportDialog} onClose={() => setShowExportDialog(false)} canvas={canvasRef.current} />
+      {confirmDialog && (
+        <ConfirmDialog
+          isOpen={true}
+          title={confirmDialog.title}
+          message={confirmDialog.message}
+          onConfirm={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }}
+          onCancel={() => setConfirmDialog(null)}
+        />
+      )}
     </div>
   );
 }

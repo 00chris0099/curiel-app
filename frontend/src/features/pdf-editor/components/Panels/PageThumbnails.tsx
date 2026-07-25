@@ -61,10 +61,19 @@ function SortablePage({ page, index, isCurrent, onSelect, onDuplicate, onRotate,
         className="cursor-pointer"
         onClick={onSelect}
       >
-        <div className="aspect-[3/4] bg-gray-50 dark:bg-gray-900 rounded p-2 flex items-center justify-center">
-          <div className="w-full h-full border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 flex items-center justify-center text-xs text-gray-500 dark:text-gray-400">
-            {index + 1}
-          </div>
+        <div className="aspect-[3/4] bg-gray-50 dark:bg-gray-900 rounded p-1 flex items-center justify-center overflow-hidden">
+          {page.backgroundDataUrl ? (
+            <img
+              src={page.backgroundDataUrl}
+              alt={`Página ${index + 1}`}
+              className="w-full h-full object-contain rounded border border-gray-200 dark:border-gray-700"
+              loading="lazy"
+            />
+          ) : (
+            <div className="w-full h-full border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 flex items-center justify-center text-xs text-gray-500 dark:text-gray-400">
+              {index + 1}
+            </div>
+          )}
         </div>
       </div>
 

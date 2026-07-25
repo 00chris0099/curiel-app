@@ -22,6 +22,7 @@ export function EditorCanvas({ onCanvasReady }: EditorCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [toolbarPosition, setToolbarPosition] = useState<{ x: number; y: number } | null>(null);
   const [toolbarVisible, setToolbarVisible] = useState(false);
+  const [containerSize, setContainerSize] = useState({ width: 800, height: 600 });
 
   const {
     canvasRef,
@@ -46,16 +47,45 @@ export function EditorCanvas({ onCanvasReady }: EditorCanvasProps) {
     }
   }, []);
 
-  // Render PDF page background when pages or current page changes
+  // Track container size
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setContainerSize({
+          width: entry.contentRect.width,
+          height: entry.contentRect.height,
+        });
+      }
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
+
+  // Render PDF page background + auto-fit zoom
   useEffect(() => {
     const canvas = getCanvas();
-    if (!canvas || pages.length === 0) return;
+    if (!canvas || pages.length === 0 || containerSize.width === 0) return;
 
     const page = pages[currentPageIndex];
     if (!page?.backgroundDataUrl) return;
 
-    // Resize canvas to match page dimensions
+    // Calculate fit-to-container zoom
+    const padding = 40;
+    const availW = containerSize.width - padding * 2;
+    const availH = containerSize.height - padding * 2;
+    const scaleX = availW / page.width;
+    const scaleY = availH / page.height;
+    const fitZoom = Math.min(scaleX, scaleY, 1) * 100;
+
+    // Set canvas size to page dimensions (logical, not display)
     canvas.setDimensions({ width: page.width, height: page.height });
+
+    // Apply fit zoom through store
+    const store = useEditorStore.getState();
+    store.setZoom(fitZoom);
 
     FabricImage.fromURL(page.backgroundDataUrl).then((img) => {
       img.set({
@@ -66,7 +96,7 @@ export function EditorCanvas({ onCanvasReady }: EditorCanvasProps) {
         hoverCursor: 'default',
         excludeFromExport: false,
       });
-      // Remove existing background images first
+      // Remove existing background images
       const objects = canvas.getObjects();
       const bgImages = objects.filter((obj) => (obj as unknown as Record<string, unknown>)._isPdfBg === true);
       bgImages.forEach((obj) => canvas.remove(obj));
@@ -78,7 +108,7 @@ export function EditorCanvas({ onCanvasReady }: EditorCanvasProps) {
     }).catch((err) => {
       console.error('[EditorCanvas] Failed to render PDF background:', err);
     });
-  }, [pages, currentPageIndex, getCanvas]);
+  }, [pages, currentPageIndex, getCanvas, containerSize]);
 
   useEffect(() => {
     setZoom(viewport.zoom);
@@ -222,12 +252,12 @@ export function EditorCanvas({ onCanvasReady }: EditorCanvasProps) {
   return (
     <div
       ref={containerRef}
-      className="relative flex-1 overflow-hidden bg-gray-100 dark:bg-gray-900"
+      className="relative flex-1 overflow-auto bg-gray-100 dark:bg-gray-900 flex items-center justify-center"
     >
       <canvas
         ref={canvasRef}
         id="editor-canvas"
-        className="absolute inset-0 m-auto"
+        className="shadow-2xl"
         style={{
           cursor: currentTool?.cursor || 'default',
           transform: `scale(${viewport.zoom / 100})`,
@@ -249,8 +279,8 @@ export function EditorCanvas({ onCanvasReady }: EditorCanvasProps) {
       <Minimap
         canvas={getCanvas()}
         zoom={viewport.zoom}
-        viewportWidth={800}
-        viewportHeight={600}
+        viewportWidth={containerSize.width}
+        viewportHeight={containerSize.height}
       />
     </div>
   );
