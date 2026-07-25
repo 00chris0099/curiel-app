@@ -214,6 +214,7 @@ export const InspectionDetail = () => {
     const inspectorName = getInspectorName(inspection);
     const canExecuteInspection = canAccessInspectionExecution(inspection, user || null);
     const canDownloadReport = canGenerateInspectionReport(inspection, user || null);
+    const canEditPdf = canExecuteInspection;
 
     return (
         <div className="space-y-4 pb-10">
@@ -233,6 +234,12 @@ export const InspectionDetail = () => {
                         <button onClick={() => navigate(`/inspections/${id}/execute`)} className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#17324a] text-white transition-colors hover:bg-[#1d3d5c] sm:h-11 sm:w-11 sm:rounded-2xl sm:w-auto sm:gap-2 sm:px-4" aria-label="Ejecutar inspeccion" title="Ejecutar inspeccion">
                             <CustomIcon name="clipboard-check" size="xs" tone="white" />
                             <span className="hidden sm:inline">Ejecutar</span>
+                        </button>
+                    )}
+                    {canEditPdf && (
+                        <button onClick={() => navigate(`/inspections/${id}/pdf-editor`)} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white transition-colors hover:bg-slate-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 sm:h-11 sm:w-11 sm:rounded-2xl sm:w-auto sm:gap-2 sm:px-4" aria-label="Editar PDF" title="Editar PDF">
+                            <CustomIcon name="pencil" size="xs" tone="cream" />
+                            <span className="hidden sm:inline">Editar PDF</span>
                         </button>
                     )}
                     {canDownloadReport && (

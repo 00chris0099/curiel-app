@@ -17,6 +17,8 @@ const suspensionRoutes = require('./suspensionRoutes');
 const evaluationRoutes = require('./evaluationRoutes');
 const apiKeyRoutes = require('./apiKeyRoutes');
 const adminSettingsRoutes = require('./adminSettingsRoutes');
+const pdfTemplateRoutes = require('./pdfTemplateRoutes');
+const pdfDraftRoutes = require('./pdfDraftRoutes');
 
 const router = express.Router();
 
@@ -97,5 +99,7 @@ router.use('/suspensions', suspensionRoutes);
 router.use('/evaluations', evaluationRoutes);
 router.use('/config/api-keys', apiKeyRoutes);
 router.use('/admin/settings', adminSettingsRoutes);
+router.use('/pdf-templates', pdfTemplateRoutes);
+router.use('/inspections', pdfDraftRoutes);
 
 module.exports = router;

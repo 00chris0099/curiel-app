@@ -673,3 +673,76 @@ model AuditLog {
   @@index([entityType, entityId])
   @@map("audit_logs")
 }
+
+// ============================================
+// MODELOS - curiel_inspecciones (PDF Editor)
+// ============================================
+
+model PdfTemplate {
+  id            String   @id @default(uuid()) @db.Uuid
+  name          String   @db.VarChar(255)
+  description   String?  @db.Text
+  category      String   @default("inspeccion") @db.VarChar(100)
+  layoutJson    Json     @db.JsonB
+  thumbnailUrl  String?  @db.VarChar(500)
+  createdBy     String   @map("created_by") @db.Uuid
+  isDefault     Boolean  @default(false) @map("is_default")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // createdBy -> curiel_auth.User.id
+
+  @@index([createdBy])
+  @@index([category])
+  @@map("pdf_templates")
+}
+
+model PdfEditHistory {
+  id            String   @id @default(uuid()) @db.Uuid
+  inspectionId  String   @map("inspection_id") @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  action        String   @db.VarChar(100)
+  details       Json?    @db.JsonB
+  timestamp     DateTime @default(now()) @db.Timestamptz(6)
+
+  // inspectionId -> curiel_inspecciones.Inspection.id
+  // userId -> curiel_auth.User.id
+
+  @@index([inspectionId])
+  @@index([userId])
+  @@index([timestamp])
+  @@map("pdf_edit_history")
+}
+
+model PdfVersion {
+  id            String   @id @default(uuid()) @db.Uuid
+  inspectionId  String   @map("inspection_id") @db.Uuid
+  versionNumber Int      @map("version_number")
+  snapshotJson  Json     @db.JsonB
+  createdBy     String   @map("created_by") @db.Uuid
+  description   String?  @db.Text
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  // inspectionId -> curiel_inspecciones.Inspection.id
+  // createdBy -> curiel_auth.User.id
+
+  @@unique([inspectionId, versionNumber])
+  @@index([inspectionId])
+  @@index([createdBy])
+  @@map("pdf_versions")
+}
+
+model PdfDraft {
+  id            String   @id @default(uuid()) @db.Uuid
+  inspectionId  String   @unique @map("inspection_id") @db.Uuid
+  snapshotJson  Json     @db.JsonB
+  savedBy       String   @map("saved_by") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // inspectionId -> curiel_inspecciones.Inspection.id
+  // savedBy -> curiel_auth.User.id
+
+  @@index([inspectionId])
+  @@map("pdf_drafts")
+}
