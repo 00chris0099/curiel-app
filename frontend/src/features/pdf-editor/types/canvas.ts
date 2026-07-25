@@ -20,6 +20,8 @@ export interface Page {
   index: number;
   width: number;
   height: number;
+  renderedWidth?: number;
+  renderedHeight?: number;
   pdfBytes?: Uint8Array;
   fabricJson?: string;
   backgroundDataUrl?: string;

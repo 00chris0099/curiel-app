@@ -73,11 +73,8 @@ export function useEditorCanvas() {
     });
   }, []);
 
-  const setZoom = useCallback((zoom: number) => {
-    if (!fabricRef.current) return;
-    const center = fabricRef.current.getVpCenter();
-    fabricRef.current.zoomToPoint(center, zoom / 100);
-    fabricRef.current.renderAll();
+  const setZoom = useCallback((_zoom: number) => {
+    // Zoom is now handled directly in EditorCanvas via viewport transform
   }, []);
 
   const addText = useCallback((text: string, options?: Record<string, unknown>) => {

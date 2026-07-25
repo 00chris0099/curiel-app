@@ -24,11 +24,15 @@ export function usePdfImport() {
 
           // Render page to a temp canvas and get data URL
           let backgroundDataUrl: string | undefined;
+          let renderedWidth = dims.width;
+          let renderedHeight = dims.height;
           try {
             const tempCanvas = document.createElement('canvas');
             const scale = 2;
-            await renderPageToCanvas(doc, i, tempCanvas, scale);
+            const rendered = await renderPageToCanvas(doc, i, tempCanvas, scale);
             backgroundDataUrl = tempCanvas.toDataURL('image/png');
+            renderedWidth = rendered.width;
+            renderedHeight = rendered.height;
           } catch {
             // If render fails, page will show without background
           }
@@ -38,6 +42,8 @@ export function usePdfImport() {
             index: i,
             width: dims.width,
             height: dims.height,
+            renderedWidth,
+            renderedHeight,
             backgroundDataUrl,
             rotation: 0,
             isVisible: true,

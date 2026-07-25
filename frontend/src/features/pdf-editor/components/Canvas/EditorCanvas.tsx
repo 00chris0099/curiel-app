@@ -28,7 +28,6 @@ export function EditorCanvas({ onCanvasReady }: EditorCanvasProps) {
     fabricRef,
     initCanvas,
     getCanvas,
-    setZoom,
     loadSnapshot,
   } = useEditorCanvas();
 
@@ -71,47 +70,68 @@ export function EditorCanvas({ onCanvasReady }: EditorCanvasProps) {
     const page = pages[currentPageIndex];
     if (!page?.backgroundDataUrl) return;
 
+    // Use rendered dimensions (2x scale) for the canvas size
+    const pageW = page.renderedWidth || page.width;
+    const pageH = page.renderedHeight || page.height;
+
+    // Set canvas to rendered image dimensions
+    canvas.setDimensions({ width: pageW, height: pageH });
+
     // Calculate fit-to-container zoom
     const padding = 40;
     const availW = containerSize.width - padding * 2;
     const availH = containerSize.height - padding * 2;
-    const scaleX = availW / page.width;
-    const scaleY = availH / page.height;
-    const fitZoom = Math.min(scaleX, scaleY, 1) * 100;
+    const fitZoom = Math.min(availW / pageW, availH / pageH, 1) * 100;
 
-    // Set canvas size to page dimensions (logical, not display)
-    canvas.setDimensions({ width: page.width, height: page.height });
+    // Apply zoom via Fabric.js viewport transform
+    canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+    const zoomRatio = fitZoom / 100;
+    const vpt: [number, number, number, number, number, number] = [
+      zoomRatio, 0, 0, zoomRatio,
+      (containerSize.width - pageW * zoomRatio) / 2,
+      (containerSize.height - pageH * zoomRatio) / 2,
+    ];
+    canvas.setViewportTransform(vpt);
 
-    // Apply fit zoom through store
+    // Update store zoom
     const store = useEditorStore.getState();
     store.setZoom(fitZoom);
 
+    // Set as backgroundImage instead of adding as object
     FabricImage.fromURL(page.backgroundDataUrl).then((img) => {
       img.set({
-        left: 0,
-        top: 0,
         selectable: false,
         evented: false,
         hoverCursor: 'default',
         excludeFromExport: false,
       });
-      // Remove existing background images
-      const objects = canvas.getObjects();
-      const bgImages = objects.filter((obj) => (obj as unknown as Record<string, unknown>)._isPdfBg === true);
-      bgImages.forEach((obj) => canvas.remove(obj));
-
-      (img as unknown as Record<string, unknown>)._isPdfBg = true;
-      canvas.add(img);
-      canvas.sendObjectToBack(img);
+      canvas.backgroundImage = img;
       canvas.renderAll();
     }).catch((err) => {
       console.error('[EditorCanvas] Failed to render PDF background:', err);
     });
   }, [pages, currentPageIndex, getCanvas, containerSize]);
 
+  // Sync zoom from store to canvas viewport
   useEffect(() => {
-    setZoom(viewport.zoom);
-  }, [viewport.zoom, setZoom]);
+    const canvas = getCanvas();
+    if (!canvas) return;
+
+    const page = pages[currentPageIndex];
+    if (!page) return;
+
+    const pageW = page.renderedWidth || page.width;
+    const pageH = page.renderedHeight || page.height;
+    const zoomRatio = viewport.zoom / 100;
+
+    const vpt: [number, number, number, number, number, number] = [
+      zoomRatio, 0, 0, zoomRatio,
+      (containerSize.width - pageW * zoomRatio) / 2,
+      (containerSize.height - pageH * zoomRatio) / 2,
+    ];
+    canvas.setViewportTransform(vpt);
+    canvas.requestRenderAll();
+  }, [viewport.zoom, getCanvas, pages, currentPageIndex, containerSize]);
 
   useEffect(() => {
     const handleRestoreSnapshot = (e: Event) => {
@@ -251,16 +271,14 @@ export function EditorCanvas({ onCanvasReady }: EditorCanvasProps) {
   return (
     <div
       ref={containerRef}
-      className="relative flex-1 overflow-auto bg-gray-100 dark:bg-gray-900 flex items-center justify-center"
+      className="relative flex-1 overflow-hidden bg-gray-100 dark:bg-gray-900"
     >
       <canvas
         ref={canvasRef}
         id="editor-canvas"
-        className="shadow-2xl"
         style={{
+          position: 'absolute',
           cursor: currentTool?.cursor || 'default',
-          transform: `scale(${viewport.zoom / 100})`,
-          transformOrigin: 'center center',
         }}
         onClick={handleCanvasClick}
         onMouseDown={handleMouseDown}
