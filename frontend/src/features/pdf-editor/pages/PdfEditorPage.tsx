@@ -118,18 +118,27 @@ export function PdfEditorPage() {
         const blob = await inspectionService.downloadReport(inspectionId);
         if (cancelled) return;
 
+        console.log('[PdfEditor] Report blob:', blob.size, 'bytes, type:', blob.type);
         const arrayBuffer = await blob.arrayBuffer();
         if (cancelled) return;
 
+        console.log('[PdfEditor] ArrayBuffer:', arrayBuffer.byteLength, 'bytes');
         setDocument(`inspection-${inspectionId}`, inspectionId);
-        await loadPdf(arrayBuffer);
+        const doc = await loadPdf(arrayBuffer);
         if (cancelled) return;
+
+        if (!doc) {
+          setLoadError('No se pudo leer el PDF. Intenta subir el archivo manualmente.');
+          setLoadState('error');
+          return;
+        }
 
         setLoadState('loaded');
         toast.success('Informe cargado en el editor');
-      } catch {
+      } catch (err) {
         if (cancelled) return;
-        // No report available, show upload state
+        console.error('[PdfEditor] Error loading report:', err);
+        setLoadError(err instanceof Error ? err.message : 'No se pudo cargar el informe');
         setLoadState('empty');
       }
     };
