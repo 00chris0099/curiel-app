@@ -19,9 +19,11 @@ type ShapeType = 'rect' | 'circle' | 'line' | 'arrow';
 export function EditorCanvas({ onCanvasReady }: EditorCanvasProps) {
   const { viewport, selection, pages, currentPageIndex } = useEditorStore();
   const containerRef = useRef<HTMLDivElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const [toolbarPosition, setToolbarPosition] = useState<{ x: number; y: number } | null>(null);
   const [toolbarVisible, setToolbarVisible] = useState(false);
   const [containerSize, setContainerSize] = useState({ width: 800, height: 600 });
+  const bgImageRef = useRef<FabricImage | null>(null);
 
   const {
     canvasRef,
@@ -62,42 +64,24 @@ export function EditorCanvas({ onCanvasReady }: EditorCanvasProps) {
     return () => observer.disconnect();
   }, []);
 
-  // Render PDF page background + auto-fit zoom
+  // Load PDF page background
   useEffect(() => {
     const canvas = getCanvas();
-    if (!canvas || pages.length === 0 || containerSize.width === 0) return;
+    if (!canvas || pages.length === 0) return;
 
     const page = pages[currentPageIndex];
     if (!page?.backgroundDataUrl) return;
 
-    // Use rendered dimensions (2x scale) for the canvas size
-    const pageW = page.renderedWidth || page.width;
-    const pageH = page.renderedHeight || page.height;
+    // Use PDF point dimensions for canvas (not rendered 2x)
+    const pageW = page.width;
+    const pageH = page.height;
 
-    // Set canvas to rendered image dimensions
+    // Set canvas to PDF point dimensions
     canvas.setDimensions({ width: pageW, height: pageH });
+    canvas.backgroundColor = '#ffffff';
+    canvas.renderAll();
 
-    // Calculate fit-to-container zoom
-    const padding = 40;
-    const availW = containerSize.width - padding * 2;
-    const availH = containerSize.height - padding * 2;
-    const fitZoom = Math.min(availW / pageW, availH / pageH, 1) * 100;
-
-    // Apply zoom via Fabric.js viewport transform
-    canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
-    const zoomRatio = fitZoom / 100;
-    const vpt: [number, number, number, number, number, number] = [
-      zoomRatio, 0, 0, zoomRatio,
-      (containerSize.width - pageW * zoomRatio) / 2,
-      (containerSize.height - pageH * zoomRatio) / 2,
-    ];
-    canvas.setViewportTransform(vpt);
-
-    // Update store zoom
-    const store = useEditorStore.getState();
-    store.setZoom(fitZoom);
-
-    // Set as backgroundImage instead of adding as object
+    // Load background image
     FabricImage.fromURL(page.backgroundDataUrl).then((img) => {
       img.set({
         selectable: false,
@@ -105,33 +89,85 @@ export function EditorCanvas({ onCanvasReady }: EditorCanvasProps) {
         hoverCursor: 'default',
         excludeFromExport: false,
       });
+      bgImageRef.current = img;
       canvas.backgroundImage = img;
       canvas.renderAll();
+
+      // Auto-fit zoom after background loads
+      fitToContainer();
     }).catch((err) => {
-      console.error('[EditorCanvas] Failed to render PDF background:', err);
+      console.error('[EditorCanvas] Failed to load background:', err);
     });
-  }, [pages, currentPageIndex, getCanvas, containerSize]);
+  }, [pages, currentPageIndex, getCanvas]);
 
-  // Sync zoom from store to canvas viewport
-  useEffect(() => {
+  // Fit to container: calculate zoom so page fills available space with padding
+  const fitToContainer = useCallback(() => {
     const canvas = getCanvas();
-    if (!canvas) return;
-
     const page = pages[currentPageIndex];
-    if (!page) return;
+    if (!canvas || !page || containerSize.width === 0) return;
 
-    const pageW = page.renderedWidth || page.width;
-    const pageH = page.renderedHeight || page.height;
+    const pageW = page.width;
+    const pageH = page.height;
+    const padding = 60;
+    const availW = containerSize.width - padding * 2;
+    const availH = containerSize.height - padding * 2;
+
+    // Fit to container, but don't zoom past 100%
+    const fitZoom = Math.min(availW / pageW, availH / pageH, 1) * 100;
+
+    const store = useEditorStore.getState();
+    store.setZoom(fitZoom);
+  }, [getCanvas, pages, currentPageIndex, containerSize]);
+
+  // Apply zoom via CSS transform on the canvas element
+  useEffect(() => {
+    const canvasEl = canvasRef.current;
+    if (!canvasEl) return;
+
     const zoomRatio = viewport.zoom / 100;
+    canvasEl.style.transform = `scale(${zoomRatio})`;
+    canvasEl.style.transformOrigin = 'top left';
+  }, [viewport.zoom, canvasRef]);
 
-    const vpt: [number, number, number, number, number, number] = [
-      zoomRatio, 0, 0, zoomRatio,
-      (containerSize.width - pageW * zoomRatio) / 2,
-      (containerSize.height - pageH * zoomRatio) / 2,
-    ];
-    canvas.setViewportTransform(vpt);
-    canvas.requestRenderAll();
-  }, [viewport.zoom, getCanvas, pages, currentPageIndex, containerSize]);
+  // Scroll to center the page when zoom changes or page loads
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    const page = pages[currentPageIndex];
+    if (!wrapper || !page) return;
+
+    const zoomRatio = viewport.zoom / 100;
+    const scaledW = page.width * zoomRatio;
+    const scaledH = page.height * zoomRatio;
+
+    // Center the page in the container
+    const scrollX = Math.max(0, (scaledW - wrapper.clientWidth) / 2);
+    const scrollY = Math.max(0, (scaledH - wrapper.clientHeight) / 2);
+
+    // Small delay to let the DOM update
+    requestAnimationFrame(() => {
+      wrapper.scrollLeft = scrollX;
+      wrapper.scrollTop = scrollY;
+    });
+  }, [viewport.zoom, pages, currentPageIndex, containerSize]);
+
+  // Handle wheel zoom (Ctrl+scroll)
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const store = useEditorStore.getState();
+        const delta = e.deltaY > 0 ? -5 : 5;
+        const newZoom = Math.min(Math.max(store.viewport.zoom + delta, 10), 400);
+        store.setZoom(newZoom);
+      }
+    };
+
+    wrapper.addEventListener('wheel', handleWheel, { passive: false });
+    return () => wrapper.removeEventListener('wheel', handleWheel);
+  }, []);
 
   useEffect(() => {
     const handleRestoreSnapshot = (e: Event) => {
@@ -267,24 +303,51 @@ export function EditorCanvas({ onCanvasReady }: EditorCanvasProps) {
   }, [getCanvas]);
 
   const currentTool = EDITOR_TOOLS[selection.tool];
+  const page = pages[currentPageIndex];
+  const zoomRatio = viewport.zoom / 100;
+  const scaledWidth = page ? page.width * zoomRatio : 800;
+  const scaledHeight = page ? page.height * zoomRatio : 600;
 
   return (
     <div
       ref={containerRef}
-      className="relative flex-1 overflow-hidden bg-gray-100 dark:bg-gray-900"
+      className="relative flex-1 overflow-hidden bg-gray-200 dark:bg-gray-800"
     >
-      <canvas
-        ref={canvasRef}
-        id="editor-canvas"
+      {/* Scrollable wrapper */}
+      <div
+        ref={wrapperRef}
+        className="w-full h-full overflow-auto"
         style={{
-          position: 'absolute',
           cursor: currentTool?.cursor || 'default',
         }}
-        onClick={handleCanvasClick}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-      />
+      >
+        {/* Spacer to enable scroll — sized to the scaled canvas */}
+        <div
+          style={{
+            minWidth: scaledWidth + 80,
+            minHeight: scaledHeight + 80,
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'flex-start',
+            padding: '40px',
+          }}
+        >
+          <canvas
+            ref={canvasRef}
+            id="editor-canvas"
+            style={{
+              boxShadow: '0 4px 24px rgba(0,0,0,0.15)',
+              transform: `scale(${zoomRatio})`,
+              transformOrigin: 'top left',
+              flexShrink: 0,
+            }}
+            onClick={handleCanvasClick}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+          />
+        </div>
+      </div>
 
       <CanvasToolbar
         canvas={getCanvas()}
