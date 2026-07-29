@@ -42,12 +42,13 @@ class PdfCacheService {
 
     async getCachedReport(inspectionId) {
         try {
-            const rows = await prisma.inspecciones.$queryRaw`
-                SELECT cached_report_url, cached_report_at, report_content_hash
-                FROM inspection_summaries
-                WHERE inspection_id = ${inspectionId}::uuid
-                LIMIT 1
-            `;
+            const rows = await prisma.inspecciones.$queryRawUnsafe(
+                `SELECT cached_report_url, cached_report_at, report_content_hash
+                 FROM inspection_summaries
+                 WHERE inspection_id = $1::uuid
+                 LIMIT 1`,
+                inspectionId
+            );
 
             if (!rows || !rows.length || !rows[0].cached_report_url || !rows[0].report_content_hash) {
                 return null;
@@ -76,14 +77,15 @@ class PdfCacheService {
 
     async saveCache(inspectionId, cloudUrl, contentHash) {
         try {
-            await prisma.inspecciones.$executeRaw`
-                INSERT INTO inspection_summaries (inspection_id, cached_report_url, cached_report_at, report_content_hash)
-                VALUES (${inspectionId}::uuid, ${cloudUrl}, NOW(), ${contentHash})
-                ON CONFLICT (inspection_id) DO UPDATE SET
-                    cached_report_url = ${cloudUrl},
-                    cached_report_at = NOW(),
-                    report_content_hash = ${contentHash}
-            `;
+            await prisma.inspecciones.$executeRawUnsafe(
+                `INSERT INTO inspection_summaries (inspection_id, cached_report_url, cached_report_at, report_content_hash)
+                 VALUES ($1::uuid, $2, NOW(), $3)
+                 ON CONFLICT (inspection_id) DO UPDATE SET
+                     cached_report_url = $2,
+                     cached_report_at = NOW(),
+                     report_content_hash = $3`,
+                inspectionId, cloudUrl, contentHash
+            );
             logger.info('PDF cache saved', { inspectionId });
         } catch (error) {
             logger.warn('Failed to save PDF cache', { inspectionId, error: error.message });
@@ -92,11 +94,12 @@ class PdfCacheService {
 
     async invalidateCache(inspectionId) {
         try {
-            await prisma.inspecciones.$executeRaw`
-                UPDATE inspection_summaries
-                SET cached_report_url = NULL, cached_report_at = NULL, report_content_hash = NULL
-                WHERE inspection_id = ${inspectionId}::uuid
-            `;
+            await prisma.inspecciones.$executeRawUnsafe(
+                `UPDATE inspection_summaries
+                 SET cached_report_url = NULL, cached_report_at = NULL, report_content_hash = NULL
+                 WHERE inspection_id = $1::uuid`,
+                inspectionId
+            );
             logger.info('PDF cache invalidated', { inspectionId });
         } catch (error) {
             logger.warn('Failed to invalidate PDF cache', { inspectionId, error: error.message });

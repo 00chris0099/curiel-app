@@ -37,7 +37,7 @@ const checkDatabaseStatus = async () => {
     const checks = databases.map(async (name) => {
         try {
             const start = Date.now();
-            await prisma[name].$queryRaw`SELECT 1`;
+            await prisma[name].$queryRawUnsafe('SELECT 1');
             results[name] = { status: 'connected', latency: `${Date.now() - start}ms` };
         } catch (error) {
             results[name] = { status: 'error', error: error.message };

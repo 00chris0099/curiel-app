@@ -5,10 +5,10 @@ const logger = require('../utils/logger');
 class AdminSignatureService {
     async getSignature() {
         try {
-            const rows = await prisma.admin.$queryRaw`
-                SELECT key, value FROM admin_settings
-                WHERE key IN ('admin_signature_url', 'admin_signature_name')
-            `;
+            const rows = await prisma.admin.$queryRawUnsafe(
+                `SELECT key, value FROM admin_settings
+                 WHERE key IN ('admin_signature_url', 'admin_signature_name')`
+            );
 
             const settings = {};
             for (const row of rows) {
@@ -32,17 +32,19 @@ class AdminSignatureService {
             format: 'png'
         });
 
-        await prisma.admin.$executeRaw`
-            INSERT INTO admin_settings (key, value, updated_at)
-            VALUES ('admin_signature_url', ${result.url}, NOW())
-            ON CONFLICT (key) DO UPDATE SET value = ${result.url}, updated_at = NOW()
-        `;
+        await prisma.admin.$executeRawUnsafe(
+            `INSERT INTO admin_settings (key, value, updated_at)
+             VALUES ('admin_signature_url', $1, NOW())
+             ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = NOW()`,
+            result.url
+        );
 
-        await prisma.admin.$executeRaw`
-            INSERT INTO admin_settings (key, value, updated_at)
-            VALUES ('admin_signature_name', ${userId}, NOW())
-            ON CONFLICT (key) DO UPDATE SET value = ${userId}, updated_at = NOW()
-        `;
+        await prisma.admin.$executeRawUnsafe(
+            `INSERT INTO admin_settings (key, value, updated_at)
+             VALUES ('admin_signature_name', $1, NOW())
+             ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = NOW()`,
+            userId
+        );
 
         logger.info('Admin signature uploaded', { url: result.url });
 
@@ -53,10 +55,10 @@ class AdminSignatureService {
     }
 
     async deleteSignature() {
-        await prisma.admin.$executeRaw`
-            DELETE FROM admin_settings
-            WHERE key IN ('admin_signature_url', 'admin_signature_name')
-        `;
+        await prisma.admin.$executeRawUnsafe(
+            `DELETE FROM admin_settings
+             WHERE key IN ('admin_signature_url', 'admin_signature_name')`
+        );
 
         logger.info('Admin signature deleted');
     }
