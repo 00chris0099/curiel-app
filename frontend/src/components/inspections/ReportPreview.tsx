@@ -217,7 +217,7 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
                 )}
 
                 {/* Preview area */}
-                <div className="flex-1 overflow-auto bg-gray-100 dark:bg-gray-800 flex justify-center">
+                <div className="flex-1 overflow-auto bg-[#d1d5db] dark:bg-[#111827] flex justify-center">
                     {isLoading && (
                         <div className="flex h-full items-center justify-center w-full">
                             <div className="flex flex-col items-center gap-3 text-gray-500">
@@ -245,7 +245,7 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
                     )}
 
                     {!isLoading && !error && html && (
-                        <div className="py-4 px-2">
+                        <div className="py-8 px-4">
                             <div
                                 style={{
                                     transform: `scale(${zoom / 100})`,
@@ -253,15 +253,17 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
                                     transition: 'transform 0.15s ease-out',
                                 }}
                             >
-                                <iframe
-                                    ref={iframeRef}
-                                    className="rounded-lg border border-gray-300 bg-white shadow-xl dark:border-gray-600"
-                                    style={{
-                                        width: '794px',
-                                        height: '1123px',
-                                    }}
-                                    title="Vista previa del informe"
-                                />
+                                <div className="rounded-lg shadow-[0_4px_24px_rgba(0,0,0,0.25)] overflow-hidden border border-gray-400/50 dark:border-gray-500/50">
+                                    <iframe
+                                        ref={iframeRef}
+                                        className="bg-white block"
+                                        style={{
+                                            width: '794px',
+                                            height: '1123px',
+                                        }}
+                                        title="Vista previa del informe"
+                                    />
+                                </div>
                             </div>
                         </div>
                     )}
