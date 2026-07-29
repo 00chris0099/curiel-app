@@ -1,8 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import * as pdfjsLib from 'pdfjs-dist';
 import toast from 'react-hot-toast';
 import { getApiErrorMessage } from '../../api/axios';
 import { CustomIcon } from '../CustomIcon';
 import inspectionService from '../../services/inspection.service';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+    'pdfjs-dist/build/pdf.worker.min.mjs',
+    import.meta.url
+).toString();
 
 type ReportPreviewProps = {
     inspectionId: string;
@@ -11,65 +18,118 @@ type ReportPreviewProps = {
     onClose: () => void;
 };
 
+const PAGE_GAP = 16;
+const BASE_WIDTH = 794;
+
 export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: ReportPreviewProps) => {
-    const [html, setHtml] = useState<string>('');
+    const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [showEditor, setShowEditor] = useState(false);
-    const [conclusion, setConclusion] = useState('');
-    const [recommendations, setRecommendations] = useState('');
-    const [isSaving, setIsSaving] = useState(false);
-    const iframeRef = useRef<HTMLIFrameElement>(null);
+    const [pageCount, setPageCount] = useState(0);
     const [zoom, setZoom] = useState(80);
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const pdfDocRef = useRef<pdfjsLib.PDFDocumentProxy | null>(null);
+    const renderingRef = useRef<Set<number>>(new Set());
+    const canvasRefs = useRef<Map<number, HTMLCanvasElement>>(new Map());
 
-    const loadPreview = useCallback(async () => {
+    const loadPdf = useCallback(async () => {
         if (!isOpen || !inspectionId) return;
 
         setIsLoading(true);
         setError(null);
+        setPageCount(0);
 
         try {
-            const previewHtml = await inspectionService.previewReport(inspectionId);
-            setHtml(previewHtml);
+            const blob = await inspectionService.downloadReport(inspectionId);
+            const arrayBuffer = await blob.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            pdfDocRef.current = pdf;
+            setPageCount(pdf.numPages);
         } catch (err: unknown) {
-            setError(getApiErrorMessage(err, 'No se pudo cargar la vista previa'));
-            toast.error('Error al cargar vista previa');
+            setError(getApiErrorMessage(err, 'No se pudo cargar el informe'));
+            toast.error('Error al cargar informe');
         } finally {
             setIsLoading(false);
         }
     }, [inspectionId, isOpen]);
 
     useEffect(() => {
-        loadPreview();
-    }, [loadPreview]);
+        loadPdf();
+        return () => {
+            pdfDocRef.current?.destroy();
+            pdfDocRef.current = null;
+            renderingRef.current.clear();
+        };
+    }, [loadPdf]);
 
-    useEffect(() => {
-        if (html && iframeRef.current) {
-            const doc = iframeRef.current.contentDocument;
-            if (doc) {
-                doc.open();
-                doc.write(html);
-                doc.close();
-            }
-        }
-    }, [html]);
+    // Container width is not needed - pages use fixed BASE_WIDTH
 
-    const handleSaveEdits = async () => {
-        setIsSaving(true);
+    const renderPage = useCallback(async (pageNumber: number) => {
+        const pdf = pdfDocRef.current;
+        if (!pdf || renderingRef.current.has(pageNumber)) return;
+
+        renderingRef.current.add(pageNumber);
+
         try {
-            await inspectionService.updateExecutionSummary(inspectionId, {
-                generalConclusion: conclusion || undefined,
-                finalRecommendations: recommendations || undefined
-            });
-            toast.success('Cambios guardados');
-            await loadPreview();
-            setShowEditor(false);
-        } catch (err: unknown) {
-            toast.error(getApiErrorMessage(err, 'Error al guardar'));
+            const page = await pdf.getPage(pageNumber);
+            const viewport = page.getViewport({ scale: 1 });
+            const scale = BASE_WIDTH / viewport.width;
+            const scaledViewport = page.getViewport({ scale });
+
+            const canvas = canvasRefs.current.get(pageNumber);
+            if (!canvas) return;
+
+            canvas.width = scaledViewport.width;
+            canvas.height = scaledViewport.height;
+            canvas.style.width = `${scaledViewport.width}px`;
+            canvas.style.height = `${scaledViewport.height}px`;
+
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+
+            await page.render({
+                canvasContext: ctx,
+                viewport: scaledViewport,
+            }).promise;
+        } catch (err) {
+            console.error(`[ReportPreview] Failed to render page ${pageNumber}:`, err);
         } finally {
-            setIsSaving(false);
+            renderingRef.current.delete(pageNumber);
         }
-    };
+    }, []);
+
+    // Render visible pages (virtual rendering)
+    useEffect(() => {
+        if (pageCount === 0) return;
+
+        const scrollEl = scrollRef.current;
+        if (!scrollEl) {
+            // No scroll ref yet, render first page
+            renderPage(1);
+            return;
+        }
+
+        const handleScroll = () => {
+            const scrollTop = scrollEl.scrollTop;
+            const viewHeight = scrollEl.clientHeight;
+            const scaledPageH = (BASE_WIDTH * 1123) / 794; // approximate A4 height
+
+            // Determine which pages are visible
+            for (let i = 1; i <= pageCount; i++) {
+                const pageTop = (i - 1) * (scaledPageH * (zoom / 100) + PAGE_GAP);
+                const pageBottom = pageTop + scaledPageH * (zoom / 100);
+
+                if (pageBottom >= scrollTop - 200 && pageTop <= scrollTop + viewHeight + 200) {
+                    renderPage(i);
+                }
+            }
+        };
+
+        handleScroll();
+        scrollEl.addEventListener('scroll', handleScroll, { passive: true });
+        return () => scrollEl.removeEventListener('scroll', handleScroll);
+    }, [pageCount, zoom, renderPage]);
 
     const handleDownload = async () => {
         try {
@@ -88,141 +148,100 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
         }
     };
 
+    const handleEdit = () => {
+        onClose();
+        navigate(`/inspections/${inspectionId}/pdf-editor`);
+    };
+
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-2 sm:p-4">
-            <div className="flex h-[96vh] sm:h-[92vh] w-full max-w-5xl flex-col rounded-2xl bg-white shadow-2xl dark:bg-gray-900 overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-0 sm:p-2">
+            <div className="flex h-full sm:h-[96vh] w-full max-w-6xl flex-col rounded-none sm:rounded-2xl bg-white shadow-2xl dark:bg-gray-900 overflow-hidden">
                 {/* Header */}
-                <div className="flex items-center justify-between border-b border-gray-200 px-4 sm:px-6 py-3 dark:border-gray-700 shrink-0 bg-gray-50 dark:bg-gray-800">
-                    <div className="flex items-center gap-3 min-w-0">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-100 dark:bg-red-900/30">
+                <div className="flex items-center justify-between border-b border-gray-200 px-3 sm:px-5 py-2.5 dark:border-gray-700 shrink-0 bg-white dark:bg-gray-900">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/30 shrink-0">
                             <CustomIcon name="file-pdf" size="xs" tone="rose" />
                         </div>
                         <div className="min-w-0">
-                            <h2 className="text-sm sm:text-base font-bold text-gray-900 dark:text-gray-100 truncate">
-                                Vista previa del informe
-                            </h2>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                            <h2 className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">
                                 {projectName}
-                            </p>
+                            </h2>
+                            {pageCount > 0 && (
+                                <p className="text-[11px] text-gray-400 dark:text-gray-500">
+                                    {pageCount} pagina{pageCount > 1 ? 's' : ''}
+                                </p>
+                            )}
                         </div>
                     </div>
-                    <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                        {html && (
+                    <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+                        {/* Zoom controls */}
+                        {pageCount > 0 && (
                             <>
-                                <div className="hidden sm:flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2 py-1 dark:border-gray-700 dark:bg-gray-800">
+                                <div className="hidden sm:flex items-center gap-0.5 rounded-lg border border-gray-200 bg-gray-50 px-1.5 py-0.5 dark:border-gray-700 dark:bg-gray-800">
                                     <button
                                         onClick={() => setZoom(Math.max(30, zoom - 10))}
-                                        className="flex h-6 w-6 items-center justify-center rounded text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 text-xs font-bold"
+                                        className="flex h-6 w-6 items-center justify-center rounded text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 text-xs font-bold"
                                     >
                                         -
                                     </button>
-                                    <span className="w-10 text-center text-[11px] font-medium text-gray-500 dark:text-gray-400">{zoom}%</span>
+                                    <span className="w-9 text-center text-[11px] font-medium text-gray-500 dark:text-gray-400">{zoom}%</span>
                                     <button
                                         onClick={() => setZoom(Math.min(200, zoom + 10))}
-                                        className="flex h-6 w-6 items-center justify-center rounded text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 text-xs font-bold"
+                                        className="flex h-6 w-6 items-center justify-center rounded text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 text-xs font-bold"
                                     >
                                         +
                                     </button>
                                 </div>
                                 <button
                                     onClick={() => setZoom(80)}
-                                    className="hidden sm:flex h-8 items-center rounded-lg px-2 text-[11px] font-medium text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
+                                    className="hidden sm:flex h-7 items-center rounded-lg px-2 text-[11px] font-medium text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
                                 >
                                     Ajustar
                                 </button>
+                                <div className="w-px h-5 bg-gray-200 dark:bg-gray-700 hidden sm:block" />
                             </>
                         )}
+
+                        {/* Editar PDF */}
                         <button
-                            onClick={() => setShowEditor(!showEditor)}
-                            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                                showEditor
-                                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
-                                    : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300'
-                            }`}
+                            onClick={handleEdit}
+                            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 transition-colors"
                         >
-                            <CustomIcon name="pencil" size="xs" tone={showEditor ? 'amber' : 'mist'} />
-                            <span className="hidden sm:inline">Editar</span>
+                            <CustomIcon name="pencil" size="xs" tone="cream" />
+                            <span className="hidden sm:inline">Editar PDF</span>
                         </button>
+
+                        {/* Descargar */}
                         <button
                             onClick={handleDownload}
-                            className="flex items-center gap-1.5 rounded-lg bg-[#17324a] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#1d3d5c]"
+                            className="flex items-center gap-1.5 rounded-lg bg-[#17324a] px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#1d3d5c]"
                         >
                             <CustomIcon name="download" size="xs" tone="white" />
                             <span className="hidden sm:inline">Descargar</span>
                         </button>
+
+                        {/* Cerrar */}
                         <button
                             onClick={onClose}
-                            className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
+                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-gray-200 bg-white transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
                         >
                             <CustomIcon name="x-circle" size="xs" tone="mist" />
                         </button>
                     </div>
                 </div>
 
-                {/* Editor panel */}
-                {showEditor && (
-                    <div className="border-b border-gray-200 bg-gray-50 px-4 sm:px-6 py-4 dark:border-gray-700 dark:bg-gray-800/50 shrink-0">
-                        <p className="mb-3 text-xs font-medium text-gray-500 dark:text-gray-400">
-                            Edita los campos y haz clic en "Guardar" para actualizar el informe.
-                        </p>
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <div>
-                                <label className="mb-1 block text-xs font-semibold text-gray-700 dark:text-gray-300">
-                                    Conclusión general
-                                </label>
-                                <textarea
-                                    value={conclusion}
-                                    onChange={(e) => setConclusion(e.target.value)}
-                                    rows={4}
-                                    className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#17324a] focus:outline-none focus:ring-1 focus:ring-[#17324a] dark:border-gray-600 dark:bg-gray-900 dark:text-white"
-                                    placeholder="Conclusión técnica de la inspección..."
-                                />
-                            </div>
-                            <div>
-                                <label className="mb-1 block text-xs font-semibold text-gray-700 dark:text-gray-300">
-                                    Recomendaciones finales
-                                </label>
-                                <textarea
-                                    value={recommendations}
-                                    onChange={(e) => setRecommendations(e.target.value)}
-                                    rows={4}
-                                    className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#17324a] focus:outline-none focus:ring-1 focus:ring-[#17324a] dark:border-gray-600 dark:bg-gray-900 dark:text-white"
-                                    placeholder="Recomendaciones adicionales del inspector..."
-                                />
-                            </div>
-                        </div>
-                        <div className="mt-3 flex justify-end gap-2">
-                            <button
-                                onClick={() => setShowEditor(false)}
-                                className="rounded-lg px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-400"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={handleSaveEdits}
-                                disabled={isSaving}
-                                className="flex items-center gap-1.5 rounded-lg bg-[#17324a] px-4 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#1d3d5c] disabled:opacity-50"
-                            >
-                                {isSaving ? (
-                                    <CustomIcon name="sync" size="xs" tone="white" spin />
-                                ) : (
-                                    <CustomIcon name="save" size="xs" tone="white" />
-                                )}
-                                Guardar
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {/* Preview area */}
-                <div className="flex-1 overflow-auto bg-[#d1d5db] dark:bg-[#111827] flex justify-center">
+                {/* PDF Pages area */}
+                <div
+                    ref={containerRef}
+                    className="flex-1 overflow-auto bg-[#4b5563] dark:bg-[#0f172a]"
+                >
                     {isLoading && (
                         <div className="flex h-full items-center justify-center w-full">
-                            <div className="flex flex-col items-center gap-3 text-gray-500">
-                                <CustomIcon name="sync" size="md" tone="mist" spin />
-                                <p className="text-sm font-medium">Cargando vista previa...</p>
+                            <div className="flex flex-col items-center gap-3 text-gray-300">
+                                <CustomIcon name="sync" size="md" tone="white" spin />
+                                <p className="text-sm font-medium">Cargando informe...</p>
                             </div>
                         </div>
                     )}
@@ -230,13 +249,13 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
                     {error && (
                         <div className="flex h-full items-center justify-center w-full">
                             <div className="flex flex-col items-center gap-3 text-center">
-                                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-100 dark:bg-red-900/30">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-900/30">
                                     <CustomIcon name="warning-circle" size="sm" tone="rose" />
                                 </div>
-                                <p className="text-sm text-gray-600 dark:text-gray-400">{error}</p>
+                                <p className="text-sm text-gray-300">{error}</p>
                                 <button
-                                    onClick={loadPreview}
-                                    className="mt-1 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                                    onClick={loadPdf}
+                                    className="mt-1 rounded-xl border border-gray-600 bg-gray-800 px-4 py-2 text-sm font-medium text-gray-200 transition-colors hover:bg-gray-700"
                                 >
                                     Reintentar
                                 </button>
@@ -244,27 +263,45 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
                         </div>
                     )}
 
-                    {!isLoading && !error && html && (
-                        <div className="py-8 px-4">
+                    {!isLoading && !error && pageCount > 0 && (
+                        <div
+                            ref={scrollRef}
+                            className="h-full overflow-auto flex flex-col items-center"
+                            style={{ padding: `${32 / (zoom / 100)}px ${16 / (zoom / 100)}px` }}
+                        >
                             <div
                                 style={{
                                     transform: `scale(${zoom / 100})`,
                                     transformOrigin: 'top center',
-                                    transition: 'transform 0.15s ease-out',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    gap: `${PAGE_GAP}px`,
                                 }}
                             >
-                                <div className="rounded-lg shadow-[0_4px_24px_rgba(0,0,0,0.25)] overflow-hidden border border-gray-400/50 dark:border-gray-500/50">
-                                    <iframe
-                                        ref={iframeRef}
-                                        className="bg-white block"
-                                        style={{
-                                            width: '794px',
-                                            height: '1123px',
-                                        }}
-                                        title="Vista previa del informe"
-                                    />
-                                </div>
+                                {Array.from({ length: pageCount }, (_, i) => i + 1).map((pageNum) => (
+                                    <div key={pageNum} className="relative">
+                                        {/* Page canvas */}
+                                        <canvas
+                                            ref={(el) => {
+                                                if (el) canvasRefs.current.set(pageNum, el);
+                                            }}
+                                            className="block bg-white"
+                                            style={{
+                                                width: `${BASE_WIDTH}px`,
+                                                boxShadow: '0 2px 12px rgba(0,0,0,0.3), 0 0 1px rgba(0,0,0,0.2)',
+                                                border: '1px solid rgba(0,0,0,0.1)',
+                                            }}
+                                        />
+                                        {/* Page number */}
+                                        <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[11px] font-medium text-gray-400 dark:text-gray-500">
+                                            {pageNum}
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
+                            {/* Bottom spacer for last page */}
+                            <div style={{ height: '40px' }} />
                         </div>
                     )}
                 </div>
