@@ -42,7 +42,7 @@ class PdfCacheService {
 
     async getCachedReport(inspectionId) {
         try {
-            const rows = await prisma.$queryRaw`
+            const rows = await prisma.inspecciones.$queryRaw`
                 SELECT cached_report_url, cached_report_at, report_content_hash
                 FROM inspection_summaries
                 WHERE inspection_id = ${inspectionId}::uuid
@@ -76,7 +76,7 @@ class PdfCacheService {
 
     async saveCache(inspectionId, cloudUrl, contentHash) {
         try {
-            await prisma.$executeRaw`
+            await prisma.inspecciones.$executeRaw`
                 INSERT INTO inspection_summaries (inspection_id, cached_report_url, cached_report_at, report_content_hash)
                 VALUES (${inspectionId}::uuid, ${cloudUrl}, NOW(), ${contentHash})
                 ON CONFLICT (inspection_id) DO UPDATE SET
@@ -92,7 +92,7 @@ class PdfCacheService {
 
     async invalidateCache(inspectionId) {
         try {
-            await prisma.$executeRaw`
+            await prisma.inspecciones.$executeRaw`
                 UPDATE inspection_summaries
                 SET cached_report_url = NULL, cached_report_at = NULL, report_content_hash = NULL
                 WHERE inspection_id = ${inspectionId}::uuid

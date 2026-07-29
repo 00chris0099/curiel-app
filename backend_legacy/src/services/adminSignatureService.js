@@ -5,7 +5,7 @@ const logger = require('../utils/logger');
 class AdminSignatureService {
     async getSignature() {
         try {
-            const rows = await prisma.$queryRaw`
+            const rows = await prisma.admin.$queryRaw`
                 SELECT key, value FROM admin_settings
                 WHERE key IN ('admin_signature_url', 'admin_signature_name')
             `;
@@ -32,13 +32,13 @@ class AdminSignatureService {
             format: 'png'
         });
 
-        await prisma.$executeRaw`
+        await prisma.admin.$executeRaw`
             INSERT INTO admin_settings (key, value, updated_at)
             VALUES ('admin_signature_url', ${result.url}, NOW())
             ON CONFLICT (key) DO UPDATE SET value = ${result.url}, updated_at = NOW()
         `;
 
-        await prisma.$executeRaw`
+        await prisma.admin.$executeRaw`
             INSERT INTO admin_settings (key, value, updated_at)
             VALUES ('admin_signature_name', ${userId}, NOW())
             ON CONFLICT (key) DO UPDATE SET value = ${userId}, updated_at = NOW()
@@ -53,7 +53,7 @@ class AdminSignatureService {
     }
 
     async deleteSignature() {
-        await prisma.$executeRaw`
+        await prisma.admin.$executeRaw`
             DELETE FROM admin_settings
             WHERE key IN ('admin_signature_url', 'admin_signature_name')
         `;
