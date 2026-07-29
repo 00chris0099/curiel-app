@@ -374,10 +374,16 @@ function buildInsertRequests(docContent) {
 
 async function cleanupDrive(driveClient) {
     try {
+        const folderId = process.env.GOOGLE_DOCS_FOLDER_ID || null;
+        const q = folderId
+            ? `'${folderId}' in parents and mimeType='application/vnd.google-apps.document' and trashed=false`
+            : "mimeType='application/vnd.google-apps.document' and trashed=false";
         const res = await driveClient.files.list({
-            q: "mimeType='application/vnd.google-apps.document' and trashed=false",
-            fields: 'files(id, name, createdTime)',
+            q,
+            fields: 'files(id, name)',
             pageSize: 100,
+            supportsAllDrives: true,
+            includeItemsFromAllDrives: true,
         });
         const files = res.data.files || [];
         if (files.length === 0) return;
@@ -385,7 +391,10 @@ async function cleanupDrive(driveClient) {
         logger.info(`[GoogleDocs] Cleaning ${files.length} old docs from Drive`);
         for (const file of files) {
             try {
-                await driveClient.files.delete({ fileId: file.id });
+                await driveClient.files.delete({
+                    fileId: file.id,
+                    supportsAllDrives: true,
+                });
             } catch {}
         }
         logger.info('[GoogleDocs] Drive cleanup done');
@@ -402,14 +411,21 @@ async function createGoogleDoc(reportData) {
 
     await cleanupDrive(driveClient);
 
+    const folderId = process.env.GOOGLE_DOCS_FOLDER_ID || null;
+
     let documentId;
     try {
+        const requestBody = {
+            name: title,
+            mimeType: 'application/vnd.google-apps.document',
+        };
+        if (folderId) {
+            requestBody.parents = [folderId];
+        }
         const createResponse = await driveClient.files.create({
-            requestBody: {
-                name: title,
-                mimeType: 'application/vnd.google-apps.document',
-            },
+            requestBody,
             fields: 'id',
+            supportsAllDrives: true,
         });
         documentId = createResponse.data.id;
         logger.info(`[GoogleDocs] Document created via Drive: ${documentId}`);
@@ -438,23 +454,6 @@ async function createGoogleDoc(reportData) {
             status: err.status,
             message: err.message,
         });
-    }
-
-    const folderId = process.env.GOOGLE_DOCS_FOLDER_ID || null;
-    if (folderId) {
-        try {
-            await driveClient.files.update({
-                fileId: documentId,
-                addParents: folderId,
-                fields: 'id, parents'
-            });
-            logger.info(`[GoogleDocs] Moved to folder: ${folderId}`);
-        } catch (err) {
-            logger.warn('[GoogleDocs] Could not move to folder', {
-                status: err.status,
-                message: err.message,
-            });
-        }
     }
 
     const docUrl = `https://docs.google.com/document/d/${documentId}/edit`;
