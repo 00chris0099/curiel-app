@@ -20,8 +20,16 @@ function getAuth() {
         try {
             key = JSON.parse(keyJson);
         } catch {
-            const cleaned = keyJson.replace(/[\r\n]+/g, '\\n').replace(/\s{2,}/g, ' ');
-            key = JSON.parse(cleaned);
+            const cleaned = keyJson
+                .replace(/[\r\n\t]+/g, ' ')
+                .replace(/\s{2,}/g, ' ')
+                .trim();
+            try {
+                key = JSON.parse(cleaned);
+            } catch (e2) {
+                logger.error('Google key parse failed', { sample: cleaned.substring(0, 80), error: e2.message });
+                throw new Error('GOOGLE_SERVICE_ACCOUNT_KEY is malformed: ' + e2.message);
+            }
         }
     } else {
         key = keyJson;
@@ -368,11 +376,23 @@ async function createGoogleDoc(reportData) {
     const { docsClient, driveClient } = getClients();
     const docContent = buildDocContent(reportData);
 
-    const createResponse = await docsClient.documents.create({
-        requestBody: {
-            title: `Informe de Inspección — ${reportData.inspection.projectName}`
-        }
-    });
+    let createResponse;
+    try {
+        createResponse = await docsClient.documents.create({
+            requestBody: {
+                title: `Informe de Inspección — ${reportData.inspection.projectName}`
+            }
+        });
+    } catch (err) {
+        logger.error('[GoogleDocs] Error creating document', {
+            status: err.status,
+            code: err.code,
+            message: err.message,
+            details: err.errors,
+            clientEmail: process.env.GOOGLE_SERVICE_ACCOUNT_KEY ? 'key_is_set' : 'key_is_missing'
+        });
+        throw err;
+    }
 
     const documentId = createResponse.data.documentId;
     logger.info(`[GoogleDocs] Document created: ${documentId}`);
