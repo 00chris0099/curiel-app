@@ -147,6 +147,9 @@ module.exports = {
   // Google Docs
   googleDocs: {
     serviceAccountKey: process.env.GOOGLE_SERVICE_ACCOUNT_KEY || null,
-    folderId: process.env.GOOGLE_DOCS_FOLDER_ID || null
+    folderId: process.env.GOOGLE_DOCS_FOLDER_ID || null,
+    oauthClientId: process.env.GOOGLE_O_CLIENT_ID || null,
+    oauthClientSecret: process.env.GOOGLE_O_CLIENT_SECRET || null,
+    oauthRedirectUri: process.env.GOOGLE_O_REDIRECT_URI || null
   }
 };

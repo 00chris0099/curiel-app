@@ -158,8 +158,25 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
         setIsOpeningDocs(true);
         try {
             const result = await inspectionService.openInGoogleDocs(inspectionId);
-            window.open(result.url, '_blank');
-            toast.success('Google Doc creado');
+            if ('requiresAuth' in result && result.requiresAuth) {
+                const token = localStorage.getItem('token') || '';
+                const authUrl = `${result.authUrl}&token=${token}`;
+                const popup = window.open(authUrl, 'google-auth', 'width=600,height=700');
+                const handler = (event: MessageEvent) => {
+                    if (event.data?.type === 'google-auth-success') {
+                        popup?.close();
+                        window.removeEventListener('message', handler);
+                        toast.success('Google autenticado. Creando documento...');
+                        handleOpenInDocs();
+                    }
+                };
+                window.addEventListener('message', handler);
+                return;
+            }
+            if ('url' in result) {
+                window.open(result.url, '_blank');
+                toast.success('Google Doc creado');
+            }
         } catch (err: unknown) {
             toast.error(getApiErrorMessage(err, 'No se pudo crear el Google Doc'));
         } finally {

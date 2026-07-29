@@ -18,6 +18,7 @@ const evaluationRoutes = require('./evaluationRoutes');
 const apiKeyRoutes = require('./apiKeyRoutes');
 const adminSettingsRoutes = require('./adminSettingsRoutes');
 const pdfTemplateRoutes = require('./pdfTemplateRoutes');
+const googleAuthRoutes = require('./googleAuthRoutes');
 
 const router = express.Router();
 
@@ -86,6 +87,7 @@ router.get('/health', async (req, res) => {
 });
 
 router.use('/auth', authRoutes);
+router.use('/auth', googleAuthRoutes);
 router.use('/users', usersRoutes);
 router.use('/inspections', inspectionRoutes);
 router.use('/checklists', checklistRoutes);

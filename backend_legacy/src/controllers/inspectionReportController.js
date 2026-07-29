@@ -3,7 +3,8 @@ const reportJobQueue = require('../services/reportJobQueue');
 const { asyncHandler, AppError } = require('../middlewares/errorHandler');
 const { createAuditLog } = require('../middlewares/auditLog');
 const { buildInspectionReportHtml } = require('../pdf/inspectionReportTemplate');
-const { createGoogleDoc } = require('../services/googleDocsService');
+const { createGoogleDoc, createUserGoogleDoc } = require('../services/googleDocsService');
+const { getTokens } = require('../services/googleTokenStore');
 
 const downloadInspectionReport = asyncHandler(async (req, res) => {
     const jobStatus = reportJobQueue.getStatus(req.params.id);
@@ -157,7 +158,19 @@ const openInGoogleDocs = asyncHandler(async (req, res) => {
     const inspectorSignature = signatures.find(s => s.signatureType === 'inspector') || null;
     const recommendationGroups = inspectionReportService._buildRecommendationGroups(sortedObservations, summary);
 
-    const result = await createGoogleDoc({
+    const userTokens = getTokens(req.userId);
+
+    if (!userTokens || userTokens.expired) {
+        const backendUrl = process.env.BACKEND_URL || 'http://localhost:4000';
+        const authUrl = `${backendUrl}/api/v1/auth/google?inspectionId=${inspectionId}`;
+        return res.json({
+            success: false,
+            requiresAuth: true,
+            data: { authUrl }
+        });
+    }
+
+    const result = await createUserGoogleDoc({
         inspection,
         metadata,
         areas: sortedAreas,
@@ -166,7 +179,7 @@ const openInGoogleDocs = asyncHandler(async (req, res) => {
         summary: summary ? { ...summary } : null,
         recommendations: recommendationGroups,
         inspectorSignature: inspectorSignature ? { ...inspectorSignature } : null,
-    });
+    }, userTokens);
 
     await createAuditLog(req.userId, 'open_in_google_docs', 'Inspection', inspectionId);
 

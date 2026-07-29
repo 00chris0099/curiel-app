@@ -467,6 +467,86 @@ async function createGoogleDoc(reportData) {
     };
 }
 
+async function createUserGoogleDoc(reportData, userTokens) {
+    const { google } = require('googleapis');
+    const docContent = buildDocContent(reportData);
+
+    const oauth2Client = new google.auth.OAuth2(
+        process.env.GOOGLE_O_CLIENT_ID,
+        process.env.GOOGLE_O_CLIENT_SECRET,
+        process.env.GOOGLE_O_REDIRECT_URI
+    );
+    oauth2Client.setCredentials({
+        access_token: userTokens.accessToken,
+        refresh_token: userTokens.refreshToken,
+    });
+
+    const docsClient = google.docs({ version: 'v1', auth: oauth2Client });
+    const driveClient = google.drive({ version: 'v3', auth: oauth2Client });
+
+    const title = `Informe de Inspección — ${reportData.inspection.projectName}`;
+
+    let documentId;
+    try {
+        const createResponse = await driveClient.files.create({
+            requestBody: {
+                name: title,
+                mimeType: 'application/vnd.google-apps.document',
+            },
+            fields: 'id',
+        });
+        documentId = createResponse.data.id;
+        logger.info(`[GoogleDocs] User doc created: ${documentId}`);
+    } catch (err) {
+        logger.error('[GoogleDocs] Error creating user doc', {
+            status: err.status,
+            code: err.code,
+            message: err.message,
+        });
+        throw err;
+    }
+
+    try {
+        const insertRequests = buildInsertRequests(docContent);
+        const batchSize = 50;
+        for (let i = 0; i < insertRequests.length; i += batchSize) {
+            const batch = insertRequests.slice(i, i + batchSize);
+            await docsClient.documents.batchUpdate({
+                documentId,
+                requestBody: { requests: batch }
+            });
+        }
+        logger.info('[GoogleDocs] Content inserted into user doc');
+    } catch (err) {
+        logger.warn('[GoogleDocs] Could not insert content into user doc', {
+            message: err.message,
+        });
+    }
+
+    const folderId = process.env.GOOGLE_DOCS_FOLDER_ID || null;
+    if (folderId) {
+        try {
+            await driveClient.files.update({
+                fileId: documentId,
+                addParents: folderId,
+                fields: 'id, parents'
+            });
+        } catch (err) {
+            logger.warn('[GoogleDocs] Could not move user doc to folder', { message: err.message });
+        }
+    }
+
+    const docUrl = `https://docs.google.com/document/d/${documentId}/edit`;
+    logger.info(`[GoogleDocs] User document ready: ${docUrl}`);
+
+    return {
+        documentId,
+        url: docUrl,
+        title
+    };
+}
+
 module.exports = {
-    createGoogleDoc
+    createGoogleDoc,
+    createUserGoogleDoc
 };
