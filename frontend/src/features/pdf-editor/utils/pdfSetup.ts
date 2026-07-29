@@ -6,7 +6,7 @@ let isInitialized = false;
 export function initPdfWorker(): void {
   if (isInitialized) return;
 
-  const version = pdfjsLib.version || '6.1.200';
+  const version = pdfjsLib.version || '4.9.155';
   pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.worker.min.mjs`;
 
   isInitialized = true;
@@ -34,7 +34,10 @@ export async function renderPageToCanvas(
   canvas.width = viewport.width;
   canvas.height = viewport.height;
 
-  await page.render({ canvas, viewport }).promise;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Could not get canvas 2d context');
+
+  await page.render({ canvasContext: ctx, viewport }).promise;
 
   return { width: viewport.width, height: viewport.height };
 }
