@@ -2,7 +2,6 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const { google } = require('googleapis');
 const { saveTokens, getTokens } = require('../services/googleTokenStore');
-const { prisma } = require('../lib/databases');
 const logger = require('../utils/logger');
 
 const router = express.Router();
@@ -97,12 +96,22 @@ router.get('/google/callback', async (req, res) => {
     }
 });
 
-router.get('/google/status', authenticate, (req, res) => {
-    const tokens = getTokens(req.userId);
-    res.json({
-        success: true,
-        data: { authenticated: !!tokens }
-    });
+router.get('/google/status', async (req, res) => {
+    try {
+        let userId = null;
+        const authHeader = req.headers.authorization;
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            const decoded = jwt.verify(authHeader.substring(7), process.env.JWT_SECRET);
+            userId = decoded.userId;
+        }
+        if (!userId) {
+            return res.json({ success: true, data: { authenticated: false } });
+        }
+        const tokens = getTokens(userId);
+        res.json({ success: true, data: { authenticated: !!tokens } });
+    } catch {
+        res.json({ success: true, data: { authenticated: false } });
+    }
 });
 
 module.exports = router;
