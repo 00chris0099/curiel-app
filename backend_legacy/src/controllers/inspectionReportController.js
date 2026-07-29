@@ -3,6 +3,7 @@ const reportJobQueue = require('../services/reportJobQueue');
 const { asyncHandler, AppError } = require('../middlewares/errorHandler');
 const { createAuditLog } = require('../middlewares/auditLog');
 const { buildInspectionReportHtml } = require('../pdf/inspectionReportTemplate');
+const { createGoogleDoc } = require('../services/googleDocsService');
 
 const downloadInspectionReport = asyncHandler(async (req, res) => {
     const jobStatus = reportJobQueue.getStatus(req.params.id);
@@ -114,8 +115,74 @@ const getReportPreview = asyncHandler(async (req, res) => {
     return res.send(html);
 });
 
+const openInGoogleDocs = asyncHandler(async (req, res) => {
+    const inspectionId = req.params.id;
+    const { prisma } = require('../lib/databases');
+
+    const inspection = await prisma.inspecciones.inspection.findUnique({
+        where: { id: inspectionId },
+        include: {
+            statusHistory: { orderBy: { createdAt: 'desc' }, take: 1 }
+        }
+    });
+
+    if (!inspection) {
+        throw new AppError('Inspección no encontrada', 404, 'INSPECTION_NOT_FOUND');
+    }
+
+    const [areas, observations, photos, summary, signatures] = await Promise.all([
+        prisma.inspecciones.inspectionArea.findMany({
+            where: { inspectionId },
+            orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }]
+        }),
+        prisma.inspecciones.inspectionObservation.findMany({
+            where: { inspectionId },
+            orderBy: [{ areaId: 'asc' }, { createdAt: 'asc' }]
+        }),
+        prisma.media.photo.findMany({
+            where: { inspectionId },
+            orderBy: { createdAt: 'asc' }
+        }),
+        prisma.inspecciones.inspectionSummary.findUnique({
+            where: { inspectionId }
+        }),
+        prisma.media.signature.findMany({
+            where: { inspectionId }
+        })
+    ]);
+
+    const metadata = inspectionReportService._parseInspectionMetadata(inspection.notes);
+    const sortedAreas = inspectionReportService._sortAreas(areas.map(a => ({ ...a })));
+    const sortedObservations = observations.map(obs => ({ ...obs }));
+    const inspectorSignature = signatures.find(s => s.signatureType === 'inspector') || null;
+    const recommendationGroups = inspectionReportService._buildRecommendationGroups(sortedObservations, summary);
+
+    const result = await createGoogleDoc({
+        inspection,
+        metadata,
+        areas: sortedAreas,
+        observations: sortedObservations,
+        photos: photos.map(p => ({ ...p })),
+        summary: summary ? { ...summary } : null,
+        recommendations: recommendationGroups,
+        inspectorSignature: inspectorSignature ? { ...inspectorSignature } : null,
+    });
+
+    await createAuditLog(req.userId, 'open_in_google_docs', 'Inspection', inspectionId);
+
+    return res.json({
+        success: true,
+        data: {
+            url: result.url,
+            documentId: result.documentId,
+            title: result.title
+        }
+    });
+});
+
 module.exports = {
     downloadInspectionReport,
     getReportJobStatus,
-    getReportPreview
+    getReportPreview,
+    openInGoogleDocs
 };

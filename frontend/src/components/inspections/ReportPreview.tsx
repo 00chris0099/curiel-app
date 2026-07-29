@@ -27,6 +27,7 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
     const [error, setError] = useState<string | null>(null);
     const [pageCount, setPageCount] = useState(0);
     const [zoom, setZoom] = useState(80);
+    const [isOpeningDocs, setIsOpeningDocs] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const pdfDocRef = useRef<pdfjsLib.PDFDocumentProxy | null>(null);
@@ -153,6 +154,19 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
         navigate(`/inspections/${inspectionId}/pdf-editor`);
     };
 
+    const handleOpenInDocs = async () => {
+        setIsOpeningDocs(true);
+        try {
+            const result = await inspectionService.openInGoogleDocs(inspectionId);
+            window.open(result.url, '_blank');
+            toast.success('Google Doc creado');
+        } catch (err: unknown) {
+            toast.error(getApiErrorMessage(err, 'No se pudo crear el Google Doc'));
+        } finally {
+            setIsOpeningDocs(false);
+        }
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -203,6 +217,28 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
                                 <div className="w-px h-5 bg-gray-200 dark:bg-gray-700 hidden sm:block" />
                             </>
                         )}
+
+                        {/* Editar en Google Docs */}
+                        <button
+                            onClick={handleOpenInDocs}
+                            disabled={isOpeningDocs}
+                            className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
+                        >
+                            {isOpeningDocs ? (
+                                <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                </svg>
+                            ) : (
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                    <polyline points="14 2 14 8 20 8" />
+                                    <line x1="16" y1="13" x2="8" y2="13" />
+                                    <line x1="16" y1="17" x2="8" y2="17" />
+                                </svg>
+                            )}
+                            <span className="hidden sm:inline">{isOpeningDocs ? 'Abriendo...' : 'Editar en Docs'}</span>
+                        </button>
 
                         {/* Editar PDF */}
                         <button

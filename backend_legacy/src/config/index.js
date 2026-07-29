@@ -142,5 +142,11 @@ module.exports = {
   },
 
   // Internal API Key (para n8n cron jobs)
-  internalApiKey: process.env.INTERNAL_API_KEY || null
+  internalApiKey: process.env.INTERNAL_API_KEY || null,
+
+  // Google Docs
+  googleDocs: {
+    serviceAccountKey: process.env.GOOGLE_SERVICE_ACCOUNT_KEY || null,
+    folderId: process.env.GOOGLE_DOCS_FOLDER_ID || null
+  }
 };

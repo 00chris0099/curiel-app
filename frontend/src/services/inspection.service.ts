@@ -299,6 +299,11 @@ const inspectionService = {
         return response.data.data;
     },
 
+    async openInGoogleDocs(id: string): Promise<{ url: string; documentId: string; title: string }> {
+        const response = await apiClient.post(`/inspections/${id}/report/open-in-docs`);
+        return response.data.data;
+    },
+
     async deletePhoto(photoId: string): Promise<void> {
         await apiClient.delete(`/photos/${photoId}`);
     },

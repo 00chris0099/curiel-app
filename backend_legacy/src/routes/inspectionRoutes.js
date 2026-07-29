@@ -67,6 +67,14 @@ router.get(
     inspectionReportController.getReportPreview
 );
 
+// POST /api/v1/inspections/:id/report/open-in-docs - Crear Google Doc con el informe
+router.post(
+    '/:id/report/open-in-docs',
+    authorize('admin', 'arquitecto', 'supervisor', 'inspector'),
+    requireInspectionReportAccess,
+    inspectionReportController.openInGoogleDocs
+);
+
 // GET /api/v1/inspections/:id - Obtener inspeccion por ID
 router.get(
     '/:id',
