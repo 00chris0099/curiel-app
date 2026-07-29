@@ -15,7 +15,17 @@ function getAuth() {
         throw new Error('GOOGLE_SERVICE_ACCOUNT_KEY is not set');
     }
 
-    const key = typeof keyJson === 'string' ? JSON.parse(keyJson) : keyJson;
+    let key;
+    if (typeof keyJson === 'string') {
+        try {
+            key = JSON.parse(keyJson);
+        } catch {
+            const cleaned = keyJson.replace(/[\r\n]+/g, '\\n').replace(/\s{2,}/g, ' ');
+            key = JSON.parse(cleaned);
+        }
+    } else {
+        key = keyJson;
+    }
 
     return new google.auth.GoogleAuth({
         credentials: key,
