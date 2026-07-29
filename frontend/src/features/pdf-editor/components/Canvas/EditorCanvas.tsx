@@ -108,7 +108,7 @@ export function EditorCanvas({ onCanvasReady }: EditorCanvasProps) {
 
     const pageW = page.width;
     const pageH = page.height;
-    const padding = 60;
+    const padding = 80;
     const availW = containerSize.width - padding * 2;
     const availH = containerSize.height - padding * 2;
 
@@ -132,19 +132,12 @@ export function EditorCanvas({ onCanvasReady }: EditorCanvasProps) {
   // Scroll to center the page when zoom changes or page loads
   useEffect(() => {
     const wrapper = wrapperRef.current;
-    const page = pages[currentPageIndex];
-    if (!wrapper || !page) return;
+    if (!wrapper) return;
 
-    const zoomRatio = viewport.zoom / 100;
-    const scaledW = page.width * zoomRatio;
-    const scaledH = page.height * zoomRatio;
-
-    // Center the page in the container
-    const scrollX = Math.max(0, (scaledW - wrapper.clientWidth) / 2);
-    const scrollY = Math.max(0, (scaledH - wrapper.clientHeight) / 2);
-
-    // Small delay to let the DOM update
+    // Wait for DOM to settle after zoom/page change
     requestAnimationFrame(() => {
+      const scrollX = Math.max(0, (wrapper.scrollWidth - wrapper.clientWidth) / 2);
+      const scrollY = Math.max(0, (wrapper.scrollHeight - wrapper.clientHeight) / 2);
       wrapper.scrollLeft = scrollX;
       wrapper.scrollTop = scrollY;
     });
@@ -303,10 +296,7 @@ export function EditorCanvas({ onCanvasReady }: EditorCanvasProps) {
   }, [getCanvas]);
 
   const currentTool = EDITOR_TOOLS[selection.tool];
-  const page = pages[currentPageIndex];
   const zoomRatio = viewport.zoom / 100;
-  const scaledWidth = page ? page.width * zoomRatio : 800;
-  const scaledHeight = page ? page.height * zoomRatio : 600;
 
   return (
     <div
@@ -321,14 +311,14 @@ export function EditorCanvas({ onCanvasReady }: EditorCanvasProps) {
           cursor: currentTool?.cursor || 'default',
         }}
       >
-        {/* Spacer to enable scroll — sized to the scaled canvas */}
+        {/* Centering container — centers the page both horizontally and vertically */}
         <div
           style={{
-            minWidth: scaledWidth + 80,
-            minHeight: scaledHeight + 80,
+            minWidth: '100%',
+            minHeight: '100%',
             display: 'flex',
-            alignItems: 'flex-start',
-            justifyContent: 'flex-start',
+            alignItems: 'center',
+            justifyContent: 'center',
             padding: '40px',
           }}
         >
@@ -338,7 +328,7 @@ export function EditorCanvas({ onCanvasReady }: EditorCanvasProps) {
             style={{
               boxShadow: '0 2px 16px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.06)',
               transform: `scale(${zoomRatio})`,
-              transformOrigin: 'top left',
+              transformOrigin: 'top center',
               flexShrink: 0,
               borderRadius: '2px',
             }}
