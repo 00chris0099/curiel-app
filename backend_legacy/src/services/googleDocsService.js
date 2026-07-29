@@ -372,11 +372,35 @@ function buildInsertRequests(docContent) {
     return requests;
 }
 
+async function cleanupDrive(driveClient) {
+    try {
+        const res = await driveClient.files.list({
+            q: "mimeType='application/vnd.google-apps.document' and trashed=false",
+            fields: 'files(id, name, createdTime)',
+            pageSize: 100,
+        });
+        const files = res.data.files || [];
+        if (files.length === 0) return;
+
+        logger.info(`[GoogleDocs] Cleaning ${files.length} old docs from Drive`);
+        for (const file of files) {
+            try {
+                await driveClient.files.delete({ fileId: file.id });
+            } catch {}
+        }
+        logger.info('[GoogleDocs] Drive cleanup done');
+    } catch (err) {
+        logger.warn('[GoogleDocs] Drive cleanup failed', { message: err.message });
+    }
+}
+
 async function createGoogleDoc(reportData) {
     const { docsClient, driveClient } = getClients();
     const docContent = buildDocContent(reportData);
 
     const title = `Informe de Inspección — ${reportData.inspection.projectName}`;
+
+    await cleanupDrive(driveClient);
 
     let documentId;
     try {
@@ -440,7 +464,7 @@ async function createGoogleDoc(reportData) {
     return {
         documentId,
         url: docUrl,
-        title: `Informe de Inspección — ${reportData.inspection.projectName}`
+        title
     };
 }
 

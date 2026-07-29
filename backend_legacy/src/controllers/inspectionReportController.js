@@ -157,17 +157,25 @@ const openInGoogleDocs = asyncHandler(async (req, res) => {
     const inspectorSignature = signatures.find(s => s.signatureType === 'inspector') || null;
     const recommendationGroups = inspectionReportService._buildRecommendationGroups(sortedObservations, summary);
 
-    const docTitle = encodeURIComponent(`Informe de Inspección — ${inspection.projectName || 'Sin nombre'}`);
-    const docUrl = `https://docs.google.com/document/create?title=${docTitle}`;
+    const result = await createGoogleDoc({
+        inspection,
+        metadata,
+        areas: sortedAreas,
+        observations: sortedObservations,
+        photos: photos.map(p => ({ ...p })),
+        summary: summary ? { ...summary } : null,
+        recommendations: recommendationGroups,
+        inspectorSignature: inspectorSignature ? { ...inspectorSignature } : null,
+    });
 
     await createAuditLog(req.userId, 'open_in_google_docs', 'Inspection', inspectionId);
 
     return res.json({
         success: true,
         data: {
-            url: docUrl,
-            documentId: null,
-            title: `Informe de Inspección — ${inspection.projectName || 'Sin nombre'}`
+            url: result.url,
+            documentId: result.documentId,
+            title: result.title
         }
     });
 });
