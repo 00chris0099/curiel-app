@@ -376,55 +376,61 @@ async function createGoogleDoc(reportData) {
     const { docsClient, driveClient } = getClients();
     const docContent = buildDocContent(reportData);
 
-    let createResponse;
+    const title = `Informe de Inspección — ${reportData.inspection.projectName}`;
+
+    let documentId;
     try {
-        createResponse = await docsClient.documents.create({
+        const createResponse = await driveClient.files.create({
             requestBody: {
-                title: `Informe de Inspección — ${reportData.inspection.projectName}`
-            }
+                name: title,
+                mimeType: 'application/vnd.google-apps.document',
+            },
+            fields: 'id',
         });
+        documentId = createResponse.data.id;
+        logger.info(`[GoogleDocs] Document created via Drive: ${documentId}`);
     } catch (err) {
-        logger.error('[GoogleDocs] Error creating document', {
+        logger.error('[GoogleDocs] Error creating document via Drive', {
             status: err.status,
             code: err.code,
             message: err.message,
-            details: err.errors,
-            clientEmail: process.env.GOOGLE_SERVICE_ACCOUNT_KEY ? 'key_is_set' : 'key_is_missing'
         });
         throw err;
     }
 
-    const documentId = createResponse.data.documentId;
-    logger.info(`[GoogleDocs] Document created: ${documentId}`);
-
-    const insertRequests = buildInsertRequests(docContent);
-
-    const batchSize = 50;
-    for (let i = 0; i < insertRequests.length; i += batchSize) {
-        const batch = insertRequests.slice(i, i + batchSize);
-        await docsClient.documents.batchUpdate({
-            documentId,
-            requestBody: { requests: batch }
+    try {
+        const insertRequests = buildInsertRequests(docContent);
+        const batchSize = 50;
+        for (let i = 0; i < insertRequests.length; i += batchSize) {
+            const batch = insertRequests.slice(i, i + batchSize);
+            await docsClient.documents.batchUpdate({
+                documentId,
+                requestBody: { requests: batch }
+            });
+            logger.info(`[GoogleDocs] Batch ${Math.floor(i / batchSize) + 1} applied (${batch.length} requests)`);
+        }
+    } catch (err) {
+        logger.warn('[GoogleDocs] Could not insert content, doc created empty', {
+            status: err.status,
+            message: err.message,
         });
-        logger.info(`[GoogleDocs] Batch ${Math.floor(i / batchSize) + 1} applied (${batch.length} requests)`);
     }
 
     const folderId = process.env.GOOGLE_DOCS_FOLDER_ID || null;
     if (folderId) {
-        await driveClient.permissions.create({
-            fileId: documentId,
-            requestBody: {
-                type: 'anyone',
-                role: 'writer',
-            },
-            fields: 'id'
-        });
-
-        await driveClient.files.update({
-            fileId: documentId,
-            addParents: folderId,
-            fields: 'id, parents'
-        });
+        try {
+            await driveClient.files.update({
+                fileId: documentId,
+                addParents: folderId,
+                fields: 'id, parents'
+            });
+            logger.info(`[GoogleDocs] Moved to folder: ${folderId}`);
+        } catch (err) {
+            logger.warn('[GoogleDocs] Could not move to folder', {
+                status: err.status,
+                message: err.message,
+            });
+        }
     }
 
     const docUrl = `https://docs.google.com/document/d/${documentId}/edit`;
