@@ -20,7 +20,7 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
     const [recommendations, setRecommendations] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const iframeRef = useRef<HTMLIFrameElement>(null);
-    const [zoom, setZoom] = useState(100);
+    const [zoom, setZoom] = useState(80);
 
     const loadPreview = useCallback(async () => {
         if (!isOpen || !inspectionId) return;
@@ -91,17 +91,19 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-2 sm:p-4">
-            <div className="flex h-[95vh] sm:h-[90vh] w-full max-w-6xl flex-col rounded-2xl bg-white shadow-2xl dark:bg-gray-900 overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-2 sm:p-4">
+            <div className="flex h-[96vh] sm:h-[92vh] w-full max-w-5xl flex-col rounded-2xl bg-white shadow-2xl dark:bg-gray-900 overflow-hidden">
                 {/* Header */}
-                <div className="flex items-center justify-between border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 dark:border-gray-700 shrink-0">
+                <div className="flex items-center justify-between border-b border-gray-200 px-4 sm:px-6 py-3 dark:border-gray-700 shrink-0 bg-gray-50 dark:bg-gray-800">
                     <div className="flex items-center gap-3 min-w-0">
-                        <CustomIcon name="file-pdf" size="xs" tone="cream" />
+                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-100 dark:bg-red-900/30">
+                            <CustomIcon name="file-pdf" size="xs" tone="rose" />
+                        </div>
                         <div className="min-w-0">
-                            <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
+                            <h2 className="text-sm sm:text-base font-bold text-gray-900 dark:text-gray-100 truncate">
                                 Vista previa del informe
                             </h2>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate sm:hidden">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                                 {projectName}
                             </p>
                         </div>
@@ -109,26 +111,32 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
                     <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                         {html && (
                             <>
+                                <div className="hidden sm:flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2 py-1 dark:border-gray-700 dark:bg-gray-800">
+                                    <button
+                                        onClick={() => setZoom(Math.max(30, zoom - 10))}
+                                        className="flex h-6 w-6 items-center justify-center rounded text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 text-xs font-bold"
+                                    >
+                                        -
+                                    </button>
+                                    <span className="w-10 text-center text-[11px] font-medium text-gray-500 dark:text-gray-400">{zoom}%</span>
+                                    <button
+                                        onClick={() => setZoom(Math.min(200, zoom + 10))}
+                                        className="flex h-6 w-6 items-center justify-center rounded text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 text-xs font-bold"
+                                    >
+                                        +
+                                    </button>
+                                </div>
                                 <button
-                                    onClick={() => setZoom(Math.max(50, zoom - 10))}
-                                    className="hidden sm:flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 text-xs font-bold"
-                                    title="Reducir"
+                                    onClick={() => setZoom(80)}
+                                    className="hidden sm:flex h-8 items-center rounded-lg px-2 text-[11px] font-medium text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
                                 >
-                                    −
-                                </button>
-                                <span className="hidden sm:inline text-xs text-gray-400 w-10 text-center">{zoom}%</span>
-                                <button
-                                    onClick={() => setZoom(Math.min(200, zoom + 10))}
-                                    className="hidden sm:flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 text-xs font-bold"
-                                    title="Ampliar"
-                                >
-                                    +
+                                    Ajustar
                                 </button>
                             </>
                         )}
                         <button
                             onClick={() => setShowEditor(!showEditor)}
-                            className={`flex items-center gap-1.5 sm:gap-2 rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors ${
+                            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
                                 showEditor
                                     ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
                                     : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300'
@@ -139,14 +147,14 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
                         </button>
                         <button
                             onClick={handleDownload}
-                            className="flex items-center gap-1.5 sm:gap-2 rounded-xl bg-[#17324a] px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-white transition-colors hover:bg-[#1d3d5c]"
+                            className="flex items-center gap-1.5 rounded-lg bg-[#17324a] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#1d3d5c]"
                         >
                             <CustomIcon name="download" size="xs" tone="white" />
                             <span className="hidden sm:inline">Descargar</span>
                         </button>
                         <button
                             onClick={onClose}
-                            className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl border border-gray-200 bg-white transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
+                            className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
                         >
                             <CustomIcon name="x-circle" size="xs" tone="mist" />
                         </button>
@@ -209,12 +217,12 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
                 )}
 
                 {/* Preview area */}
-                <div className="flex-1 overflow-auto bg-gray-200 dark:bg-gray-800 flex justify-center">
+                <div className="flex-1 overflow-auto bg-gray-100 dark:bg-gray-800 flex justify-center">
                     {isLoading && (
                         <div className="flex h-full items-center justify-center w-full">
                             <div className="flex flex-col items-center gap-3 text-gray-500">
                                 <CustomIcon name="sync" size="md" tone="mist" spin />
-                                <p className="text-sm">Cargando vista previa...</p>
+                                <p className="text-sm font-medium">Cargando vista previa...</p>
                             </div>
                         </div>
                     )}
@@ -222,11 +230,13 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
                     {error && (
                         <div className="flex h-full items-center justify-center w-full">
                             <div className="flex flex-col items-center gap-3 text-center">
-                                <CustomIcon name="warning-circle" size="md" tone="cream" />
+                                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-100 dark:bg-red-900/30">
+                                    <CustomIcon name="warning-circle" size="sm" tone="rose" />
+                                </div>
                                 <p className="text-sm text-gray-600 dark:text-gray-400">{error}</p>
                                 <button
                                     onClick={loadPreview}
-                                    className="mt-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                                    className="mt-1 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
                                 >
                                     Reintentar
                                 </button>
@@ -235,16 +245,24 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
                     )}
 
                     {!isLoading && !error && html && (
-                        <div
-                            className="my-4 shadow-2xl"
-                            style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'top center' }}
-                        >
-                            <iframe
-                                ref={iframeRef}
-                                className="border border-gray-300 dark:border-gray-600 bg-white"
-                                style={{ width: '794px', height: '1123px' }}
-                                title="Vista previa del informe"
-                            />
+                        <div className="py-4 px-2">
+                            <div
+                                style={{
+                                    transform: `scale(${zoom / 100})`,
+                                    transformOrigin: 'top center',
+                                    transition: 'transform 0.15s ease-out',
+                                }}
+                            >
+                                <iframe
+                                    ref={iframeRef}
+                                    className="rounded-lg border border-gray-300 bg-white shadow-xl dark:border-gray-600"
+                                    style={{
+                                        width: '794px',
+                                        height: '1123px',
+                                    }}
+                                    title="Vista previa del informe"
+                                />
+                            </div>
                         </div>
                     )}
                 </div>

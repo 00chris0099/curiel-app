@@ -561,71 +561,154 @@ export const InspectionExecution = () => {
     ];
 
     return (
-        <div className="space-y-4 pb-10">
-            <ConnectionStatus
-                pendingCount={pendingCount}
-                onSyncNow={syncNow}
-                isSyncing={isSyncing}
-            />
-
+        <div className="flex min-h-[calc(100vh-8rem)] flex-col pb-24 lg:pb-10">
+            {/* Header */}
             <ExecutionHeader
                 projectName={inspection.projectName}
-                canComplete={canCompleteExecution}
+                canComplete={false}
                 busyAction={busyAction}
                 onComplete={handleCompleteInspection}
             />
 
-            <ModuleGrid modules={moduleDefinitions}>
-                <ModuleEdificio
-                    photos={photos}
-                    busyAction={busyAction}
-                    canEdit={canEditExecutionContent}
-                    getEntitySyncState={getEntitySyncState}
-                    onUploadPhoto={handleUploadPhoto}
-                    onDeletePhoto={handleDeletePhoto}
-                />
-                <ModuleFotoPlano
-                    photos={photos}
-                    busyAction={busyAction}
-                    canEdit={canEditExecutionContent}
-                    getEntitySyncState={getEntitySyncState}
-                    onUploadPhoto={handleUploadPhoto}
-                    onDeletePhoto={handleDeletePhoto}
-                />
-                <ModuleAreas
-                    areas={areas}
-                    busyAction={busyAction}
-                    canEdit={canEditExecutionContent}
-                    getEntitySyncState={getEntitySyncState}
-                    onCreateDefaultAreas={handleCreateDefaultAreas}
-                    onCreateArea={handleCreateArea}
-                    onUpdateArea={handleUpdateArea}
-                    onDeleteArea={handleDeleteArea}
-                />
-                <ModuleObsMetrica
-                    observations={observations}
-                    canEdit={canEditExecutionContent}
-                    onSaveMetric={handleSaveMetric}
-                />
-                <ModuleObservaciones
-                    areas={areas}
-                    observations={observations}
-                    photos={photos}
-                    busyAction={busyAction}
-                    canEdit={canEditExecutionContent}
-                    onSaveObservation={handleSaveObservation}
-                    onDeleteObservation={handleDeleteObservation}
-                    onUploadPhoto={handleUploadPhoto}
-                    onDeletePhoto={handleDeletePhoto}
-                />
-                <ModuleConsideraciones
-                    summaryForm={summaryForm}
-                    busyAction={busyAction}
-                    canEdit={canEditExecutionContent}
-                    onSummaryChange={setSummaryForm}
-                    onSaveSummary={handleSaveSummary}
-                />
-            </ModuleGrid>
+            {/* 6 Modules Grid */}
+            <div className="mt-4 flex-1">
+                <ModuleGrid modules={moduleDefinitions}>
+                    <ModuleEdificio
+                        photos={photos}
+                        busyAction={busyAction}
+                        canEdit={canEditExecutionContent}
+                        getEntitySyncState={getEntitySyncState}
+                        onUploadPhoto={handleUploadPhoto}
+                        onDeletePhoto={handleDeletePhoto}
+                    />
+                    <ModuleFotoPlano
+                        photos={photos}
+                        busyAction={busyAction}
+                        canEdit={canEditExecutionContent}
+                        getEntitySyncState={getEntitySyncState}
+                        onUploadPhoto={handleUploadPhoto}
+                        onDeletePhoto={handleDeletePhoto}
+                    />
+                    <ModuleAreas
+                        areas={areas}
+                        busyAction={busyAction}
+                        canEdit={canEditExecutionContent}
+                        getEntitySyncState={getEntitySyncState}
+                        onCreateDefaultAreas={handleCreateDefaultAreas}
+                        onCreateArea={handleCreateArea}
+                        onUpdateArea={handleUpdateArea}
+                        onDeleteArea={handleDeleteArea}
+                    />
+                    <ModuleObsMetrica
+                        observations={observations}
+                        canEdit={canEditExecutionContent}
+                        onSaveMetric={handleSaveMetric}
+                    />
+                    <ModuleObservaciones
+                        areas={areas}
+                        observations={observations}
+                        photos={photos}
+                        busyAction={busyAction}
+                        canEdit={canEditExecutionContent}
+                        onSaveObservation={handleSaveObservation}
+                        onDeleteObservation={handleDeleteObservation}
+                        onUploadPhoto={handleUploadPhoto}
+                        onDeletePhoto={handleDeletePhoto}
+                    />
+                    <ModuleConsideraciones
+                        summaryForm={summaryForm}
+                        busyAction={busyAction}
+                        canEdit={canEditExecutionContent}
+                        onSummaryChange={setSummaryForm}
+                        onSaveSummary={handleSaveSummary}
+                    />
+                </ModuleGrid>
+            </div>
+
+            {/* Bottom bar: Connection status + Terminado button */}
+            <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-gray-200 bg-white/95 px-4 py-3 backdrop-blur-sm dark:border-gray-700 dark:bg-gray-900/95 lg:hidden">
+                <div className="flex items-center justify-between gap-3">
+                    {/* Offline/Online toggle */}
+                    <div className="flex items-center gap-2">
+                        <ConnectionStatus
+                            pendingCount={pendingCount}
+                            onSyncNow={syncNow}
+                            isSyncing={isSyncing}
+                        />
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                            {pendingCount > 0 ? `${pendingCount} pendiente${pendingCount > 1 ? 's' : ''}` : 'En linea'}
+                        </span>
+                    </div>
+
+                    {/* Terminado button */}
+                    {canCompleteExecution && (
+                        <button
+                            type="button"
+                            onClick={handleCompleteInspection}
+                            disabled={busyAction === 'complete-inspection'}
+                            className="flex items-center gap-2 rounded-xl bg-[#17324a] px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#17324a]/20 transition-all hover:bg-[#1d3d5c] active:scale-[0.97] disabled:opacity-50 dark:bg-primary-600 dark:hover:bg-primary-700"
+                        >
+                            {busyAction === 'complete-inspection' ? (
+                                <>
+                                    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                    </svg>
+                                    Enviando...
+                                </>
+                            ) : (
+                                <>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                                        <polyline points="22 4 12 14.01 9 11.01" />
+                                    </svg>
+                                    Terminado
+                                </>
+                            )}
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {/* Desktop: keep terminado in header area but also show connection status */}
+            {canCompleteExecution && (
+                <div className="mb-4 hidden lg:flex items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-900">
+                    <div className="flex items-center gap-3">
+                        <ConnectionStatus
+                            pendingCount={pendingCount}
+                            onSyncNow={syncNow}
+                            isSyncing={isSyncing}
+                        />
+                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                            {pendingCount > 0 ? `${pendingCount} cambio${pendingCount > 1 ? 's' : ''} pendiente${pendingCount > 1 ? 's' : ''} de sincronizar` : 'Todo sincronizado'}
+                        </span>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={handleCompleteInspection}
+                        disabled={busyAction === 'complete-inspection'}
+                        className="flex items-center gap-2 rounded-xl bg-[#17324a] px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#17324a]/20 transition-all hover:bg-[#1d3d5c] active:scale-[0.97] disabled:opacity-50 dark:bg-primary-600 dark:hover:bg-primary-700"
+                    >
+                        {busyAction === 'complete-inspection' ? (
+                            <>
+                                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                </svg>
+                                Enviando a revision...
+                            </>
+                        ) : (
+                            <>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                                    <polyline points="22 4 12 14.01 9 11.01" />
+                                </svg>
+                                Enviar a revision
+                            </>
+                        )}
+                    </button>
+                </div>
+            )}
         </div>
     );
 };

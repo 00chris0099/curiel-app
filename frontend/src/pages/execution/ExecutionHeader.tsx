@@ -10,9 +10,9 @@ type ExecutionHeaderProps = {
 
 export const ExecutionHeader = ({
     projectName,
-    canComplete,
-    busyAction,
-    onComplete,
+    canComplete: _canComplete,
+    busyAction: _busyAction,
+    onComplete: _onComplete,
 }: ExecutionHeaderProps) => {
     const navigate = useNavigate();
 
@@ -27,22 +27,6 @@ export const ExecutionHeader = ({
             </button>
 
             <h1 className="min-w-0 flex-1 truncate text-base font-bold text-gray-900 dark:text-white sm:text-lg">{projectName}</h1>
-
-            {canComplete && (
-                <button
-                    type="button"
-                    onClick={onComplete}
-                    disabled={busyAction === 'complete-inspection'}
-                    title="Enviar a revisión"
-                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#17324a] text-white transition-colors hover:bg-[#1d3d5c] dark:bg-primary-600 dark:hover:bg-primary-700"
-                >
-                    {busyAction === 'complete-inspection' ? (
-                        <CustomIcon name="sync" size="xs" tone="white" spin />
-                    ) : (
-                        <CustomIcon name="seal-check" size="xs" tone="white" />
-                    )}
-                </button>
-            )}
         </div>
     );
 };

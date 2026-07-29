@@ -311,7 +311,7 @@ export function EditorCanvas({ onCanvasReady }: EditorCanvasProps) {
   return (
     <div
       ref={containerRef}
-      className="relative flex-1 overflow-hidden bg-gray-200 dark:bg-gray-800"
+      className="relative flex-1 overflow-hidden bg-[#e5e7eb] dark:bg-[#1f2937]"
     >
       {/* Scrollable wrapper */}
       <div
@@ -336,10 +336,11 @@ export function EditorCanvas({ onCanvasReady }: EditorCanvasProps) {
             ref={canvasRef}
             id="editor-canvas"
             style={{
-              boxShadow: '0 4px 24px rgba(0,0,0,0.15)',
+              boxShadow: '0 2px 16px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.06)',
               transform: `scale(${zoomRatio})`,
               transformOrigin: 'top left',
               flexShrink: 0,
+              borderRadius: '2px',
             }}
             onClick={handleCanvasClick}
             onMouseDown={handleMouseDown}

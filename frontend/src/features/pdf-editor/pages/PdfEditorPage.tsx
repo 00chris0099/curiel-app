@@ -5,7 +5,6 @@ import { EditorShell } from '../components/EditorShell';
 import { VersionHistoryPanel } from '../components/Panels/VersionHistoryPanel';
 import { usePdfImport } from '../hooks/usePdfImport';
 import { useAutosave } from '../hooks/useAutosave';
-import { useIsMobile } from '../hooks/useMediaQuery';
 import { pdfDraftService, pdfVersionService } from '../services/pdfApi';
 import { useEditorStore } from '../store';
 import type { Canvas as FabricCanvas } from 'fabric';
@@ -17,7 +16,6 @@ type LoadState = 'loading' | 'loaded' | 'empty' | 'error';
 export function PdfEditorPage() {
   const { id: inspectionId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
   const { loadPdf } = usePdfImport();
   const { pages, markClean, setDocument, setError } = useEditorStore();
 
@@ -275,106 +273,67 @@ export function PdfEditorPage() {
 
   // Editor state
   return (
-    <div className="h-screen flex flex-col">
-      {/* Top bar - hidden on mobile since EditorShell has its own toolbar */}
-      {!isMobile && (
-        <div className="flex items-center gap-3 px-4 py-2 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shrink-0">
-          <button
-            onClick={() => navigate(`/inspections/${inspectionId}`)}
-            className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-          >
-            <ArrowLeft size={16} />
-            <span className="hidden sm:inline">Volver</span>
-          </button>
+    <div className="h-screen flex flex-col bg-gray-100 dark:bg-gray-900">
+      {/* Top bar */}
+      <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shrink-0">
+        <button
+          onClick={() => navigate(`/inspections/${inspectionId}`)}
+          className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors shrink-0"
+        >
+          <ArrowLeft size={16} />
+          <span className="hidden sm:inline">Volver</span>
+        </button>
 
-          <div className="h-5 w-px bg-gray-200 dark:bg-gray-700" />
+        <div className="h-5 w-px bg-gray-200 dark:bg-gray-700 shrink-0" />
 
-          <FileText size={16} className="text-primary-600 shrink-0" />
-          <h1 className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">
-            {inspectionName || 'Editor PDF'}
-          </h1>
-
-          <div className="flex-1" />
-
-          {pages.length > 0 && (
-            <div className="flex items-center gap-2">
-              <input
-                type="file"
-                accept=".pdf"
-                onChange={handleFileUpload}
-                className="hidden"
-                id="pdf-upload-replace"
-              />
-              <label
-                htmlFor="pdf-upload-replace"
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer transition-colors"
-              >
-                <Upload size={12} />
-                Reemplazar PDF
-              </label>
-
-              <button
-                onClick={() => handleSaveVersion()}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-primary-600 bg-primary-50 dark:bg-primary-900/20 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/30 transition-colors"
-              >
-                <History size={12} />
-                Guardar versión
-              </button>
-
-              <button
-                onClick={() => setView(view === 'versions' ? 'editor' : 'versions')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                  view === 'versions'
-                    ? 'text-white bg-primary-600'
-                    : 'text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
-              >
-                <History size={12} />
-                Historial
-              </button>
-            </div>
-          )}
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/30 shrink-0">
+          <FileText size={14} className="text-red-600 dark:text-red-400" />
         </div>
-      )}
+        <h1 className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate min-w-0">
+          {inspectionName || 'Editor PDF'}
+        </h1>
 
-      {/* Mobile top bar */}
-      {isMobile && (
-        <div className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shrink-0">
-          <button
-            onClick={() => navigate(`/inspections/${inspectionId}`)}
-            className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400"
-          >
-            <ArrowLeft size={18} />
-          </button>
-          <FileText size={14} className="text-primary-600 shrink-0" />
-          <h1 className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate flex-1">
-            {inspectionName || 'Editor PDF'}
-          </h1>
-          {pages.length > 0 && (
-            <div className="flex items-center gap-1">
-              <input
-                type="file"
-                accept=".pdf"
-                onChange={handleFileUpload}
-                className="hidden"
-                id="pdf-upload-replace-mobile"
-              />
-              <label
-                htmlFor="pdf-upload-replace-mobile"
-                className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 cursor-pointer"
-              >
-                <Upload size={14} />
-              </label>
-              <button
-                onClick={() => handleSaveVersion()}
-                className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400"
-              >
-                <History size={14} />
-              </button>
-            </div>
-          )}
-        </div>
-      )}
+        <div className="flex-1" />
+
+        {pages.length > 0 && (
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <input
+              type="file"
+              accept=".pdf"
+              onChange={handleFileUpload}
+              className="hidden"
+              id="pdf-upload-replace"
+            />
+            <label
+              htmlFor="pdf-upload-replace"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer transition-colors"
+            >
+              <Upload size={12} />
+              <span className="hidden sm:inline">Reemplazar</span>
+            </label>
+
+            <button
+              onClick={() => handleSaveVersion()}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-primary-600 bg-primary-50 dark:bg-primary-900/20 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/30 transition-colors"
+            >
+              <History size={12} />
+              <span className="hidden sm:inline">Version</span>
+            </button>
+
+            <button
+              onClick={() => setView(view === 'versions' ? 'editor' : 'versions')}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                view === 'versions'
+                  ? 'text-white bg-primary-600'
+                  : 'text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+            >
+              <History size={12} />
+              <span className="hidden sm:inline">Historial</span>
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Editor area */}
       <div className="flex-1 relative overflow-hidden">
