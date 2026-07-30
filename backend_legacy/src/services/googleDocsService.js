@@ -1,5 +1,7 @@
 const { google } = require('googleapis');
 const { Readable } = require('stream');
+const https = require('https');
+const http = require('http');
 const logger = require('../utils/logger');
 const { buildInspectionReportHtml } = require('../pdf/inspectionReportTemplate');
 
@@ -53,7 +55,72 @@ function getClients() {
     return { docsClient, driveClient };
 }
 
-function buildReportHtml(reportData) {
+function fetchImageAsBase64(url) {
+    return new Promise((resolve) => {
+        try {
+            const client = url.startsWith('https') ? https : http;
+            const req = client.get(url, { timeout: 10000 }, (res) => {
+                if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+                    return fetchImageAsBase64(res.headers.location).then(resolve);
+                }
+                if (res.statusCode !== 200) {
+                    resolve(null);
+                    return;
+                }
+                const chunks = [];
+                res.on('data', (chunk) => chunks.push(chunk));
+                res.on('end', () => {
+                    const buffer = Buffer.concat(chunks);
+                    const contentType = res.headers['content-type'] || 'image/png';
+                    const base64 = buffer.toString('base64');
+                    resolve(`data:${contentType};base64,${base64}`);
+                });
+                res.on('error', () => resolve(null));
+            });
+            req.on('error', () => resolve(null));
+            req.on('timeout', () => { req.destroy(); resolve(null); });
+        } catch {
+            resolve(null);
+        }
+    });
+}
+
+async function embedImagesAsBase64(html) {
+    const imgRegex = /<img\s[^>]*src="([^"]+)"/gi;
+    const urls = new Set();
+    let match;
+    while ((match = imgRegex.exec(html)) !== null) {
+        const url = match[1];
+        if (url && !url.startsWith('data:')) {
+            urls.add(url);
+        }
+    }
+
+    if (urls.size === 0) return html;
+
+    logger.info(`[GoogleDocs] Embedding ${urls.size} images as base64`);
+
+    const urlMap = {};
+    const promises = [...urls].map(async (url) => {
+        const dataUri = await fetchImageAsBase64(url);
+        if (dataUri) {
+            urlMap[url] = dataUri;
+        } else {
+            logger.warn('[GoogleDocs] Could not fetch image', { url });
+        }
+    });
+    await Promise.all(promises);
+
+    let result = html;
+    for (const [url, dataUri] of Object.entries(urlMap)) {
+        result = result.split(url).join(dataUri);
+    }
+
+    logger.info(`[GoogleDocs] Embedded ${Object.keys(urlMap).length}/${urls.size} images`);
+    return result;
+}
+
+async function buildReportHtml(reportData) {
     const {
         inspection,
         metadata,
@@ -65,7 +132,7 @@ function buildReportHtml(reportData) {
         inspectorSignature
     } = reportData;
 
-    return buildInspectionReportHtml({
+    const html = buildInspectionReportHtml({
         inspection,
         metadata,
         areas,
@@ -77,6 +144,8 @@ function buildReportHtml(reportData) {
         logoUrl: require('../config').pdf.companyLogo,
         generatedAt: new Date().toISOString()
     });
+
+    return embedImagesAsBase64(html);
 }
 
 async function cleanupDrive(driveClient) {
