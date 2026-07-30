@@ -28,13 +28,6 @@ const uploadPdf = async (buffer, filename) => {
                 public_id: publicId,
                 format: 'pdf',
                 type: 'upload',
-                access_control: [
-                    {
-                        access_type: 'anonymous',
-                        start: Math.floor(Date.now() / 1000),
-                        end: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
-                    }
-                ],
             },
             (error, result) => {
                 if (error) {
@@ -67,6 +60,7 @@ const getSignedUrl = (publicId, expiresInDays = 30) => {
     const expiresAt = Math.floor(Date.now() / 1000) + expiresInDays * 24 * 60 * 60;
     return cloudinary.url(publicId, {
         resource_type: 'raw',
+        type: 'upload',
         sign_url: true,
         secure: true,
         expires_at: expiresAt,
