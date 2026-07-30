@@ -3,7 +3,9 @@ require('dotenv').config();
 const DEFAULT_CORS_ORIGINS = [
   'http://localhost:19006',
   'http://localhost:5173',
-  'http://localhost:3000'
+  'http://localhost:3000',
+  'https://aimachristian-curielapp.ajcxjb.easypanel.host',
+  'https://aimachristian-curielfrontend.ajcxjb.easypanel.host',
 ];
 
 const parseBoolean = (value, defaultValue = false) => {
