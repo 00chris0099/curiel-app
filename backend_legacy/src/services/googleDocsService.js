@@ -53,7 +53,7 @@ function getClients() {
 
 function toGoogleFriendlyUrl(url) {
     if (!url) return url;
-    if (url.includes('res.cloudinary.com') && (url.includes('.webp') || url.includes('/image/upload/'))) {
+    if (url.includes('res.cloudinary.com') && url.includes('/image/upload/')) {
         if (!url.includes('/f_png') && !url.includes('/f_jpg') && !url.includes('/f_auto')) {
             return url.replace('/image/upload/', '/image/upload/f_png/');
         }
@@ -154,7 +154,7 @@ function buildDocContent(reportData) {
     };
 }
 
-function buildInsertRequests(docContent) {
+function buildTextRequests(docContent) {
     const requests = [];
     let index = 1;
 
@@ -259,9 +259,10 @@ function buildInsertRequests(docContent) {
         });
     };
 
+    const getTableIndex = () => index;
+
     setPageSize();
 
-    // ─── PORTADA ───
     addText('INFORME DE INSPECCIÓN', { namedStyleType: 'HEADING_1' });
     addText('Informe técnico profesional. Criterios inmobiliarios, métricos y fotográficos.');
     nl();
@@ -291,26 +292,19 @@ function buildInsertRequests(docContent) {
 
     nl();
 
-    // ─── INSPECCIÓN MÉTRICA ───
-    addText('INSPECCIÓN MÉTRICA', { namedStyleType: 'HEADING_1' });
-
-    addStyledText('Ambiente\t\tÁrea (m²)', { bold: true });
+    addText('INSPECCIÓN MÉTRICA', { namedStyleType: 'HEADING_2' });
     nl();
 
-    docContent.areas.forEach((area) => {
-        addText(`${area.name}\t\t${formatMetric(area.calculatedAreaM2)}`);
-    });
+    const tableIndex = getTableIndex();
 
-    addStyledText(`TOTAL\t\t${formatMetric(docContent.totalArea)}`, { bold: true });
-    nl();
-
-    // ─── SECCIONES POR AMBIENTE ───
     docContent.obsBlocks.forEach((block) => {
         if (block.type === 'area_header') {
+            nl();
             addText(block.name, { namedStyleType: 'HEADING_2' });
         } else if (block.type === 'no_observations') {
             addText('Sin observaciones registradas.');
         } else if (block.type === 'observation') {
+            nl();
             addStyledText(`Obs. ${block.sequence}: `, { bold: true });
 
             const meta = [];
@@ -319,13 +313,12 @@ function buildInsertRequests(docContent) {
             if (block.obs.metricValue) meta.push(`${formatMetric(block.obs.metricValue, block.obs.metricUnit ? ` ${block.obs.metricUnit}` : '')}`);
 
             if (meta.length) {
-                addStyledText(`[${meta.join(' · ')}]\n`, {
+                addStyledText(`[${meta.join(' · ')}]`, {
                     foregroundColor: { color: { rgbColor: { red: 0.42, green: 0.45, blue: 0.47 } } }
                 });
-            } else {
-                nl();
             }
 
+            nl();
             addText(block.obs.description);
 
             if (block.obs.recommendation) {
@@ -348,8 +341,7 @@ function buildInsertRequests(docContent) {
 
     nl();
 
-    // ─── RECOMENDACIONES ───
-    addText('RECOMENDACIONES', { namedStyleType: 'HEADING_1' });
+    addText('RECOMENDACIONES', { namedStyleType: 'HEADING_2' });
 
     if (docContent.allRecommendations.length) {
         docContent.allRecommendations.forEach((rec) => {
@@ -361,8 +353,7 @@ function buildInsertRequests(docContent) {
 
     nl();
 
-    // ─── CIERRE TÉCNICO ───
-    addText('CIERRE TÉCNICO', { namedStyleType: 'HEADING_1' });
+    addText('CIERRE TÉCNICO', { namedStyleType: 'HEADING_2' });
 
     addText(docContent.summary?.generalConclusion || 'Sin conclusión general registrada.');
     nl();
@@ -378,15 +369,100 @@ function buildInsertRequests(docContent) {
         addImage(docContent.signatureUrl);
     }
 
-    return requests;
+    return { requests, tableIndex };
+}
+
+async function buildAndApplyTable(docsClient, documentId, tableIndex, docContent) {
+    const rows = docContent.areas.length + 2;
+
+    await docsClient.documents.batchUpdate({
+        documentId,
+        requestBody: {
+            requests: [{
+                insertTable: {
+                    location: { index: tableIndex },
+                    rows,
+                    columns: 2
+                }
+            }]
+        }
+    });
+
+    logger.info(`[GoogleDocs] Table inserted at index ${tableIndex} (${rows} rows)`);
+
+    const doc = await docsClient.documents.get({ documentId });
+    const body = doc.data.body.content;
+
+    let tableStruct = null;
+    for (const element of body) {
+        if (element.table) {
+            tableStruct = element.table;
+            break;
+        }
+    }
+
+    if (!tableStruct) {
+        logger.warn('[GoogleDocs] Table not found in document after insertion');
+        return;
+    }
+
+    const cellRequests = [];
+
+    const setCell = (row, col, text, isBold = false) => {
+        const cell = tableStruct.tableCells[row * 2 + col];
+        if (!cell) return;
+        const cellContent = cell.tableCellContent;
+        if (!cellContent || cellContent.length === 0) return;
+
+        const cellStartIndex = cellContent[0].startIndex;
+
+        cellRequests.push({
+            insertText: {
+                location: { index: cellStartIndex },
+                text: String(text)
+            }
+        });
+
+        if (isBold) {
+            cellRequests.push({
+                updateTextStyle: {
+                    range: {
+                        startIndex: cellStartIndex,
+                        endIndex: cellStartIndex + String(text).length
+                    },
+                    textStyle: { bold: true },
+                    fields: 'bold'
+                }
+            });
+        }
+    };
+
+    setCell(0, 0, 'Ambiente', true);
+    setCell(0, 1, 'Área (m²)', true);
+
+    docContent.areas.forEach((area, i) => {
+        setCell(i + 1, 0, area.name);
+        setCell(i + 1, 1, formatMetric(area.calculatedAreaM2));
+    });
+
+    setCell(rows - 1, 0, 'TOTAL', true);
+    setCell(rows - 1, 1, formatMetric(docContent.totalArea), true);
+
+    if (cellRequests.length > 0) {
+        await docsClient.documents.batchUpdate({
+            documentId,
+            requestBody: { requests: cellRequests }
+        });
+        logger.info(`[GoogleDocs] Table cells filled (${cellRequests.length} requests)`);
+    }
 }
 
 async function applyContent(docsClient, documentId, docContent) {
-    const allRequests = buildInsertRequests(docContent);
+    const { requests, tableIndex } = buildTextRequests(docContent);
 
     const batchSize = 50;
-    for (let i = 0; i < allRequests.length; i += batchSize) {
-        const batch = allRequests.slice(i, i + batchSize);
+    for (let i = 0; i < requests.length; i += batchSize) {
+        const batch = requests.slice(i, i + batchSize);
         try {
             await docsClient.documents.batchUpdate({
                 documentId,
@@ -394,9 +470,9 @@ async function applyContent(docsClient, documentId, docContent) {
             });
             logger.info(`[GoogleDocs] Batch ${Math.floor(i / batchSize) + 1} applied (${batch.length} requests)`);
         } catch (err) {
-            const failedReq = batch.find((r) => r.insertInlineImage);
-            if (failedReq) {
-                logger.warn('[GoogleDocs] Image in batch failed, retrying without images', {
+            const hasImages = batch.some((r) => r.insertInlineImage);
+            if (hasImages) {
+                logger.warn('[GoogleDocs] Batch with images failed, retrying text-only', {
                     batch: Math.floor(i / batchSize) + 1,
                     status: err.status,
                     message: err.message
@@ -408,7 +484,7 @@ async function applyContent(docsClient, documentId, docContent) {
                             documentId,
                             requestBody: { requests: textOnly }
                         });
-                        logger.info(`[GoogleDocs] Text-only batch applied (${textOnly.length} requests)`);
+                        logger.info(`[GoogleDocs] Text-only retry succeeded (${textOnly.length} requests)`);
                     } catch (retryErr) {
                         logger.error('[GoogleDocs] Text-only retry also failed', {
                             status: retryErr.status,
@@ -418,7 +494,7 @@ async function applyContent(docsClient, documentId, docContent) {
                     }
                 }
             } else {
-                logger.error('[GoogleDocs] BatchUpdate failed', {
+                logger.error('[GoogleDocs] BatchUpdate failed (no images in batch)', {
                     batch: Math.floor(i / batchSize) + 1,
                     status: err.status,
                     code: err.code,
@@ -430,7 +506,17 @@ async function applyContent(docsClient, documentId, docContent) {
         }
     }
 
-    logger.info(`[GoogleDocs] Content applied (${allRequests.length} total requests)`);
+    try {
+        await buildAndApplyTable(docsClient, documentId, tableIndex, docContent);
+    } catch (err) {
+        logger.error('[GoogleDocs] Table insertion failed', {
+            status: err.status,
+            message: err.message,
+            details: err.errors
+        });
+    }
+
+    logger.info(`[GoogleDocs] Content applied (${requests.length} text requests + table)`);
 }
 
 async function cleanupDrive(driveClient) {
