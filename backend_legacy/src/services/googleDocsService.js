@@ -51,6 +51,16 @@ function getClients() {
     return { docsClient, driveClient };
 }
 
+function toGoogleFriendlyUrl(url) {
+    if (!url) return url;
+    if (url.includes('res.cloudinary.com') && (url.includes('.webp') || url.includes('/image/upload/'))) {
+        if (!url.includes('/f_png') && !url.includes('/f_jpg') && !url.includes('/f_auto')) {
+            return url.replace('/image/upload/', '/image/upload/f_png/');
+        }
+    }
+    return url;
+}
+
 function escapeDocText(value) {
     return String(value || '').replace(/\n/g, '\n');
 }
@@ -221,17 +231,14 @@ function buildInsertRequests(docContent) {
         index += 1;
     };
 
-    const setSpacing = (startIdx, endIdx, before, after) => {
+    const addImage = (uri) => {
         requests.push({
-            updateParagraphStyle: {
-                range: { startIndex: startIdx, endIndex: endIdx },
-                paragraphStyle: {
-                    spaceBefore: { magnitude: before, unit: 'PT' },
-                    spaceAfter: { magnitude: after, unit: 'PT' }
-                },
-                fields: 'spaceBefore,spaceAfter'
+            insertInlineImage: {
+                location: { index },
+                uri: toGoogleFriendlyUrl(uri)
             }
         });
+        index += 1;
     };
 
     const setPageSize = () => {
@@ -279,17 +286,7 @@ function buildInsertRequests(docContent) {
 
     if (docContent.buildingPhotoUrl) {
         nl();
-        try {
-            requests.push({
-                insertInlineImage: {
-                    location: { index },
-                    uri: docContent.buildingPhotoUrl
-                }
-            });
-            index += 1;
-        } catch {
-            addText('[Foto del edificio]');
-        }
+        addImage(docContent.buildingPhotoUrl);
     }
 
     nl();
@@ -340,17 +337,7 @@ function buildInsertRequests(docContent) {
             if (block.photos.length) {
                 block.photos.forEach((photo) => {
                     nl();
-                    try {
-                        requests.push({
-                            insertInlineImage: {
-                                location: { index },
-                                uri: photo.url
-                            }
-                        });
-                        index += 1;
-                    } catch {
-                        addText('[Foto]');
-                    }
+                    addImage(photo.url);
                     if (photo.caption) {
                         addText(` — ${photo.caption}`);
                     }
@@ -388,20 +375,62 @@ function buildInsertRequests(docContent) {
 
     if (docContent.signatureUrl) {
         nl();
-        try {
-            requests.push({
-                insertInlineImage: {
-                    location: { index },
-                    uri: docContent.signatureUrl
-                }
-            });
-            index += 1;
-        } catch {
-            addText('[Firma]');
-        }
+        addImage(docContent.signatureUrl);
     }
 
     return requests;
+}
+
+async function applyContent(docsClient, documentId, docContent) {
+    const allRequests = buildInsertRequests(docContent);
+
+    const batchSize = 50;
+    for (let i = 0; i < allRequests.length; i += batchSize) {
+        const batch = allRequests.slice(i, i + batchSize);
+        try {
+            await docsClient.documents.batchUpdate({
+                documentId,
+                requestBody: { requests: batch }
+            });
+            logger.info(`[GoogleDocs] Batch ${Math.floor(i / batchSize) + 1} applied (${batch.length} requests)`);
+        } catch (err) {
+            const failedReq = batch.find((r) => r.insertInlineImage);
+            if (failedReq) {
+                logger.warn('[GoogleDocs] Image in batch failed, retrying without images', {
+                    batch: Math.floor(i / batchSize) + 1,
+                    status: err.status,
+                    message: err.message
+                });
+                const textOnly = batch.filter((r) => !r.insertInlineImage);
+                if (textOnly.length > 0) {
+                    try {
+                        await docsClient.documents.batchUpdate({
+                            documentId,
+                            requestBody: { requests: textOnly }
+                        });
+                        logger.info(`[GoogleDocs] Text-only batch applied (${textOnly.length} requests)`);
+                    } catch (retryErr) {
+                        logger.error('[GoogleDocs] Text-only retry also failed', {
+                            status: retryErr.status,
+                            message: retryErr.message,
+                            details: retryErr.errors
+                        });
+                    }
+                }
+            } else {
+                logger.error('[GoogleDocs] BatchUpdate failed', {
+                    batch: Math.floor(i / batchSize) + 1,
+                    status: err.status,
+                    code: err.code,
+                    message: err.message,
+                    details: err.errors
+                });
+                throw err;
+            }
+        }
+    }
+
+    logger.info(`[GoogleDocs] Content applied (${allRequests.length} total requests)`);
 }
 
 async function cleanupDrive(driveClient) {
@@ -427,7 +456,9 @@ async function cleanupDrive(driveClient) {
                     fileId: file.id,
                     supportsAllDrives: true,
                 });
-            } catch {}
+            } catch (deleteErr) {
+                logger.debug('[GoogleDocs] Could not delete doc', { fileId: file.id });
+            }
         }
         logger.info('[GoogleDocs] Drive cleanup done');
     } catch (err) {
@@ -470,33 +501,12 @@ async function createGoogleDoc(reportData) {
         throw err;
     }
 
-    try {
-        const insertRequests = buildInsertRequests(docContent);
-        const batchSize = 50;
-        for (let i = 0; i < insertRequests.length; i += batchSize) {
-            const batch = insertRequests.slice(i, i + batchSize);
-            await docsClient.documents.batchUpdate({
-                documentId,
-                requestBody: { requests: batch }
-            });
-            logger.info(`[GoogleDocs] Batch ${Math.floor(i / batchSize) + 1} applied (${batch.length} requests)`);
-        }
-    } catch (err) {
-        logger.warn('[GoogleDocs] Could not insert content, doc created empty', {
-            status: err.status,
-            message: err.message,
-        });
-    }
+    await applyContent(docsClient, documentId, docContent);
 
     const docUrl = `https://docs.google.com/document/d/${documentId}/edit`;
-
     logger.info(`[GoogleDocs] Document ready: ${docUrl}`);
 
-    return {
-        documentId,
-        url: docUrl,
-        title
-    };
+    return { documentId, url: docUrl, title };
 }
 
 async function createUserGoogleDoc(reportData, userTokens) {
@@ -538,25 +548,7 @@ async function createUserGoogleDoc(reportData, userTokens) {
         throw err;
     }
 
-    try {
-        const insertRequests = buildInsertRequests(docContent);
-        const batchSize = 50;
-        for (let i = 0; i < insertRequests.length; i += batchSize) {
-            const batch = insertRequests.slice(i, i + batchSize);
-            await docsClient.documents.batchUpdate({
-                documentId,
-                requestBody: { requests: batch }
-            });
-        }
-        logger.info(`[GoogleDocs] Content inserted (${insertRequests.length} requests)`);
-    } catch (err) {
-        logger.error('[GoogleDocs] Error inserting content', {
-            status: err.status,
-            code: err.code,
-            message: err.message,
-            details: err.errors
-        });
-    }
+    await applyContent(docsClient, documentId, docContent);
 
     const folderId = process.env.GOOGLE_DOCS_FOLDER_ID || null;
     if (folderId) {
@@ -574,11 +566,7 @@ async function createUserGoogleDoc(reportData, userTokens) {
     const docUrl = `https://docs.google.com/document/d/${documentId}/edit`;
     logger.info(`[GoogleDocs] User document ready: ${docUrl}`);
 
-    return {
-        documentId,
-        url: docUrl,
-        title
-    };
+    return { documentId, url: docUrl, title };
 }
 
 module.exports = {

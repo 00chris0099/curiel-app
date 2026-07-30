@@ -28,14 +28,18 @@ router.get('/google', async (req, res) => {
             try {
                 const decoded = jwt.verify(authHeader.substring(7), process.env.JWT_SECRET);
                 userId = decoded.userId;
-            } catch {}
+            } catch (jwtErr) {
+                logger.debug('[GoogleAuth] JWT from header invalid', { error: jwtErr.message });
+            }
         }
 
         if (!userId && req.query.token) {
             try {
                 const decoded = jwt.verify(req.query.token, process.env.JWT_SECRET);
                 userId = decoded.userId;
-            } catch {}
+            } catch (jwtErr) {
+                logger.debug('[GoogleAuth] JWT from query invalid', { error: jwtErr.message });
+            }
         }
 
         if (!userId) {
@@ -102,7 +106,8 @@ router.get('/google/status', async (req, res) => {
         }
         const tokens = getTokens(userId);
         res.json({ success: true, data: { authenticated: !!tokens } });
-    } catch {
+    } catch (err) {
+        logger.debug('[GoogleAuth] Status check failed', { error: err.message });
         res.json({ success: true, data: { authenticated: false } });
     }
 });
