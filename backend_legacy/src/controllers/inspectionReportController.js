@@ -5,6 +5,7 @@ const { createAuditLog } = require('../middlewares/auditLog');
 const { buildInspectionReportHtml } = require('../pdf/inspectionReportTemplate');
 const { createGoogleDoc, createUserGoogleDoc } = require('../services/googleDocsService');
 const { getTokens } = require('../services/googleTokenStore');
+const { getSignedUrl } = require('../utils/cloudinaryStorage');
 
 const downloadInspectionReport = asyncHandler(async (req, res) => {
     const jobStatus = reportJobQueue.getStatus(req.params.id);
@@ -25,6 +26,10 @@ const downloadInspectionReport = asyncHandler(async (req, res) => {
 
     if (result.fromCache && result.cloudUrl) {
         await createAuditLog(req.userId, 'download_inspection_report_cached', 'Inspection', req.params.id);
+        const publicId = result.cloudUrl.split('/upload/')[1]?.replace(/\.pdf$/, '');
+        if (publicId) {
+            return res.redirect(getSignedUrl(publicId, 7));
+        }
         return res.redirect(result.cloudUrl);
     }
 
