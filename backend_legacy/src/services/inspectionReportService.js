@@ -35,6 +35,9 @@ const defaultExecutablePath =
     process.env.CHROME_BIN ||
     '/usr/bin/chromium';
 
+const pdfBufferCache = new Map();
+const PDF_BUFFER_TTL = 30 * 60 * 1000;
+
 class InspectionReportService {
     async generateInspectionReport(inspectionId, userId, userRole, isMasterAdmin = false) {
         const inspection = await prisma.inspecciones.inspection.findUnique({
@@ -111,14 +114,18 @@ class InspectionReportService {
 
         const cached = await pdfCacheService.getCachedReport(inspectionId);
         if (cached && cached.contentHash === contentHash) {
-            logger.info('PDF cache hit', { inspectionId });
-            return {
-                buffer: null,
-                filename: this._buildFileName(inspection),
-                cloudUrl: cached.cloudUrl,
-                cloudExpiresAt: cached.expiresAt,
-                fromCache: true
-            };
+            const memBuf = pdfBufferCache.get(inspectionId);
+            if (memBuf && Date.now() - memBuf.ts < PDF_BUFFER_TTL) {
+                logger.info('PDF cache hit (memory)', { inspectionId });
+                return {
+                    buffer: memBuf.buffer,
+                    filename: this._buildFileName(inspection),
+                    cloudUrl: cached.cloudUrl,
+                    cloudExpiresAt: cached.expiresAt,
+                    fromCache: true
+                };
+            }
+            logger.info('PDF cache hit (DB, regenerating buffer)', { inspectionId });
         }
 
         const recommendationGroups = this._buildRecommendationGroups(sortedObservations, summary);
@@ -191,6 +198,8 @@ class InspectionReportService {
             } catch (cloudError) {
                 logger.warn('Fallo subida a Cloudinary, PDF disponible solo localmente', { error: cloudError.message });
             }
+
+            pdfBufferCache.set(inspectionId, { buffer: pdfBuffer, ts: Date.now() });
 
             return {
                 buffer: pdfBuffer,
