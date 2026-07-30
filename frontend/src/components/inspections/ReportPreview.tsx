@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import * as pdfjsLib from 'pdfjs-dist';
 import toast from 'react-hot-toast';
 import { getApiErrorMessage } from '../../api/axios';
@@ -22,7 +21,6 @@ const PAGE_GAP = 16;
 const BASE_WIDTH = 794;
 
 export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: ReportPreviewProps) => {
-    const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [pageCount, setPageCount] = useState(0);
@@ -132,28 +130,6 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
         return () => scrollEl.removeEventListener('scroll', handleScroll);
     }, [pageCount, zoom, renderPage]);
 
-    const handleDownload = async () => {
-        try {
-            const blob = await inspectionService.downloadReport(inspectionId);
-            const url = window.URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `informe-inspeccion-${projectName}.pdf`;
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            window.URL.revokeObjectURL(url);
-            toast.success('PDF descargado');
-        } catch (err: unknown) {
-            toast.error(getApiErrorMessage(err, 'No se pudo descargar el PDF'));
-        }
-    };
-
-    const handleEdit = () => {
-        onClose();
-        navigate(`/inspections/${inspectionId}/pdf-editor`);
-    };
-
     const handleOpenInDocs = async () => {
         setIsOpeningDocs(true);
         try {
@@ -248,24 +224,6 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
                                 </svg>
                             )}
                             <span className="hidden sm:inline">{isOpeningDocs ? 'Abriendo...' : 'Editar en Docs'}</span>
-                        </button>
-
-                        {/* Editar PDF */}
-                        <button
-                            onClick={handleEdit}
-                            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 transition-colors"
-                        >
-                            <CustomIcon name="pencil" size="xs" tone="cream" />
-                            <span className="hidden sm:inline">Editar PDF</span>
-                        </button>
-
-                        {/* Descargar */}
-                        <button
-                            onClick={handleDownload}
-                            className="flex items-center gap-1.5 rounded-lg bg-[#17324a] px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#1d3d5c]"
-                        >
-                            <CustomIcon name="download" size="xs" tone="white" />
-                            <span className="hidden sm:inline">Descargar</span>
                         </button>
 
                         {/* Cerrar */}

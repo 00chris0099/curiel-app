@@ -30,7 +30,6 @@ const Evaluations = lazy(() => import('./pages/Evaluations').then(m => ({ defaul
 const Suspensions = lazy(() => import('./pages/Suspensions').then(m => ({ default: m.Suspensions })));
 const SupervisorActions = lazy(() => import('./pages/SupervisorActions').then(m => ({ default: m.SupervisorActions })));
 const Config = lazy(() => import('./pages/Config').then(m => ({ default: m.Config })));
-const PdfEditor = lazy(() => import('./features/pdf-editor').then(m => ({ default: m.PdfEditorPage })));
 
 const PageLoader = () => (
   <div className="flex min-h-screen items-center justify-center">
@@ -116,7 +115,6 @@ function App() {
           <Route path="/inspections/:id/execute" element={<PrivateRoute allowedRoles={['admin', 'arquitecto', 'supervisor', 'inspector']}><DashboardLayout><ErrorBoundary backHref="/inspections"><InspectionExecution /></ErrorBoundary></DashboardLayout></PrivateRoute>} />
           <Route path="/inspections/:id/execute/areas/:areaId" element={<PrivateRoute allowedRoles={['admin', 'arquitecto', 'supervisor', 'inspector']}><DashboardLayout><ErrorBoundary backHref="/inspections"><InspectionAreaDetail /></ErrorBoundary></DashboardLayout></PrivateRoute>} />
           <Route path="/inspections/create" element={<PrivateRoute allowedRoles={['admin', 'arquitecto', 'supervisor']}><DashboardLayout><ErrorBoundary><CreateInspection /></ErrorBoundary></DashboardLayout></PrivateRoute>} />
-          <Route path="/inspections/:id/pdf-editor" element={<PrivateRoute allowedRoles={['admin', 'arquitecto', 'supervisor', 'inspector']}><PdfEditor /></PrivateRoute>} />
           <Route path="/supervisor" element={<PrivateRoute allowedRoles={['supervisor', 'admin']}><DashboardLayout><ErrorBoundary><SupervisorDashboard /></ErrorBoundary></DashboardLayout></PrivateRoute>} />
           <Route path="/alerts" element={<PrivateRoute allowedRoles={['supervisor', 'admin']}><DashboardLayout><ErrorBoundary><Alerts /></ErrorBoundary></DashboardLayout></PrivateRoute>} />
           <Route path="/evaluations" element={<PrivateRoute allowedRoles={['supervisor', 'admin']}><DashboardLayout><ErrorBoundary><Evaluations /></ErrorBoundary></DashboardLayout></PrivateRoute>} />

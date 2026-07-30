@@ -45,7 +45,6 @@ export const InspectionDetail = () => {
     const [inspection, setInspection] = useState<Inspection | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isUpdating, setIsUpdating] = useState(false);
-    const [isDownloadingReport, setIsDownloadingReport] = useState(false);
     const [showPreview, setShowPreview] = useState(false);
     const [statusAction, setStatusAction] = useState<StatusActionConfig | null>(null);
     const [statusModal, setStatusModal] = useState<StatusModalState>(emptyStatusModalState);
@@ -160,30 +159,6 @@ export const InspectionDetail = () => {
         }
     };
 
-    const handleDownloadReport = async () => {
-        if (!inspection || !id) {
-            return;
-        }
-
-        setIsDownloadingReport(true);
-        try {
-            const blob = await inspectionService.downloadReport(id);
-            const url = window.URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `informe-inspeccion-${inspection.projectName}.pdf`;
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            window.URL.revokeObjectURL(url);
-            toast.success('Informe generado');
-        } catch (error: unknown) {
-            toast.error(getApiErrorMessage(error, 'No se pudo generar el informe PDF'));
-        } finally {
-            setIsDownloadingReport(false);
-        }
-    };
-
     if (isLoading) {
         return <Loader fullScreen />;
     }
@@ -214,7 +189,6 @@ export const InspectionDetail = () => {
     const inspectorName = getInspectorName(inspection);
     const canExecuteInspection = canAccessInspectionExecution(inspection, user || null);
     const canDownloadReport = canGenerateInspectionReport(inspection, user || null);
-    const canEditPdf = canExecuteInspection;
 
     return (
         <div className="space-y-4 pb-10">
@@ -236,21 +210,10 @@ export const InspectionDetail = () => {
                             <span className="hidden sm:inline">Ejecutar</span>
                         </button>
                     )}
-                    {canEditPdf && (
-                        <button onClick={() => navigate(`/inspections/${id}/pdf-editor`)} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white transition-colors hover:bg-slate-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 sm:h-11 sm:w-11 sm:rounded-2xl sm:w-auto sm:gap-2 sm:px-4" aria-label="Editar PDF" title="Editar PDF">
-                            <CustomIcon name="pencil" size="xs" tone="cream" />
-                            <span className="hidden sm:inline">Editar PDF</span>
-                        </button>
-                    )}
                     {canDownloadReport && (
-                        <>
-                            <button onClick={() => setShowPreview(true)} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white transition-colors hover:bg-slate-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700" aria-label="Vista previa del informe" title="Vista previa del informe">
-                                <CustomIcon name="file-pdf" size="xs" tone="cream" />
-                            </button>
-                            <button onClick={handleDownloadReport} disabled={isDownloadingReport} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white transition-colors hover:bg-slate-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700" aria-label="Descargar informe" title="Descargar informe">
-                                <CustomIcon name={isDownloadingReport ? 'sync' : 'download'} size="xs" tone="cream" spin={isDownloadingReport} />
-                            </button>
-                        </>
+                        <button onClick={() => setShowPreview(true)} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white transition-colors hover:bg-slate-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700" aria-label="Vista previa del informe" title="Vista previa del informe">
+                            <CustomIcon name="file-pdf" size="xs" tone="cream" />
+                        </button>
                     )}
                 </div>
             </div>

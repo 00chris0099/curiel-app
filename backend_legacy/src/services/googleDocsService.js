@@ -1,4 +1,8 @@
 const { google } = require('googleapis');
+const {
+    Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, ImageRun,
+    AlignmentType, BorderStyle, WidthType, PageBreak, convertInchesToTwip, HeadingLevel
+} = require('docx');
 const { Readable } = require('stream');
 const https = require('https');
 const http = require('http');
@@ -10,58 +14,65 @@ const SCOPES = [
     'https://www.googleapis.com/auth/drive'
 ];
 
-let docsClient = null;
-let driveClient = null;
+// ─── AUTH ───────────────────────────────────────────────────────────────────────
 
-function getAuth() {
+function createOAuthClient() {
+    const clientId = process.env.GOOGLE_O_CLIENT_ID || process.env.GOOGLE_OAUTH_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_O_CLIENT_SECRET || process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+    const redirectUri = process.env.GOOGLE_O_REDIRECT_URI || process.env.GOOGLE_OAUTH_REDIRECT_URI;
+
+    if (!clientId || !clientSecret || !redirectUri) {
+        throw new Error('Google OAuth credentials not configured (GOOGLE_O_CLIENT_ID, GOOGLE_O_CLIENT_SECRET, GOOGLE_O_REDIRECT_URI)');
+    }
+
+    return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
+}
+
+function createServiceAccountClients() {
     const keyJson = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
-    if (!keyJson) {
-        throw new Error('GOOGLE_SERVICE_ACCOUNT_KEY is not set');
-    }
+    if (!keyJson) return null;
 
-    let key;
-    if (typeof keyJson === 'string') {
-        try {
-            key = JSON.parse(keyJson);
-        } catch {
-            const cleaned = keyJson
-                .replace(/[\r\n\t]+/g, ' ')
-                .replace(/\s{2,}/g, ' ')
-                .trim();
-            try {
-                key = JSON.parse(cleaned);
-            } catch (e2) {
-                logger.error('Google key parse failed', { sample: cleaned.substring(0, 80), error: e2.message });
-                throw new Error('GOOGLE_SERVICE_ACCOUNT_KEY is malformed: ' + e2.message);
-            }
-        }
-    } else {
-        key = keyJson;
+    try {
+        const key = typeof keyJson === 'string' ? JSON.parse(keyJson) : keyJson;
+        const auth = new google.auth.GoogleAuth({
+            credentials: key,
+            scopes: SCOPES,
+        });
+        return {
+            docsClient: google.docs({ version: 'v1', auth }),
+            driveClient: google.drive({ version: 'v3', auth }),
+        };
+    } catch (err) {
+        logger.error('[GoogleDocs] Service account auth failed', { error: err.message });
+        return null;
     }
-
-    return new google.auth.GoogleAuth({
-        credentials: key,
-        scopes: SCOPES,
-    });
 }
 
-function getClients() {
-    if (docsClient && driveClient) return { docsClient, driveClient };
+function getDriveClient(userTokens) {
+    if (userTokens) {
+        const oauth2Client = createOAuthClient();
+        oauth2Client.setCredentials({
+            access_token: userTokens.accessToken,
+            refresh_token: userTokens.refreshToken,
+        });
+        return google.drive({ version: 'v3', auth: oauth2Client });
+    }
 
-    const auth = getAuth();
-    docsClient = google.docs({ version: 'v1', auth });
-    driveClient = google.drive({ version: 'v3', auth });
+    const sa = createServiceAccountClients();
+    if (sa) return sa.driveClient;
 
-    return { docsClient, driveClient };
+    throw new Error('No Google credentials available');
 }
 
-function fetchImageAsBase64(url) {
+// ─── IMAGE HELPER ───────────────────────────────────────────────────────────────
+
+function fetchImageBuffer(url) {
     return new Promise((resolve) => {
         try {
             const client = url.startsWith('https') ? https : http;
-            const req = client.get(url, { timeout: 10000 }, (res) => {
+            const req = client.get(url, { timeout: 15000 }, (res) => {
                 if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-                    return fetchImageAsBase64(res.headers.location).then(resolve);
+                    return fetchImageBuffer(res.headers.location).then(resolve);
                 }
                 if (res.statusCode !== 200) {
                     resolve(null);
@@ -70,10 +81,10 @@ function fetchImageAsBase64(url) {
                 const chunks = [];
                 res.on('data', (chunk) => chunks.push(chunk));
                 res.on('end', () => {
-                    const buffer = Buffer.concat(chunks);
-                    const contentType = res.headers['content-type'] || 'image/png';
-                    const base64 = buffer.toString('base64');
-                    resolve(`data:${contentType};base64,${base64}`);
+                    resolve({
+                        buffer: Buffer.concat(chunks),
+                        contentType: res.headers['content-type'] || 'image/png',
+                    });
                 });
                 res.on('error', () => resolve(null));
             });
@@ -85,103 +96,703 @@ function fetchImageAsBase64(url) {
     });
 }
 
-async function embedImagesAsBase64(html) {
-    const imgRegex = /<img\s[^>]*src="([^"]+)"/gi;
-    const urls = new Set();
-    let match;
-    while ((match = imgRegex.exec(html)) !== null) {
-        const url = match[1];
-        if (url && !url.startsWith('data:')) {
-            urls.add(url);
-        }
+function getDocxImageFormat(contentType) {
+    const map = {
+        'image/png': 'png',
+        'image/jpeg': 'jpg',
+        'image/jpg': 'jpg',
+        'image/gif': 'gif',
+        'image/webp': 'png',
+        'image/bmp': 'png',
+    };
+    return map[(contentType || '').toLowerCase()] || 'png';
+}
+
+// ─── DOCX HELPERS ───────────────────────────────────────────────────────────────
+
+const BORDER_COLOR = 'BFBFBF';
+const BLUE = '2563EB';
+const MEDIUM_BORDER = { style: BorderStyle.SINGLE, size: 1, color: BORDER_COLOR };
+const NO_BORDER = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+const BLUE_BORDER = { style: BorderStyle.SINGLE, size: 2, color: BLUE };
+
+const CELL_FULL = { top: MEDIUM_BORDER, bottom: MEDIUM_BORDER, left: MEDIUM_BORDER, right: MEDIUM_BORDER };
+const CELL_NONE = { top: NO_BORDER, bottom: NO_BORDER, left: NO_BORDER, right: NO_BORDER };
+
+const TWIP_WIDTHS = {
+    full: convertInchesToTwip(6.3),
+    label: convertInchesToTwip(1.9),
+    value: convertInchesToTwip(4.4),
+    half: convertInchesToTwip(3.15),
+};
+
+const FONT = 'Arial';
+const FONT_SIZE = 21;   // 10.5pt in half-points
+const FONT_SIZE_SM = 18; // 9pt
+const FONT_SIZE_LG = 32; // 16pt
+const FONT_SIZE_TITLE = 52; // 26pt
+
+function setCellBorders(cell, borders) {
+    cell.options.borders = borders;
+    return cell;
+}
+
+function borderedBox(title, rows) {
+    const borderCells = [
+        new TableCell({
+            columnSpan: 2,
+            borders: { top: BLUE_BORDER, bottom: { style: BorderStyle.SINGLE, size: 1, color: BLUE }, left: MEDIUM_BORDER, right: MEDIUM_BORDER },
+            shading: { type: 'clear', fill: 'EFF6FF' },
+            children: [
+                new Paragraph({
+                    spacing: { before: 80, after: 80 },
+                    indent: { left: convertInchesToTwip(0.1) },
+                    children: [new TextRun({ text: title, bold: true, size: FONT_SIZE_LG, color: '111827', font: FONT })],
+                }),
+            ],
+        }),
+    ];
+
+    for (const row of rows) {
+        borderCells.push(
+            new TableCell({
+                borders: CELL_FULL,
+                width: { size: TWIP_WIDTHS.label, type: WidthType.DXA },
+                shading: { type: 'clear', fill: 'F9FAFB' },
+                children: [
+                    new Paragraph({
+                        spacing: { before: 40, after: 40 },
+                        indent: { left: convertInchesToTwip(0.1) },
+                        children: [new TextRun({ text: row.label, bold: true, size: FONT_SIZE_SM, color: '374151', font: FONT })],
+                    }),
+                ],
+            }),
+            new TableCell({
+                borders: CELL_FULL,
+                width: { size: TWIP_WIDTHS.value, type: WidthType.DXA },
+                children: [
+                    new Paragraph({
+                        spacing: { before: 40, after: 40 },
+                        indent: { left: convertInchesToTwip(0.1) },
+                        children: [new TextRun({ text: row.value || '---', size: FONT_SIZE, color: '1A1A1A', font: FONT })],
+                    }),
+                ],
+            }),
+        );
     }
 
-    if (urls.size === 0) return html;
-
-    logger.info(`[GoogleDocs] Embedding ${urls.size} images as base64`);
-
-    const urlMap = {};
-    const promises = [...urls].map(async (url) => {
-        const dataUri = await fetchImageAsBase64(url);
-        if (dataUri) {
-            urlMap[url] = dataUri;
-        } else {
-            logger.warn('[GoogleDocs] Could not fetch image', { url });
-        }
+    return new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        columnWidths: [TWIP_WIDTHS.label, TWIP_WIDTHS.value],
+        rows: [
+            new TableRow({ children: [borderCells[0], new TableCell({ borders: CELL_NONE, children: [new Paragraph('')], columnSpan: 0 })] }),
+            ...chunk(borderCells.slice(1), 2).map(cells => new TableRow({ children: cells })),
+        ],
     });
-    await Promise.all(promises);
+}
 
-    let result = html;
-    for (const [url, dataUri] of Object.entries(urlMap)) {
-        result = result.split(url).join(dataUri);
+function chunk(arr, size) {
+    const result = [];
+    for (let i = 0; i < arr.length; i += size) {
+        result.push(arr.slice(i, i + size));
     }
-
-    logger.info(`[GoogleDocs] Embedded ${Object.keys(urlMap).length}/${urls.size} images`);
     return result;
 }
 
-async function buildReportHtml(reportData) {
-    const {
-        inspection,
-        metadata,
-        areas,
-        observations,
-        photos,
-        summary,
-        recommendations,
-        inspectorSignature
-    } = reportData;
+function sectionTitle(text) {
+    return new Paragraph({
+        spacing: { before: 0, after: 120 },
+        border: { bottom: { style: BorderStyle.SINGLE, size: 2, color: BLUE } },
+        children: [new TextRun({ text, bold: true, size: FONT_SIZE_LG, color: '111827', font: FONT })],
+    });
+}
 
-    const html = buildInspectionReportHtml({
-        inspection,
-        metadata,
-        areas,
-        observations,
-        photos,
-        summary,
-        recommendations,
-        inspectorSignature,
-        logoUrl: require('../config').pdf.companyLogo,
-        generatedAt: new Date().toISOString()
+function bodyParagraph(text, opts = {}) {
+    return new Paragraph({
+        spacing: { before: opts.before || 0, after: opts.after || 80 },
+        alignment: opts.align,
+        children: [new TextRun({
+            text,
+            bold: opts.bold,
+            italics: opts.italic,
+            size: opts.size || FONT_SIZE,
+            color: opts.color || '1A1A1A',
+            font: FONT,
+        })],
+    });
+}
+
+function bulletItem(text) {
+    return new Paragraph({
+        spacing: { before: 40, after: 40 },
+        indent: { left: convertInchesToTwip(0.3), hanging: convertInchesToTwip(0.15) },
+        children: [new TextRun({ text: '•  ', size: FONT_SIZE, font: FONT }), new TextRun({ text, size: FONT_SIZE, color: '1A1A1A', font: FONT })],
+    });
+}
+
+// ─── REPORT DATA EXTRACTION ─────────────────────────────────────────────────────
+
+function extractReportData(reportData) {
+    const { inspection, metadata, areas, observations, photos, summary, recommendations } = reportData;
+
+    const inspector = inspection.inspector || {};
+    const inspectorName = inspector.fullName
+        || `${inspector.firstName || ''} ${inspector.lastName || ''}`.trim()
+        || 'Sin asignar';
+    const inspectorRole = inspector.roles?.[0]?.name || inspector.role || 'inspector';
+    const capValue = inspector.capNumber || inspector.cap || inspector.registrationNumber || null;
+    const district = metadata?.district || inspection.state || 'Lima';
+    const address = metadata?.exactAddress || inspection.address || '';
+    const buildingName = metadata?.buildingName || 'No registrado';
+    const apartmentNumber = metadata?.apartmentNumber || 'No registrado';
+    const serviceType = metadata?.serviceType || inspection.inspectionType || '';
+    const totalArea = areas.reduce((sum, area) => sum + Number(area.calculatedAreaM2 || 0), 0);
+
+    // Build observations grouped by area with sequence numbers
+    let observationCounter = 1;
+    const sections = areas.map((area) => {
+        const areaObs = observations
+            .filter((obs) => obs.areaId === area.id)
+            .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+            .map((obs) => ({
+                ...obs,
+                sequence: observationCounter++,
+                photos: photos.filter((p) => p.observationId === obs.id),
+            }));
+        return { title: area.name.toUpperCase(), area, observations: areaObs };
     });
 
-    return embedImagesAsBase64(html);
+    // Collect all recommendations
+    const allRecs = [];
+    for (const group of ['pintura', 'estructura', 'instalaciones', 'acabados']) {
+        for (const item of (recommendations[group] || [])) {
+            allRecs.push(item);
+        }
+    }
+    const manualRecs = (summary?.finalRecommendations || '')
+        .split(/\n+/)
+        .map((l) => l.trim())
+        .filter(Boolean);
+    for (const item of manualRecs) allRecs.push(item);
+
+    const buildingPhoto = photos.find((p) => p.type === 'edificio') || null;
+
+    return {
+        inspection, metadata, areas, inspectorName, inspectorRole, capValue,
+        district, address, buildingName, apartmentNumber, serviceType,
+        totalArea, sections, allRecs, buildingPhoto,
+        inspectorSignature: reportData.inspectorSignature,
+        generatedAt: reportData.generatedAt || new Date().toISOString(),
+    };
 }
 
-async function cleanupDrive(driveClient) {
-    try {
-        const folderId = process.env.GOOGLE_DOCS_FOLDER_ID || null;
-        const q = folderId
-            ? `'${folderId}' in parents and mimeType='application/vnd.google-apps.document' and trashed=false`
-            : "mimeType='application/vnd.google-apps.document' and trashed=false";
-        const res = await driveClient.files.list({
-            q,
-            fields: 'files(id, name)',
-            pageSize: 100,
-            supportsAllDrives: true,
-            includeItemsFromAllDrives: true,
-        });
-        const files = res.data.files || [];
-        if (files.length === 0) return;
+// ─── IMAGE CACHE ────────────────────────────────────────────────────────────────
 
-        logger.info(`[GoogleDocs] Cleaning ${files.length} old docs from Drive`);
-        for (const file of files) {
-            try {
-                await driveClient.files.delete({
-                    fileId: file.id,
-                    supportsAllDrives: true,
-                });
-            } catch (deleteErr) {
-                logger.debug('[GoogleDocs] Could not delete doc', { fileId: file.id });
+const imageCache = new Map();
+
+async function getImageBuffer(url) {
+    if (imageCache.has(url)) return imageCache.get(url);
+
+    const result = await fetchImageBuffer(url);
+    if (result) {
+        imageCache.set(url, result);
+    }
+    return result;
+}
+
+// ─── DOCX BUILDER ───────────────────────────────────────────────────────────────
+
+async function buildDocx(reportData) {
+    const data = extractReportData(reportData);
+    const sections = [];
+    const imageBuffers = [];
+
+    // Pre-fetch all images
+    const allImageUrls = new Set();
+    for (const section of data.sections) {
+        for (const obs of section.observations) {
+            for (const photo of (obs.photos || [])) {
+                if (photo.url) allImageUrls.add(photo.url);
             }
         }
-        logger.info('[GoogleDocs] Drive cleanup done');
-    } catch (err) {
-        logger.warn('[GoogleDocs] Drive cleanup failed', { message: err.message });
     }
+    if (data.inspectorSignature?.signatureUrl) allImageUrls.add(data.inspectorSignature.signatureUrl);
+    if (data.buildingPhoto?.url) allImageUrls.add(data.buildingPhoto.url);
+
+    for (const url of allImageUrls) {
+        const result = await getImageBuffer(url);
+        if (result) imageBuffers.push({ url, ...result });
+    }
+
+    // ── PAGE 1: COVER ───────────────────────────────────────────────────────────
+
+    sections.push({
+        properties: {
+            page: {
+                size: { width: convertInchesToTwip(8.27), height: convertInchesToTwip(11.69) },
+                margin: { top: convertInchesToTwip(1.0), bottom: convertInchesToTwip(0.7), left: convertInchesToTwip(1.0), right: convertInchesToTwip(1.0) },
+            },
+        },
+        children: [
+            new Paragraph({ spacing: { before: convertInchesToTwip(1.5), after: 400 }, children: [] }),
+            new Paragraph({
+                spacing: { after: 200 },
+                children: [new TextRun({ text: 'CURIEL', bold: true, size: 72, color: '1F2937', font: FONT })],
+            }),
+            new Paragraph({
+                spacing: { after: 200 },
+                border: { bottom: { style: BorderStyle.SINGLE, size: 2, color: BLUE } },
+                children: [new TextRun({ text: 'INFORME DE INSPECCION', bold: true, size: FONT_SIZE_TITLE, color: '111827', font: FONT })],
+            }),
+            new Paragraph({
+                spacing: { after: 300 },
+                children: [new TextRun({
+                    text: 'Informe tecnico profesional elaborado con criterios inmobiliarios, metricos y fotograficos para revision tecnica integral del inmueble.',
+                    italics: true, size: FONT_SIZE, color: '6B7280', font: FONT,
+                })],
+            }),
+
+            // General info box (on cover)
+            new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                columnWidths: [TWIP_WIDTHS.label, TWIP_WIDTHS.value],
+                rows: [
+                    new TableRow({ children: [
+                        new TableCell({
+                            columnSpan: 2,
+                            borders: { top: BLUE_BORDER, bottom: { style: BorderStyle.SINGLE, size: 1, color: BLUE }, left: MEDIUM_BORDER, right: MEDIUM_BORDER },
+                            shading: { type: 'clear', fill: 'EFF6FF' },
+                            children: [new Paragraph({
+                                spacing: { before: 80, after: 80 },
+                                indent: { left: convertInchesToTwip(0.1) },
+                                children: [new TextRun({ text: 'INFORMACION GENERAL', bold: true, size: FONT_SIZE_LG, color: '111827', font: FONT })],
+                            })],
+                        }),
+                    ]}),
+                    ...[
+                        { label: 'Cliente', value: data.inspection.clientName },
+                        { label: 'Direccion', value: data.address },
+                        { label: 'Distrito', value: data.district },
+                        { label: 'Provincia', value: 'Lima' },
+                        { label: 'Edificio', value: data.buildingName },
+                        { label: 'Fecha', value: formatDateEs(data.inspection.scheduledDate) },
+                        { label: 'Inmueble', value: data.apartmentNumber },
+                        { label: 'Servicio', value: data.serviceType },
+                    ].map(r => new TableRow({ children: [
+                        new TableCell({
+                            borders: CELL_FULL,
+                            width: { size: TWIP_WIDTHS.label, type: WidthType.DXA },
+                            shading: { type: 'clear', fill: 'F9FAFB' },
+                            children: [new Paragraph({
+                                spacing: { before: 40, after: 40 },
+                                indent: { left: convertInchesToTwip(0.1) },
+                                children: [new TextRun({ text: r.label, bold: true, size: FONT_SIZE_SM, color: '374151', font: FONT })],
+                            })],
+                        }),
+                        new TableCell({
+                            borders: CELL_FULL,
+                            width: { size: TWIP_WIDTHS.value, type: WidthType.DXA },
+                            children: [new Paragraph({
+                                spacing: { before: 40, after: 40 },
+                                indent: { left: convertInchesToTwip(0.1) },
+                                children: [new TextRun({ text: r.value || '---', size: FONT_SIZE, color: '1A1A1A', font: FONT })],
+                            })],
+                        }),
+                    ]})),
+                ],
+            }),
+
+            // Building photo
+            ...(() => {
+                if (data.buildingPhoto) {
+                    const imgBuf = imageBuffers.find(b => b.url === data.buildingPhoto.url);
+                    if (imgBuf) {
+                        const fmt = getDocxImageFormat(imgBuf.contentType);
+                        return [new Paragraph({
+                            spacing: { before: 200, after: 0 },
+                            border: { top: { style: BorderStyle.SINGLE, size: 1, color: BORDER_COLOR }, bottom: { style: BorderStyle.SINGLE, size: 1, color: BORDER_COLOR }, left: MEDIUM_BORDER, right: MEDIUM_BORDER },
+                            alignment: AlignmentType.CENTER,
+                            children: [new ImageRun({
+                                data: imgBuf.buffer,
+                                transformation: { width: 500, height: 280 },
+                                type: fmt,
+                            })],
+                        })];
+                    }
+                }
+                return [new Paragraph({
+                    spacing: { before: 200, after: 0 },
+                    alignment: AlignmentType.CENTER,
+                    children: [new TextRun({ text: 'Foto del edificio no disponible', italics: true, size: FONT_SIZE, color: '9CA3AF', font: FONT })],
+                })];
+            })(),
+
+            new Paragraph({ spacing: { before: 600 }, children: [] }),
+            new Paragraph({
+                border: { top: { style: BorderStyle.SINGLE, size: 1, color: BORDER_COLOR } },
+                spacing: { before: 100 },
+                children: [
+                    new TextRun({ text: `Generado: ${formatDateTimeEs(data.generatedAt)}    |    `, size: FONT_SIZE_SM, color: '9CA3AF', font: FONT }),
+                    new TextRun({ text: 'CURIEL Inspection Management', size: FONT_SIZE_SM, color: '9CA3AF', font: FONT }),
+                ],
+            }),
+        ],
+    });
+
+    // ── PAGE 2: INSPECCION METRICA ──────────────────────────────────────────────
+
+    sections.push({
+        properties: {
+            page: {
+                size: { width: convertInchesToTwip(8.27), height: convertInchesToTwip(11.69) },
+                margin: { top: convertInchesToTwip(1.0), bottom: convertInchesToTwip(0.7), left: convertInchesToTwip(1.0), right: convertInchesToTwip(1.0) },
+            },
+        },
+        children: [
+            new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                columnWidths: [TWIP_WIDTHS.label, TWIP_WIDTHS.value],
+                rows: [
+                    new TableRow({ children: [
+                        new TableCell({
+                            columnSpan: 2,
+                            borders: { top: BLUE_BORDER, bottom: { style: BorderStyle.SINGLE, size: 1, color: BLUE }, left: MEDIUM_BORDER, right: MEDIUM_BORDER },
+                            shading: { type: 'clear', fill: 'EFF6FF' },
+                            children: [new Paragraph({
+                                spacing: { before: 80, after: 80 },
+                                indent: { left: convertInchesToTwip(0.1) },
+                                children: [new TextRun({ text: 'INSPECCION METRICA', bold: true, size: FONT_SIZE_LG, color: '111827', font: FONT })],
+                            })],
+                        }),
+                    ]}),
+                    // Header row
+                    new TableRow({ children: [
+                        new TableCell({
+                            borders: CELL_FULL,
+                            width: { size: TWIP_WIDTHS.label, type: WidthType.DXA },
+                            shading: { type: 'clear', fill: 'F9FAFB' },
+                            children: [new Paragraph({
+                                spacing: { before: 60, after: 60 },
+                                indent: { left: convertInchesToTwip(0.1) },
+                                children: [new TextRun({ text: 'AMBIENTE', bold: true, size: FONT_SIZE_SM, color: '6B7280', font: FONT })],
+                            })],
+                        }),
+                        new TableCell({
+                            borders: CELL_FULL,
+                            width: { size: TWIP_WIDTHS.value, type: WidthType.DXA },
+                            shading: { type: 'clear', fill: 'F9FAFB' },
+                            children: [new Paragraph({
+                                spacing: { before: 60, after: 60 },
+                                alignment: AlignmentType.RIGHT,
+                                indent: { right: convertInchesToTwip(0.1) },
+                                children: [new TextRun({ text: 'AREA (m2)', bold: true, size: FONT_SIZE_SM, color: '6B7280', font: FONT })],
+                            })],
+                        }),
+                    ]}),
+                    // Data rows
+                    ...data.areas.map(area => new TableRow({ children: [
+                        new TableCell({
+                            borders: CELL_FULL,
+                            width: { size: TWIP_WIDTHS.label, type: WidthType.DXA },
+                            children: [new Paragraph({
+                                spacing: { before: 40, after: 40 },
+                                indent: { left: convertInchesToTwip(0.1) },
+                                children: [new TextRun({ text: area.name || '---', size: FONT_SIZE, color: '1A1A1A', font: FONT })],
+                            })],
+                        }),
+                        new TableCell({
+                            borders: CELL_FULL,
+                            width: { size: TWIP_WIDTHS.value, type: WidthType.DXA },
+                            children: [new Paragraph({
+                                spacing: { before: 40, after: 40 },
+                                alignment: AlignmentType.RIGHT,
+                                indent: { right: convertInchesToTwip(0.1) },
+                                children: [new TextRun({ text: formatMetric(area.calculatedAreaM2), size: FONT_SIZE, color: '1A1A1A', font: FONT })],
+                            })],
+                        }),
+                    ]})),
+                    // Total row
+                    new TableRow({ children: [
+                        new TableCell({
+                            borders: { top: { style: BorderStyle.SINGLE, size: 2, color: BORDER_COLOR }, bottom: { style: BorderStyle.SINGLE, size: 2, color: BORDER_COLOR }, left: MEDIUM_BORDER, right: MEDIUM_BORDER },
+                            width: { size: TWIP_WIDTHS.label, type: WidthType.DXA },
+                            children: [new Paragraph({
+                                spacing: { before: 80, after: 80 },
+                                indent: { left: convertInchesToTwip(0.1) },
+                                children: [new TextRun({ text: 'TOTAL', bold: true, size: FONT_SIZE, color: '1A1A1A', font: FONT })],
+                            })],
+                        }),
+                        new TableCell({
+                            borders: { top: { style: BorderStyle.SINGLE, size: 2, color: BORDER_COLOR }, bottom: { style: BorderStyle.SINGLE, size: 2, color: BORDER_COLOR }, left: MEDIUM_BORDER, right: MEDIUM_BORDER },
+                            width: { size: TWIP_WIDTHS.value, type: WidthType.DXA },
+                            children: [new Paragraph({
+                                spacing: { before: 80, after: 80 },
+                                alignment: AlignmentType.RIGHT,
+                                indent: { right: convertInchesToTwip(0.1) },
+                                children: [new TextRun({ text: formatMetric(data.totalArea), bold: true, size: FONT_SIZE, color: '1A1A1A', font: FONT })],
+                            })],
+                        }),
+                    ]}),
+                ],
+            }),
+            new Paragraph({
+                spacing: { before: 120 },
+                children: [new TextRun({
+                    text: 'El area total corresponde a la suma de las mediciones individuales de cada ambiente inspeccionado.',
+                    italics: true, size: FONT_SIZE_SM, color: '6B7280', font: FONT,
+                })],
+            }),
+        ],
+    });
+
+    // ── PAGES 3+: SECCIONES POR AMBIENTE ────────────────────────────────────────
+
+    for (const section of data.sections) {
+        const sectionChildren = [
+            sectionTitle(section.title),
+        ];
+
+        if (section.observations.length === 0) {
+            sectionChildren.push(bodyParagraph('No se registraron observaciones tecnicas en esta seccion.', { italic: true, color: '9CA3AF' }));
+        } else {
+            for (const obs of section.observations) {
+                sectionChildren.push(bodyParagraph(`Observacion ${obs.sequence}`, { bold: true, color: '374151', before: 160 }));
+
+                // Photos
+                for (const photo of (obs.photos || [])) {
+                    const imgBuf = imageBuffers.find(b => b.url === photo.url);
+                    if (imgBuf) {
+                        const fmt = getDocxImageFormat(imgBuf.contentType);
+                        sectionChildren.push(new Paragraph({
+                            spacing: { before: 80, after: 40 },
+                            alignment: AlignmentType.CENTER,
+                            children: [new ImageRun({
+                                data: imgBuf.buffer,
+                                transformation: { width: 480, height: 270 },
+                                type: fmt,
+                            })],
+                        }));
+                        if (photo.caption) {
+                            sectionChildren.push(bodyParagraph(photo.caption, { italic: true, color: '6B7280', size: FONT_SIZE_SM, after: 120 }));
+                        }
+                    }
+                }
+
+                // Description
+                sectionChildren.push(bodyParagraph(obs.description || '', { after: 80 }));
+
+                // Metadata
+                const metaParts = [`Tipo: ${obs.type || '---'}`];
+                if (obs.severity) metaParts.push(`Severidad: ${obs.severity}`);
+                if (obs.metricValue) metaParts.push(`Metrica: ${formatMetric(obs.metricValue, obs.metricUnit ? ` ${obs.metricUnit}` : '')}`);
+                if (obs.recommendation) metaParts.push(`Recomendacion: ${obs.recommendation}`);
+                sectionChildren.push(bodyParagraph(metaParts.join('  ·  '), { italic: true, color: '6B7280', size: FONT_SIZE_SM, after: 200 }));
+            }
+        }
+
+        sections.push({
+            properties: {
+                page: {
+                    size: { width: convertInchesToTwip(8.27), height: convertInchesToTwip(11.69) },
+                    margin: { top: convertInchesToTwip(1.0), bottom: convertInchesToTwip(0.7), left: convertInchesToTwip(1.0), right: convertInchesToTwip(1.0) },
+                },
+            },
+            children: sectionChildren,
+        });
+    }
+
+    // ── PAGE: RECOMENDACIONES ───────────────────────────────────────────────────
+
+    const recChildren = [
+        new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: [
+                new TableRow({ children: [
+                    new TableCell({
+                        borders: { top: BLUE_BORDER, bottom: { style: BorderStyle.SINGLE, size: 1, color: BLUE }, left: MEDIUM_BORDER, right: MEDIUM_BORDER },
+                        shading: { type: 'clear', fill: 'EFF6FF' },
+                        children: [new Paragraph({
+                            spacing: { before: 80, after: 80 },
+                            indent: { left: convertInchesToTwip(0.1) },
+                            children: [new TextRun({ text: 'RECOMENDACIONES', bold: true, size: FONT_SIZE_LG, color: '111827', font: FONT })],
+                        })],
+                    }),
+                ]}),
+                new TableRow({ children: [
+                    new TableCell({
+                        borders: CELL_FULL,
+                        children: [
+                            new Paragraph({ spacing: { before: 40, after: 40 }, children: [] }),
+                            ...(data.allRecs.length > 0
+                                ? data.allRecs.map(rec => bulletItem(rec))
+                                : [bodyParagraph('No se generaron recomendaciones automaticas.', { italic: true, color: '9CA3AF' })]
+                            ),
+                            new Paragraph({ spacing: { before: 40, after: 40 }, children: [] }),
+                        ],
+                    }),
+                ]}),
+            ],
+        }),
+    ];
+
+    sections.push({
+        properties: {
+            page: {
+                size: { width: convertInchesToTwip(8.27), height: convertInchesToTwip(11.69) },
+                margin: { top: convertInchesToTwip(1.0), bottom: convertInchesToTwip(0.7), left: convertInchesToTwip(1.0), right: convertInchesToTwip(1.0) },
+            },
+        },
+        children: recChildren,
+    });
+
+    // ── PAGE: CIERRE TECNICO ────────────────────────────────────────────────────
+
+    const cierreChildren = [
+        new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            columnWidths: [TWIP_WIDTHS.label, TWIP_WIDTHS.value],
+            rows: [
+                new TableRow({ children: [
+                    new TableCell({
+                        columnSpan: 2,
+                        borders: { top: BLUE_BORDER, bottom: { style: BorderStyle.SINGLE, size: 1, color: BLUE }, left: MEDIUM_BORDER, right: MEDIUM_BORDER },
+                        shading: { type: 'clear', fill: 'EFF6FF' },
+                        children: [new Paragraph({
+                            spacing: { before: 80, after: 80 },
+                            indent: { left: convertInchesToTwip(0.1) },
+                            children: [new TextRun({ text: 'CIERRE TECNICO', bold: true, size: FONT_SIZE_LG, color: '111827', font: FONT })],
+                        })],
+                    }),
+                ]}),
+                ...[
+                    { label: 'Cliente', value: data.inspection.clientName },
+                    { label: 'Direccion', value: data.address },
+                    { label: 'Distrito', value: data.district },
+                    { label: 'Fecha', value: formatDateEs(data.inspection.scheduledDate) },
+                    { label: 'Inmueble', value: data.apartmentNumber },
+                ].map(r => new TableRow({ children: [
+                    new TableCell({
+                        borders: CELL_FULL,
+                        width: { size: TWIP_WIDTHS.label, type: WidthType.DXA },
+                        shading: { type: 'clear', fill: 'F9FAFB' },
+                        children: [new Paragraph({
+                            spacing: { before: 40, after: 40 },
+                            indent: { left: convertInchesToTwip(0.1) },
+                            children: [new TextRun({ text: r.label, bold: true, size: FONT_SIZE_SM, color: '374151', font: FONT })],
+                        })],
+                    }),
+                    new TableCell({
+                        borders: CELL_FULL,
+                        width: { size: TWIP_WIDTHS.value, type: WidthType.DXA },
+                        children: [new Paragraph({
+                            spacing: { before: 40, after: 40 },
+                            indent: { left: convertInchesToTwip(0.1) },
+                            children: [new TextRun({ text: r.value || '---', size: FONT_SIZE, color: '1A1A1A', font: FONT })],
+                        })],
+                    }),
+                ]})),
+            ],
+        }),
+
+        // Conclusion
+        new Paragraph({
+            spacing: { before: 300, after: 120 },
+            children: [new TextRun({
+                text: data.summary?.generalConclusion || 'Sin conclusion general registrada.',
+                size: FONT_SIZE, color: '1A1A1A', font: FONT,
+            })],
+        }),
+        new Paragraph({
+            spacing: { after: 200 },
+            children: [new TextRun({
+                text: 'Este informe consolida los hallazgos observados en la fecha de inspeccion y debe complementarse con las acciones correctivas correspondientes para el inmueble evaluado.',
+                italics: true, size: FONT_SIZE_SM, color: '9CA3AF', font: FONT,
+            })],
+        }),
+
+        // Signature block
+        new Paragraph({
+            spacing: { after: 120 },
+            children: [new TextRun({
+                text: 'El presente informe fue realizado e inspeccionado por:',
+                size: FONT_SIZE_SM, color: '6B7280', font: FONT,
+            })],
+        }),
+
+        // Inspector signature image
+        ...(() => {
+            if (data.inspectorSignature?.signatureUrl) {
+                const imgBuf = imageBuffers.find(b => b.url === data.inspectorSignature.signatureUrl);
+                if (imgBuf) {
+                    const fmt = getDocxImageFormat(imgBuf.contentType);
+                    return [new Paragraph({
+                        spacing: { before: 80, after: 80 },
+                        children: [new ImageRun({
+                            data: imgBuf.buffer,
+                            transformation: { width: 180, height: 70 },
+                            type: fmt,
+                        })],
+                    })];
+                }
+            }
+            return [bodyParagraph('Firma pendiente', { italic: true, color: '9CA3AF', size: FONT_SIZE_SM, after: 80 })];
+        })(),
+
+        // Signature line
+        new Paragraph({
+            spacing: { before: 40, after: 80 },
+            border: { bottom: { style: BorderStyle.SINGLE, size: 2, color: '1A1A1A' } },
+            children: [],
+        }),
+        bodyParagraph(data.inspectorName, { bold: true, color: '1A1A1A' }),
+        bodyParagraph(data.inspectorRole, { color: '6B7280', size: FONT_SIZE_SM }),
+        ...(data.inspectorRole === 'arquitecto'
+            ? [bodyParagraph(`CAP: ${data.capValue || 'No registrado'}`, { color: '6B7280', size: FONT_SIZE_SM })]
+            : []),
+    ];
+
+    sections.push({
+        properties: {
+            page: {
+                size: { width: convertInchesToTwip(8.27), height: convertInchesToTwip(11.69) },
+                margin: { top: convertInchesToTwip(1.0), bottom: convertInchesToTwip(0.7), left: convertInchesToTwip(1.0), right: convertInchesToTwip(1.0) },
+            },
+        },
+        children: cierreChildren,
+    });
+
+    // ── BUILD DOCUMENT ──────────────────────────────────────────────────────────
+
+    const doc = new Document({
+        creator: 'CURIEL Inspection Management',
+        title: `Informe de Inspeccion — ${data.inspection.projectName || ''}`,
+        description: 'Informe tecnico de inspeccion inmobiliaria',
+        sections,
+    });
+
+    return Packer.toBuffer(doc);
 }
 
-async function uploadHtmlAsGoogleDoc(driveClient, html, title, folderId) {
+// ─── FORMAT HELPERS ─────────────────────────────────────────────────────────────
+
+function formatDateEs(value) {
+    if (!value) return '---';
+    return new Date(value).toLocaleDateString('es-PE', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+function formatDateTimeEs(value) {
+    if (!value) return '---';
+    return new Date(value).toLocaleString('es-PE', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
+function formatMetric(value, suffix = '') {
+    if (value === null || value === undefined || value === '') return '---';
+    return `${Number(value).toFixed(2)}${suffix}`;
+}
+
+// ─── UPLOAD TO GOOGLE DRIVE ─────────────────────────────────────────────────────
+
+async function uploadDocxAsGoogleDoc(driveClient, docxBuffer, title, folderId) {
     const fileMetadata = {
         name: title,
         mimeType: 'application/vnd.google-apps.document',
@@ -193,8 +804,8 @@ async function uploadHtmlAsGoogleDoc(driveClient, html, title, folderId) {
     const res = await driveClient.files.create({
         requestBody: fileMetadata,
         media: {
-            mimeType: 'text/html',
-            body: Readable.from(Buffer.from(html, 'utf-8')),
+            mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            body: Readable.from(docxBuffer),
         },
         fields: 'id, webViewLink',
         supportsAllDrives: true,
@@ -202,61 +813,52 @@ async function uploadHtmlAsGoogleDoc(driveClient, html, title, folderId) {
 
     return {
         documentId: res.data.id,
-        url: res.data.webViewLink || `https://docs.google.com/document/d/${res.data.id}/edit`
+        url: res.data.webViewLink || `https://docs.google.com/document/d/${res.data.id}/edit`,
     };
 }
 
+// ─── PUBLIC: CREATE SERVICE ACCOUNT DOC ──────────────────────────────────────────
+
 async function createGoogleDoc(reportData) {
-    const { driveClient } = getClients();
+    const sa = createServiceAccountClients();
+    if (!sa) throw new Error('Google service account not configured');
 
-    const title = `Informe de Inspección — ${reportData.inspection.projectName}`;
-
-    await cleanupDrive(driveClient);
+    const title = `Informe de Inspeccion — ${reportData.inspection.projectName}`;
+    const docxBuffer = await buildDocx(reportData);
 
     const folderId = process.env.GOOGLE_DOCS_FOLDER_ID || null;
-    const html = await buildReportHtml(reportData);
-
-    const result = await uploadHtmlAsGoogleDoc(driveClient, html, title, folderId);
+    const result = await uploadDocxAsGoogleDoc(sa.driveClient, docxBuffer, title, folderId);
 
     logger.info(`[GoogleDocs] Document ready: ${result.url}`);
 
     return {
         documentId: result.documentId,
         url: result.url,
-        title
+        title,
     };
 }
 
+// ─── PUBLIC: CREATE USER DOC (OAUTH) ────────────────────────────────────────────
+
 async function createUserGoogleDoc(reportData, userTokens) {
-    const { google } = require('googleapis');
+    const driveClient = getDriveClient(userTokens);
 
-    const oauth2Client = new google.auth.OAuth2(
-        process.env.GOOGLE_O_CLIENT_ID,
-        process.env.GOOGLE_O_CLIENT_SECRET,
-        process.env.GOOGLE_O_REDIRECT_URI
-    );
-    oauth2Client.setCredentials({
-        access_token: userTokens.accessToken,
-        refresh_token: userTokens.refreshToken,
-    });
+    const title = `Informe de Inspeccion — ${reportData.inspection.projectName}`;
+    const docxBuffer = await buildDocx(reportData);
 
-    const driveClient = google.drive({ version: 'v3', auth: oauth2Client });
-
-    const title = `Informe de Inspección — ${reportData.inspection.projectName}`;
-    const html = await buildReportHtml(reportData);
-
-    const result = await uploadHtmlAsGoogleDoc(driveClient, html, title, null);
+    const result = await uploadDocxAsGoogleDoc(driveClient, docxBuffer, title, null);
 
     logger.info(`[GoogleDocs] User document ready: ${result.url}`);
 
     return {
         documentId: result.documentId,
         url: result.url,
-        title
+        title,
     };
 }
 
 module.exports = {
     createGoogleDoc,
-    createUserGoogleDoc
+    createUserGoogleDoc,
+    buildDocx,
 };
