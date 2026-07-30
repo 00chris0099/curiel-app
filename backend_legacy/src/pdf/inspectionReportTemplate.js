@@ -130,12 +130,10 @@ const buildInspectionReportHtml = (reportData) => {
 
     const FOOTER_HTML = `
         <div style="position:fixed; bottom:0; left:0; right:0; height:50px; overflow:visible; z-index:100; margin:0; padding:0;">
-            <svg viewBox="0 0 827 50" preserveAspectRatio="none" style="width:100%; height:50px; display:block; margin:0; padding:0;">
-                <path d="M0,18 C100,8 200,3 350,10 C500,17 650,33 827,8 L827,50 L0,50 Z" fill="#e57a1a"/>
-                <path d="M0,23 C150,13 300,6 500,16 C650,24 750,36 827,18 L827,50 L0,50 Z" fill="#d4710f"/>
-                <path d="M0,28 C120,20 280,13 450,20 C600,26 730,38 827,23 L827,50 L0,50 Z" fill="#c0660a"/>
+            <svg viewBox="0 0 1000 50" preserveAspectRatio="none" style="width:100vw; height:50px; display:block; margin:0; padding:0;">
+                <path d="M0,0 L1000,0 L1000,50 L0,50 Z" fill="#24385A"/>
             </svg>
-            <div style="position:absolute; bottom:10px; left:0; right:0; display:flex; justify-content:center; align-items:center; gap:32px; font-size:9pt; color:#fff; font-weight:600;">
+            <div style="position:absolute; bottom:12px; left:0; right:0; display:flex; justify-content:center; align-items:center; gap:32px; font-size:9pt; color:#fff; font-weight:600;">
                 <span style="display:flex; align-items:center; gap:6px;">${WHATSAPP_SVG} 983 893 067</span>
                 <span style="display:flex; align-items:center; gap:6px;">${EMAIL_SVG} info@tudepacheck.com</span>
             </div>
@@ -165,7 +163,7 @@ const buildInspectionReportHtml = (reportData) => {
     <style>
         @page {
             size: A4;
-            margin: 50px 18mm 0px 18mm;
+            margin: 50px 0 0 0;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -174,6 +172,7 @@ const buildInspectionReportHtml = (reportData) => {
             font-size: 10.5pt;
             line-height: 1.4;
             background: #fff;
+            padding: 0 18mm;
         }
         .page-break { page-break-before: always; }
         .header-fixed { position: fixed; top: 0; left: 0; right: 0; z-index: 100; }

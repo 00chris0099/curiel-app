@@ -1,17 +1,22 @@
-FROM node:20-alpine
+FROM node:20-slim
 
 WORKDIR /app
 
-RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     chromium \
-    nss \
-    freetype \
-    harfbuzz \
+    fonts-liberation \
+    libnss3 \
+    libfreetype6 \
+    libharfbuzz0b \
     ca-certificates \
-    ttf-freefont
+    libreoffice-core \
+    libreoffice-writer \
+    && rm -rf /var/lib/apt/lists/*
 
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+ENV LIBRE_OFFICE_DIR=/usr/lib/libreoffice/program
+ENV LIBRE_OFFICE_EXE=/usr/lib/libreoffice/program/soffice
 
 COPY package*.json ./
 RUN npm ci --omit=dev

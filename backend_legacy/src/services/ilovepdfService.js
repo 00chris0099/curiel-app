@@ -1,56 +1,86 @@
-const ILovePDFApi = require('@ilovepdf/ilovepdf-nodejs');
-const ILovePDFFile = require('@ilovepdf/ilovepdf-nodejs/ILovePDFFile');
+const { spawn } = require('child_process');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
 const logger = require('../utils/logger');
 
-const PUBLIC_KEY = process.env.ILOVEPDF_PUBLIC_KEY;
-const SECRET_KEY = process.env.ILOVEPDF_SECRET_KEY;
+const SOFFICE_DIR = process.env.LIBRE_OFFICE_DIR
+    || 'C:/Program Files/LibreOffice/program';
+const SOFFICE_PATH = process.env.LIBRE_OFFICE_EXE
+    || path.join(SOFFICE_DIR, 'soffice.com');
 
-let instance = null;
+const LO_TMP_DIR = path.join(os.tmpdir(), 'loconvert');
 
-function getClient() {
-    if (!PUBLIC_KEY || !SECRET_KEY) {
-        throw new Error('iLovePDF keys not configured (ILOVEPDF_PUBLIC_KEY, ILOVEPDF_SECRET_KEY)');
-    }
-    if (!instance) {
-        instance = new ILovePDFApi(PUBLIC_KEY, SECRET_KEY);
-    }
-    return instance;
+function runSoffice(args, timeoutMs = 60000) {
+    return new Promise((resolve, reject) => {
+        const proc = spawn(SOFFICE_PATH, args, {
+            cwd: SOFFICE_DIR,
+            timeout: timeoutMs,
+            windowsHide: true,
+            env: { ...process.env },
+        });
+
+        let stdout = '';
+        let stderr = '';
+        proc.stdout.on('data', d => { stdout += d; });
+        proc.stderr.on('data', d => { stderr += d; });
+
+        proc.on('close', code => {
+            resolve({ code, stdout, stderr });
+        });
+        proc.on('error', reject);
+    });
 }
 
 /**
- * Convert PDF buffer to DOCX buffer using iLovePDF API
+ * Convert PDF buffer to DOCX buffer using LibreOffice
  * @param {Buffer} pdfBuffer - The PDF file buffer
  * @param {string} filename - Original filename
  * @returns {Promise<{docxBuffer: Buffer, filename: string}>}
  */
 async function pdfToDocx(pdfBuffer, filename = 'report.pdf') {
-    const client = getClient();
-    const task = client.newTask('pdfword');
+    if (!fs.existsSync(LO_TMP_DIR)) fs.mkdirSync(LO_TMP_DIR, { recursive: true });
+
+    const inputPath = path.join(LO_TMP_DIR, 'input.pdf');
+    const outputPath = path.join(LO_TMP_DIR, 'input.docx');
 
     try {
-        await task.start();
+        fs.writeFileSync(inputPath, pdfBuffer);
+        if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
 
-        const file = new ILovePDFFile(pdfBuffer, filename);
-        await task.addFile(file);
+        const { code, stdout, stderr } = await runSoffice([
+            '--headless',
+            '--norestore',
+            '--nologo',
+            '--infilter=writer_pdf_import',
+            '--convert-to', 'docx:MS Word 2007 XML',
+            '--outdir', LO_TMP_DIR,
+            inputPath,
+        ]);
 
-        await task.process();
+        if (!fs.existsSync(outputPath)) {
+            const detail = stderr || stdout || 'no output';
+            throw new Error(`LibreOffice conversion failed (exit ${code}): ${detail}`);
+        }
 
-        const data = await task.download();
-
+        const docxBuffer = fs.readFileSync(outputPath);
         const outputFilename = filename.replace(/\.pdf$/i, '.docx');
 
-        logger.info(`[iLovePDF] PDF converted to DOCX: ${outputFilename}`);
+        if (code !== 0) {
+            logger.warn(`[LibreOffice] PDF→DOCX succeeded with warnings (exit ${code})`);
+        }
+        logger.info(`[LibreOffice] PDF→DOCX: ${outputFilename} (${docxBuffer.length} bytes)`);
 
-        return {
-            docxBuffer: data,
-            filename: outputFilename,
-        };
+        return { docxBuffer, filename: outputFilename };
     } catch (err) {
-        logger.error('[iLovePDF] Conversion failed', { error: err.message });
+        logger.error('[LibreOffice] PDF→DOCX conversion failed', { error: err.message });
         throw err;
+    } finally {
+        try {
+            if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+            if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+        } catch (_err) { /* ignore cleanup errors */ }
     }
 }
 
-module.exports = {
-    pdfToDocx,
-};
+module.exports = { pdfToDocx };
