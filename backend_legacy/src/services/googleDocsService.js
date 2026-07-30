@@ -7,6 +7,7 @@ const {
 const { Readable } = require('stream');
 const https = require('https');
 const http = require('http');
+const puppeteer = require('puppeteer');
 const logger = require('../utils/logger');
 const { buildInspectionReportHtml } = require('../pdf/inspectionReportTemplate');
 
@@ -976,7 +977,7 @@ function formatMetric(value, suffix = '') {
 
 // ─── UPLOAD TO GOOGLE DRIVE ─────────────────────────────────────────────────────
 
-async function uploadDocxAsGoogleDoc(driveClient, docxBuffer, title, folderId) {
+async function uploadPdfAsGoogleDoc(driveClient, pdfBuffer, title, folderId) {
     const fileMetadata = {
         name: title,
         mimeType: 'application/vnd.google-apps.document',
@@ -988,8 +989,8 @@ async function uploadDocxAsGoogleDoc(driveClient, docxBuffer, title, folderId) {
     const res = await driveClient.files.create({
         requestBody: fileMetadata,
         media: {
-            mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            body: Readable.from(docxBuffer),
+            mimeType: 'application/pdf',
+            body: Readable.from(pdfBuffer),
         },
         fields: 'id, webViewLink',
         supportsAllDrives: true,
@@ -1001,19 +1002,60 @@ async function uploadDocxAsGoogleDoc(driveClient, docxBuffer, title, folderId) {
     };
 }
 
-// ─── PUBLIC: CREATE SERVICE ACCOUNT DOC ──────────────────────────────────────────
+// ─── PDF GENERATION ────────────────────────────────────────────────────────────
+
+async function generatePdfBuffer(reportData) {
+    const html = buildInspectionReportHtml(reportData);
+
+    let browser;
+    const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH
+        || process.env.CHROME_BIN
+        || null;
+
+    try {
+        browser = await puppeteer.launch({
+            executablePath,
+            headless: 'new',
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-gpu',
+                '--no-zygote',
+                '--single-process',
+                '--font-render-hinting=medium'
+            ]
+        });
+
+        const page = await browser.newPage();
+        await page.setViewport({ width: 1240, height: 1754, deviceScaleFactor: 1.5 });
+        await page.setContent(html, { waitUntil: 'networkidle0' });
+
+        const pdfBinary = await page.pdf({
+            format: 'A4',
+            printBackground: true,
+            preferCSSPageSize: true
+        });
+
+        return Buffer.from(pdfBinary);
+    } finally {
+        if (browser) await browser.close();
+    }
+}
+
+// ─── PUBLIC: CREATE SERVICE ACCOUNT DOC (PDF → Google Drive) ────────────────────
 
 async function createGoogleDoc(reportData) {
     const sa = createServiceAccountClients();
     if (!sa) throw new Error('Google service account not configured');
 
     const title = `Informe de Inspeccion — ${reportData.inspection.projectName}`;
-    const docxBuffer = await buildDocx(reportData);
+    const pdfBuffer = await generatePdfBuffer(reportData);
 
     const folderId = process.env.GOOGLE_DOCS_FOLDER_ID || null;
-    const result = await uploadDocxAsGoogleDoc(sa.driveClient, docxBuffer, title, folderId);
+    const result = await uploadPdfAsGoogleDoc(sa.driveClient, pdfBuffer, title, folderId);
 
-    logger.info(`[GoogleDocs] Document ready: ${result.url}`);
+    logger.info(`[GoogleDocs] Document ready (via PDF): ${result.url}`);
 
     return {
         documentId: result.documentId,
@@ -1022,17 +1064,17 @@ async function createGoogleDoc(reportData) {
     };
 }
 
-// ─── PUBLIC: CREATE USER DOC (OAUTH) ────────────────────────────────────────────
+// ─── PUBLIC: CREATE USER DOC (OAUTH, PDF → Google Drive) ──────────────────────
 
 async function createUserGoogleDoc(reportData, userTokens) {
     const driveClient = getDriveClient(userTokens);
 
     const title = `Informe de Inspeccion — ${reportData.inspection.projectName}`;
-    const docxBuffer = await buildDocx(reportData);
+    const pdfBuffer = await generatePdfBuffer(reportData);
 
-    const result = await uploadDocxAsGoogleDoc(driveClient, docxBuffer, title, null);
+    const result = await uploadPdfAsGoogleDoc(driveClient, pdfBuffer, title, null);
 
-    logger.info(`[GoogleDocs] User document ready: ${result.url}`);
+    logger.info(`[GoogleDocs] User document ready (via PDF): ${result.url}`);
 
     return {
         documentId: result.documentId,
