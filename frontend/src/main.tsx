@@ -4,6 +4,22 @@ import * as Sentry from '@sentry/react';
 import './index.css';
 import App from './App.tsx';
 
+// Force-clear stale service workers and caches (one-time cleanup)
+const SW_CLEANUP_KEY = 'sw-cleanup-v2';
+if (!sessionStorage.getItem(SW_CLEANUP_KEY)) {
+  sessionStorage.setItem(SW_CLEANUP_KEY, '1');
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then((regs) => {
+      regs.forEach((r) => r.unregister());
+    });
+  }
+  if ('caches' in window) {
+    caches.keys().then((keys) => {
+      keys.forEach((k) => caches.delete(k));
+    });
+  }
+}
+
 Sentry.init({
   dsn: import.meta.env.VITE_SENTRY_DSN,
   environment: import.meta.env.MODE,
