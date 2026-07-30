@@ -221,11 +221,42 @@ function buildInsertRequests(docContent) {
         index += 1;
     };
 
+    const setSpacing = (startIdx, endIdx, before, after) => {
+        requests.push({
+            updateParagraphStyle: {
+                range: { startIndex: startIdx, endIndex: endIdx },
+                paragraphStyle: {
+                    spaceBefore: { magnitude: before, unit: 'PT' },
+                    spaceAfter: { magnitude: after, unit: 'PT' }
+                },
+                fields: 'spaceBefore,spaceAfter'
+            }
+        });
+    };
+
+    const setPageSize = () => {
+        requests.push({
+            updateDocumentStyle: {
+                documentStyle: {
+                    pageSize: {
+                        width: { magnitude: 612, unit: 'PT' },
+                        height: { magnitude: 792, unit: 'PT' }
+                    },
+                    marginTop: { magnitude: 50, unit: 'PT' },
+                    marginBottom: { magnitude: 50, unit: 'PT' },
+                    marginLeft: { magnitude: 55, unit: 'PT' },
+                    marginRight: { magnitude: 55, unit: 'PT' }
+                },
+                fields: 'pageSize,marginTop,marginBottom,marginLeft,marginRight'
+            }
+        });
+    };
+
+    setPageSize();
+
     // ─── PORTADA ───
     addText('INFORME DE INSPECCIÓN', { namedStyleType: 'HEADING_1' });
-    nl();
-    addText('Informe técnico profesional elaborado con criterios inmobiliarios, métricos y fotográficos.', { namedStyleType: 'NORMAL_TEXT' });
-    nl();
+    addText('Informe técnico profesional elaborado con criterios inmobiliarios, métricos y fotográficos.');
     nl();
 
     addText('INFORMACIÓN GENERAL', { namedStyleType: 'HEADING_2' });
@@ -236,7 +267,7 @@ function buildInsertRequests(docContent) {
         ['Distrito', docContent.district],
         ['Provincia', 'Lima'],
         ['Edificio', docContent.buildingName],
-        ['Fecha de inspección', formatDate(docContent.scheduledDate)],
+        ['Fecha', formatDate(docContent.scheduledDate)],
         ['Inmueble', docContent.apartmentNumber],
         ['Servicio', docContent.serviceType],
     ];
@@ -244,7 +275,6 @@ function buildInsertRequests(docContent) {
     infoFields.forEach(([label, value]) => {
         addStyledText(`${label}: `, { bold: true });
         addText(value);
-        nl();
     });
 
     if (docContent.buildingPhotoUrl) {
@@ -263,43 +293,84 @@ function buildInsertRequests(docContent) {
     }
 
     nl();
-    nl();
 
     // ─── INSPECCIÓN MÉTRICA ───
     addText('INSPECCIÓN MÉTRICA', { namedStyleType: 'HEADING_1' });
-    nl();
 
-    addStyledText('Ambiente', { bold: true });
-    addText('\t');
-    addStyledText('Área (m²)', { bold: true });
-    nl();
-
-    docContent.areas.forEach((area) => {
-        addText(area.name);
-        addText('\t');
-        addText(formatMetric(area.calculatedAreaM2));
-        nl();
+    const rows = docContent.areas.length + 2;
+    requests.push({
+        insertTable: {
+            location: { index },
+            rows,
+            columns: 2
+        }
     });
 
-    addStyledText('TOTAL', { bold: true });
-    addText('\t');
-    addStyledText(formatMetric(docContent.totalArea), { bold: true });
-    nl();
-    nl();
+    let cellIdx = index + 1;
+    const setCell = (text, isBold = false) => {
+        const t = escapeDocText(text);
+        requests.push({
+            insertText: { location: { index: cellIdx }, text: t }
+        });
+        if (isBold) {
+            requests.push({
+                updateTextStyle: {
+                    range: { startIndex: cellIdx, endIndex: cellIdx + t.length },
+                    textStyle: { bold: true },
+                    fields: 'bold'
+                }
+            });
+        }
+        cellIdx += t.length + 1;
+    };
+
+    setCell('Ambiente', true);
+    setCell('Área (m²)', true);
+
+    docContent.areas.forEach((area) => {
+        setCell(area.name);
+        setCell(formatMetric(area.calculatedAreaM2));
+    });
+
+    setCell('TOTAL', true);
+    setCell(formatMetric(docContent.totalArea), true);
+
+    index = cellIdx;
 
     // ─── SECCIONES POR AMBIENTE ───
     docContent.obsBlocks.forEach((block) => {
         if (block.type === 'area_header') {
+            nl();
             addText(block.name, { namedStyleType: 'HEADING_2' });
         } else if (block.type === 'no_observations') {
-            addText('No se registraron observaciones técnicas en esta sección.');
+            addText('Sin observaciones registradas.');
         } else if (block.type === 'observation') {
             nl();
-            addStyledText(`Observación ${block.sequence}:`, { bold: true });
+            addStyledText(`${block.sequence}. `, { bold: true });
+
+            const details = [];
+            if (block.obs.severity) details.push(block.obs.severity);
+            if (block.obs.type) details.push(block.obs.type);
+            if (block.obs.metricValue) details.push(`${formatMetric(block.obs.metricValue, block.obs.metricUnit ? ` ${block.obs.metricUnit}` : '')}`);
+
+            if (details.length) {
+                addStyledText(`[${details.join(' · ')}] `, {
+                    foregroundColor: { color: { rgbColor: { red: 0.42, green: 0.45, blue: 0.47 } } }
+                });
+            }
+
             nl();
+            addText(block.obs.description);
+
+            if (block.obs.recommendation) {
+                nl();
+                addStyledText('Recomendación: ', { bold: true, italic: true });
+                addText(block.obs.recommendation);
+            }
 
             if (block.photos.length) {
                 block.photos.forEach((photo) => {
+                    nl();
                     try {
                         requests.push({
                             insertInlineImage: {
@@ -314,28 +385,15 @@ function buildInsertRequests(docContent) {
                     if (photo.caption) {
                         addText(` — ${photo.caption}`);
                     }
-                    nl();
                 });
             }
-
-            addText(block.obs.description);
-            nl();
-
-            const details = [`Tipo: ${block.obs.type}`];
-            if (block.obs.severity) details.push(`Severidad: ${block.obs.severity}`);
-            if (block.obs.metricValue) details.push(`Métrica: ${formatMetric(block.obs.metricValue, block.obs.metricUnit ? ` ${block.obs.metricUnit}` : '')}`);
-            if (block.obs.recommendation) details.push(`Recomendación: ${block.obs.recommendation}`);
-
-            addStyledText(details.join(' · '), { foregroundColor: { color: { rgbColor: { red: 0.42, green: 0.45, blue: 0.47 } } } });
         }
     });
 
     nl();
-    nl();
 
     // ─── RECOMENDACIONES ───
     addText('RECOMENDACIONES', { namedStyleType: 'HEADING_1' });
-    nl();
 
     if (docContent.allRecommendations.length) {
         docContent.allRecommendations.forEach((rec) => {
@@ -346,42 +404,19 @@ function buildInsertRequests(docContent) {
     }
 
     nl();
-    nl();
 
     // ─── CIERRE TÉCNICO ───
     addText('CIERRE TÉCNICO', { namedStyleType: 'HEADING_1' });
-    nl();
 
-    addText('INFORMACIÓN DEL INMUEBLE', { namedStyleType: 'HEADING_2' });
-
-    [
-        ['Cliente', docContent.clientName],
-        ['Dirección', docContent.address],
-        ['Distrito', docContent.district],
-        ['Provincia', 'Lima'],
-        ['Fecha', formatDate(docContent.scheduledDate)],
-        ['Inmueble', docContent.apartmentNumber],
-    ].forEach(([label, value]) => {
-        addStyledText(`${label}: `, { bold: true });
-        addText(value);
-        nl();
-    });
-
-    nl();
     addText(docContent.summary?.generalConclusion || 'Sin conclusión general registrada.');
     nl();
-    nl();
-    addText('Este informe consolida los hallazgos observados en la fecha de inspección y debe complementarse con las acciones correctivas correspondientes para el inmueble evaluado.');
-    nl();
+    addText('Este informe consolida los hallazgos observados y debe complementarse con las acciones correctivas correspondientes.');
     nl();
     nl();
 
-    addText(`Firmado por: ${docContent.inspectorName}`);
-    nl();
-    addText(`Rol: ${docContent.inspectorRole}`);
+    addText(`Firmado por: ${docContent.inspectorName} — ${docContent.inspectorRole}`);
     if (docContent.inspectorRole === 'arquitecto' && docContent.capValue) {
-        nl();
-        addText(`CAP: ${docContent.capValue}`);
+        addText(` — CAP: ${docContent.capValue}`);
     }
 
     if (docContent.signatureUrl) {
