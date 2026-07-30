@@ -249,7 +249,17 @@ function buildInsertRequests(docContent) {
 
     if (docContent.buildingPhotoUrl) {
         nl();
-        addText(`[Foto del edificio: ${docContent.buildingPhotoUrl}]`);
+        try {
+            requests.push({
+                insertInlineImage: {
+                    location: { index },
+                    uri: docContent.buildingPhotoUrl
+                }
+            });
+            index += 1;
+        } catch {
+            addText(`[Foto del edificio]`);
+        }
     }
 
     nl();
@@ -290,7 +300,17 @@ function buildInsertRequests(docContent) {
 
             if (block.photos.length) {
                 block.photos.forEach((photo) => {
-                    addText(`[Foto: ${photo.url}]`);
+                    try {
+                        requests.push({
+                            insertInlineImage: {
+                                location: { index },
+                                uri: photo.url
+                            }
+                        });
+                        index += 1;
+                    } catch {
+                        addText(`[Foto]`);
+                    }
                     if (photo.caption) {
                         addText(` — ${photo.caption}`);
                     }
@@ -366,7 +386,18 @@ function buildInsertRequests(docContent) {
 
     if (docContent.signatureUrl) {
         nl();
-        addText(`[Firma: ${docContent.signatureUrl}]`);
+        nl();
+        try {
+            requests.push({
+                insertInlineImage: {
+                    location: { index },
+                    uri: docContent.signatureUrl
+                }
+            });
+            index += 1;
+        } catch {
+            addText(`[Firma]`);
+        }
     }
 
     return requests;
