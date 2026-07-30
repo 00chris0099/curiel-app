@@ -256,7 +256,7 @@ function buildInsertRequests(docContent) {
 
     // ─── PORTADA ───
     addText('INFORME DE INSPECCIÓN', { namedStyleType: 'HEADING_1' });
-    addText('Informe técnico profesional elaborado con criterios inmobiliarios, métricos y fotográficos.');
+    addText('Informe técnico profesional. Criterios inmobiliarios, métricos y fotográficos.');
     nl();
 
     addText('INFORMACIÓN GENERAL', { namedStyleType: 'HEADING_2' });
@@ -288,7 +288,7 @@ function buildInsertRequests(docContent) {
             });
             index += 1;
         } catch {
-            addText(`[Foto del edificio]`);
+            addText('[Foto del edificio]');
         }
     }
 
@@ -297,74 +297,43 @@ function buildInsertRequests(docContent) {
     // ─── INSPECCIÓN MÉTRICA ───
     addText('INSPECCIÓN MÉTRICA', { namedStyleType: 'HEADING_1' });
 
-    const rows = docContent.areas.length + 2;
-    requests.push({
-        insertTable: {
-            location: { index },
-            rows,
-            columns: 2
-        }
-    });
-
-    let cellIdx = index + 1;
-    const setCell = (text, isBold = false) => {
-        const t = escapeDocText(text);
-        requests.push({
-            insertText: { location: { index: cellIdx }, text: t }
-        });
-        if (isBold) {
-            requests.push({
-                updateTextStyle: {
-                    range: { startIndex: cellIdx, endIndex: cellIdx + t.length },
-                    textStyle: { bold: true },
-                    fields: 'bold'
-                }
-            });
-        }
-        cellIdx += t.length + 1;
-    };
-
-    setCell('Ambiente', true);
-    setCell('Área (m²)', true);
+    addStyledText('Ambiente\t\tÁrea (m²)', { bold: true });
+    nl();
 
     docContent.areas.forEach((area) => {
-        setCell(area.name);
-        setCell(formatMetric(area.calculatedAreaM2));
+        addText(`${area.name}\t\t${formatMetric(area.calculatedAreaM2)}`);
     });
 
-    setCell('TOTAL', true);
-    setCell(formatMetric(docContent.totalArea), true);
-
-    index = cellIdx;
+    addStyledText(`TOTAL\t\t${formatMetric(docContent.totalArea)}`, { bold: true });
+    nl();
 
     // ─── SECCIONES POR AMBIENTE ───
     docContent.obsBlocks.forEach((block) => {
         if (block.type === 'area_header') {
-            nl();
             addText(block.name, { namedStyleType: 'HEADING_2' });
         } else if (block.type === 'no_observations') {
             addText('Sin observaciones registradas.');
         } else if (block.type === 'observation') {
-            nl();
-            addStyledText(`${block.sequence}. `, { bold: true });
+            addStyledText(`Obs. ${block.sequence}: `, { bold: true });
 
-            const details = [];
-            if (block.obs.severity) details.push(block.obs.severity);
-            if (block.obs.type) details.push(block.obs.type);
-            if (block.obs.metricValue) details.push(`${formatMetric(block.obs.metricValue, block.obs.metricUnit ? ` ${block.obs.metricUnit}` : '')}`);
+            const meta = [];
+            if (block.obs.severity) meta.push(block.obs.severity);
+            if (block.obs.type) meta.push(block.obs.type);
+            if (block.obs.metricValue) meta.push(`${formatMetric(block.obs.metricValue, block.obs.metricUnit ? ` ${block.obs.metricUnit}` : '')}`);
 
-            if (details.length) {
-                addStyledText(`[${details.join(' · ')}] `, {
+            if (meta.length) {
+                addStyledText(`[${meta.join(' · ')}]\n`, {
                     foregroundColor: { color: { rgbColor: { red: 0.42, green: 0.45, blue: 0.47 } } }
                 });
+            } else {
+                nl();
             }
 
-            nl();
             addText(block.obs.description);
 
             if (block.obs.recommendation) {
                 nl();
-                addStyledText('Recomendación: ', { bold: true, italic: true });
+                addStyledText('→ Rec: ', { bold: true, italic: true });
                 addText(block.obs.recommendation);
             }
 
@@ -380,7 +349,7 @@ function buildInsertRequests(docContent) {
                         });
                         index += 1;
                     } catch {
-                        addText(`[Foto]`);
+                        addText('[Foto]');
                     }
                     if (photo.caption) {
                         addText(` — ${photo.caption}`);
@@ -410,8 +379,6 @@ function buildInsertRequests(docContent) {
 
     addText(docContent.summary?.generalConclusion || 'Sin conclusión general registrada.');
     nl();
-    addText('Este informe consolida los hallazgos observados y debe complementarse con las acciones correctivas correspondientes.');
-    nl();
     nl();
 
     addText(`Firmado por: ${docContent.inspectorName} — ${docContent.inspectorRole}`);
@@ -420,7 +387,6 @@ function buildInsertRequests(docContent) {
     }
 
     if (docContent.signatureUrl) {
-        nl();
         nl();
         try {
             requests.push({
@@ -431,7 +397,7 @@ function buildInsertRequests(docContent) {
             });
             index += 1;
         } catch {
-            addText(`[Firma]`);
+            addText('[Firma]');
         }
     }
 
@@ -582,10 +548,13 @@ async function createUserGoogleDoc(reportData, userTokens) {
                 requestBody: { requests: batch }
             });
         }
-        logger.info('[GoogleDocs] Content inserted into user doc');
+        logger.info(`[GoogleDocs] Content inserted (${insertRequests.length} requests)`);
     } catch (err) {
-        logger.warn('[GoogleDocs] Could not insert content into user doc', {
+        logger.error('[GoogleDocs] Error inserting content', {
+            status: err.status,
+            code: err.code,
             message: err.message,
+            details: err.errors
         });
     }
 
