@@ -300,7 +300,7 @@ const inspectionService = {
     },
 
     async openInGoogleDocs(id: string): Promise<{ url: string; documentId: string; title: string } | { requiresAuth: boolean; authUrl: string }> {
-        const response = await apiClient.post(`/inspections/${id}/report/open-in-docs`);
+        const response = await apiClient.post(`/inspections/${id}/report/open-in-docs`, null, { timeout: 120000 });
         if (response.data.requiresAuth) {
             return { requiresAuth: true, authUrl: response.data.data.authUrl };
         }
