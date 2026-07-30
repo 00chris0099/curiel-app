@@ -103,6 +103,31 @@ async function generatePdfBuffer(reportData) {
 
 // ─── UPLOAD TO GOOGLE DRIVE ─────────────────────────────────────────────────────
 
+async function uploadPdfToDrive(driveClient, pdfBuffer, title, folderId) {
+    const fileMetadata = {
+        name: title.endsWith('.pdf') ? title : `${title}.pdf`,
+        mimeType: 'application/pdf',
+    };
+    if (folderId) {
+        fileMetadata.parents = [folderId];
+    }
+
+    const res = await driveClient.files.create({
+        requestBody: fileMetadata,
+        media: {
+            mimeType: 'application/pdf',
+            body: Readable.from(pdfBuffer),
+        },
+        fields: 'id, webViewLink',
+        supportsAllDrives: true,
+    });
+
+    return {
+        documentId: res.data.id,
+        url: res.data.webViewLink || `https://drive.google.com/file/d/${res.data.id}/view`,
+    };
+}
+
 async function uploadDocxToDrive(driveClient, docxBuffer, title, folderId) {
     const fileMetadata = {
         name: title,
@@ -172,7 +197,29 @@ async function createUserGoogleDoc(reportData, userTokens) {
     };
 }
 
+// ─── PUBLIC: DOWNLOAD PDF + SAVE TO DRIVE ──────────────────────────────────────
+
+async function downloadAndSaveToDrive(reportData, userTokens) {
+    const driveClient = getDriveClient(userTokens);
+
+    const title = `Informe de Inspeccion — ${reportData.inspection.projectName}`;
+    const pdfBuffer = await generatePdfBuffer(reportData);
+
+    const folderId = process.env.GOOGLE_DOCS_FOLDER_ID || null;
+    const result = await uploadPdfToDrive(driveClient, pdfBuffer, `${title}.pdf`, folderId);
+
+    logger.info(`[GoogleDocs] PDF saved to Drive: ${result.url}`);
+
+    return {
+        pdfBuffer,
+        documentId: result.documentId,
+        url: result.url,
+        title,
+    };
+}
+
 module.exports = {
     createGoogleDoc,
     createUserGoogleDoc,
+    downloadAndSaveToDrive,
 };

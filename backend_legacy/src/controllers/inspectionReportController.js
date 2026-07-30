@@ -3,7 +3,7 @@ const reportJobQueue = require('../services/reportJobQueue');
 const { asyncHandler, AppError } = require('../middlewares/errorHandler');
 const { createAuditLog } = require('../middlewares/auditLog');
 const { buildInspectionReportHtml } = require('../pdf/inspectionReportTemplate');
-const { createGoogleDoc, createUserGoogleDoc } = require('../services/googleDocsService');
+const { createGoogleDoc, createUserGoogleDoc, downloadAndSaveToDrive } = require('../services/googleDocsService');
 const { getTokens } = require('../services/googleTokenStore');
 
 const downloadInspectionReport = asyncHandler(async (req, res) => {
@@ -192,9 +192,83 @@ const openInGoogleDocs = asyncHandler(async (req, res) => {
     });
 });
 
+const downloadAndSaveToDriveController = asyncHandler(async (req, res) => {
+    const inspectionId = req.params.id;
+    const { prisma } = require('../lib/databases');
+
+    const inspection = await prisma.inspecciones.inspection.findUnique({
+        where: { id: inspectionId },
+        include: {
+            statusHistory: { orderBy: { createdAt: 'desc' }, take: 1 }
+        }
+    });
+
+    if (!inspection) {
+        throw new AppError('Inspección no encontrada', 404, 'INSPECTION_NOT_FOUND');
+    }
+
+    const [areas, observations, photos, summary, signatures] = await Promise.all([
+        prisma.inspecciones.inspectionArea.findMany({
+            where: { inspectionId },
+            orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }]
+        }),
+        prisma.inspecciones.inspectionObservation.findMany({
+            where: { inspectionId },
+            orderBy: [{ areaId: 'asc' }, { createdAt: 'asc' }]
+        }),
+        prisma.media.photo.findMany({
+            where: { inspectionId },
+            orderBy: { createdAt: 'asc' }
+        }),
+        prisma.inspecciones.inspectionSummary.findUnique({
+            where: { inspectionId }
+        }),
+        prisma.media.signature.findMany({
+            where: { inspectionId }
+        })
+    ]);
+
+    const metadata = inspectionReportService._parseInspectionMetadata(inspection.notes);
+    const sortedAreas = inspectionReportService._sortAreas(areas.map(a => ({ ...a })));
+    const sortedObservations = observations.map(obs => ({ ...obs }));
+    const inspectorSignature = signatures.find(s => s.signatureType === 'inspector') || null;
+    const recommendationGroups = inspectionReportService._buildRecommendationGroups(sortedObservations, summary);
+
+    const userTokens = getTokens(req.userId);
+
+    if (!userTokens || userTokens.expired) {
+        const backendUrl = process.env.BACKEND_URL || 'http://localhost:4000';
+        const authUrl = `${backendUrl}/api/v1/auth/google?inspectionId=${inspectionId}`;
+        return res.json({
+            success: false,
+            requiresAuth: true,
+            data: { authUrl }
+        });
+    }
+
+    const result = await downloadAndSaveToDrive({
+        inspection,
+        metadata,
+        areas: sortedAreas,
+        observations: sortedObservations,
+        photos: photos.map(p => ({ ...p })),
+        summary: summary ? { ...summary } : null,
+        recommendations: recommendationGroups,
+        inspectorSignature: inspectorSignature ? { ...inspectorSignature } : null,
+    }, userTokens);
+
+    await createAuditLog(req.userId, 'download_and_save_to_drive', 'Inspection', inspectionId);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="informe-inspeccion-${inspection.projectName || inspectionId}.pdf"`);
+    res.setHeader('Content-Length', result.pdfBuffer.length);
+    return res.end(result.pdfBuffer);
+});
+
 module.exports = {
     downloadInspectionReport,
     getReportJobStatus,
     getReportPreview,
-    openInGoogleDocs
+    openInGoogleDocs,
+    downloadAndSaveToDriveController
 };

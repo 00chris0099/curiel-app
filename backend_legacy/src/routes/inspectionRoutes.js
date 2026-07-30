@@ -75,6 +75,14 @@ router.post(
     inspectionReportController.openInGoogleDocs
 );
 
+// POST /api/v1/inspections/:id/report/download-and-drive - Descargar PDF y guardar en Google Drive
+router.post(
+    '/:id/report/download-and-drive',
+    authorize('admin', 'arquitecto', 'supervisor', 'inspector'),
+    requireInspectionReportAccess,
+    inspectionReportController.downloadAndSaveToDriveController
+);
+
 // GET /api/v1/inspections/:id - Obtener inspeccion por ID
 router.get(
     '/:id',

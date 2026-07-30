@@ -307,6 +307,39 @@ const inspectionService = {
         return response.data.data;
     },
 
+    async downloadReportAndSaveToDrive(id: string): Promise<{ blob: Blob; driveUrl?: string } | { requiresAuth: boolean; authUrl: string }> {
+        try {
+            const response = await apiClient.post(`/inspections/${id}/report/download-and-drive`, {}, {
+                responseType: 'blob',
+                timeout: 120000,
+            });
+
+            const contentType = String(response.headers['content-type'] || response.data.type || '').toLowerCase();
+
+            if (!contentType.includes('application/pdf')) {
+                const message = await parseBlobErrorMessage(response.data, 'El servidor no devolvió un PDF válido');
+                throw new Error(message);
+            }
+
+            return { blob: new Blob([response.data], { type: 'application/pdf' }) };
+        } catch (error: unknown) {
+            if (axios.isAxiosError(error) && error.response?.data instanceof Blob) {
+                try {
+                    const text = await error.response.data.text();
+                    const parsed = JSON.parse(text);
+                    if (parsed.requiresAuth) {
+                        return { requiresAuth: true, authUrl: parsed.data.authUrl };
+                    }
+                } catch {
+                    // not JSON
+                }
+                const message = await parseBlobErrorMessage(error.response.data, 'No se pudo descargar el informe');
+                throw new Error(message);
+            }
+            throw error;
+        }
+    },
+
     async deletePhoto(photoId: string): Promise<void> {
         await apiClient.delete(`/photos/${photoId}`);
     },
