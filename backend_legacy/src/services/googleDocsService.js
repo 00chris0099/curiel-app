@@ -325,11 +325,13 @@ function extractReportData(reportData) {
     for (const item of manualRecs) allRecs.push(item);
 
     const buildingPhoto = photos.find((p) => p.type === 'edificio') || null;
+    const planPhoto = photos.find((p) => p.type === 'plano') || null;
+    const wallWindowPercent = metadata?.wallWindowPercent || metadata?.pctMurosVanos || null;
 
     return {
         inspection, metadata, areas, inspectorName, inspectorRole, capValue,
         district, address, buildingName, apartmentNumber, serviceType,
-        totalArea, sections, allRecs, buildingPhoto,
+        totalArea, sections, allRecs, buildingPhoto, planPhoto, wallWindowPercent,
         inspectorSignature: reportData.inspectorSignature,
         generatedAt: reportData.generatedAt || new Date().toISOString(),
     };
@@ -367,6 +369,7 @@ async function buildDocx(reportData) {
     }
     if (data.inspectorSignature?.signatureUrl) allImageUrls.add(data.inspectorSignature.signatureUrl);
     if (data.buildingPhoto?.url) allImageUrls.add(data.buildingPhoto.url);
+    if (data.planPhoto?.url) allImageUrls.add(data.planPhoto.url);
 
     for (const url of allImageUrls) {
         const result = await getImageBuffer(url);
@@ -384,10 +387,25 @@ async function buildDocx(reportData) {
         },
         children: [
             new Paragraph({ spacing: { before: convertInchesToTwip(1.5), after: SPACING.afterXxl }, children: [] }),
-            new Paragraph({
-                spacing: { after: SPACING.afterXl },
-                children: [new TextRun({ text: 'CURIEL', bold: true, size: 72, color: '1F2937', font: FONT })],
-            }),
+            // Logo instead of CURIEL text
+            ...(() => {
+                const logoUrl = reportData.logoUrl || null;
+                if (logoUrl) {
+                    const logoBuf = imageBuffers.find(b => b.url === logoUrl);
+                    if (logoBuf) {
+                        const fmt = getDocxImageFormat(logoBuf.contentType);
+                        return [new Paragraph({
+                            spacing: { after: SPACING.afterXl },
+                            children: [new ImageRun({
+                                data: logoBuf.buffer,
+                                transformation: { width: 160, height: 45 },
+                                type: fmt,
+                            })],
+                        })];
+                    }
+                }
+                return [];
+            })(),
             new Paragraph({
                 spacing: { after: SPACING.afterXl },
                 border: { bottom: { style: BorderStyle.SINGLE, size: 2, color: BLUE } },
@@ -482,13 +500,17 @@ async function buildDocx(reportData) {
                 spacing: { before: 100 },
                 children: [
                     new TextRun({ text: `Generado: ${formatDateTimeEs(data.generatedAt)}    |    `, size: FONT_SIZE_SM, color: '9CA3AF', font: FONT }),
-                    new TextRun({ text: 'CURIEL Inspection Management', size: FONT_SIZE_SM, color: '9CA3AF', font: FONT }),
+                    new TextRun({ text: '983 893 067    |    info@tudepacheck.com', size: FONT_SIZE_SM, color: '9CA3AF', font: FONT }),
                 ],
             }),
         ],
     });
 
-    // ── PAGE 2: INSPECCION METRICA ──────────────────────────────────────────────
+    // ── PAGE 2: INSPECCION METRICA - SPLIT: table left + plan right ───────────
+
+    const complianceText = data.wallWindowPercent !== null
+        ? `Cumple el area total del departamento con ${data.wallWindowPercent}% de muros y vanos, es aceptable.`
+        : 'Cumple el area total del departamento, es aceptable.';
 
     sections.push({
         properties: {
@@ -498,91 +520,142 @@ async function buildDocx(reportData) {
             },
         },
         children: [
+            // Split table: left = metric table, right = plan photo
             new Table({
                 width: { size: 100, type: WidthType.PERCENTAGE },
-                columnWidths: [TWIP_WIDTHS.label, TWIP_WIDTHS.value],
+                columnWidths: [TWIP_WIDTHS.half, TWIP_WIDTHS.half],
                 rows: [
                     new TableRow({ children: [
-                        new TableCell({
-                            columnSpan: 2,
-                            borders: { top: BLUE_BORDER, bottom: { style: BorderStyle.SINGLE, size: 1, color: BLUE }, left: MEDIUM_BORDER, right: MEDIUM_BORDER },
-                            shading: { type: 'clear', fill: 'EFF6FF' },
-                            children: [new Paragraph({
-                                spacing: { before: 80, after: 80 },
-                                indent: { left: convertInchesToTwip(0.1) },
-                                children: [new TextRun({ text: 'INSPECCION METRICA', bold: true, size: FONT_SIZE_LG, color: '111827', font: FONT })],
-                            })],
-                        }),
-                    ]}),
-                    // Header row
-                    new TableRow({ children: [
+                        // LEFT CELL: Metric table
                         new TableCell({
                             borders: CELL_FULL,
-                            width: { size: TWIP_WIDTHS.label, type: WidthType.DXA },
-                            shading: { type: 'clear', fill: 'F9FAFB' },
-                            children: [new Paragraph({
-                                spacing: { before: 60, after: 60 },
-                                indent: { left: convertInchesToTwip(0.1) },
-                                children: [new TextRun({ text: 'AMBIENTE', bold: true, size: FONT_SIZE_SM, color: '6B7280', font: FONT })],
-                            })],
+                            width: { size: TWIP_WIDTHS.half, type: WidthType.DXA },
+                            children: [
+                                new Paragraph({
+                                    spacing: { before: SPACING.beforeMd, after: SPACING.afterMd },
+                                    indent: { left: convertInchesToTwip(0.1) },
+                                    children: [new TextRun({ text: 'INSPECCION METRICA', bold: true, size: FONT_SIZE_LG, color: '111827', font: FONT })],
+                                }),
+                                // Header row
+                                new Table({
+                                    width: { size: 100, type: WidthType.PERCENTAGE },
+                                    columnWidths: [TWIP_WIDTHS.label, TWIP_WIDTHS.value],
+                                    rows: [
+                                        new TableRow({ children: [
+                                            new TableCell({
+                                                borders: CELL_FULL,
+                                                width: { size: TWIP_WIDTHS.label, type: WidthType.DXA },
+                                                shading: { type: 'clear', fill: 'F9FAFB' },
+                                                children: [new Paragraph({
+                                                    spacing: { before: 60, after: 60 },
+                                                    indent: { left: convertInchesToTwip(0.05) },
+                                                    children: [new TextRun({ text: 'AMBIENTE', bold: true, size: FONT_SIZE_SM, color: '6B7280', font: FONT })],
+                                                })],
+                                            }),
+                                            new TableCell({
+                                                borders: CELL_FULL,
+                                                width: { size: TWIP_WIDTHS.value, type: WidthType.DXA },
+                                                shading: { type: 'clear', fill: 'F9FAFB' },
+                                                children: [new Paragraph({
+                                                    spacing: { before: 60, after: 60 },
+                                                    alignment: AlignmentType.RIGHT,
+                                                    indent: { right: convertInchesToTwip(0.05) },
+                                                    children: [new TextRun({ text: 'AREA (m2)', bold: true, size: FONT_SIZE_SM, color: '6B7280', font: FONT })],
+                                                })],
+                                            }),
+                                        ]}),
+                                        ...data.areas.map(area => new TableRow({ children: [
+                                            new TableCell({
+                                                borders: CELL_FULL,
+                                                width: { size: TWIP_WIDTHS.label, type: WidthType.DXA },
+                                                children: [new Paragraph({
+                                                    spacing: { before: SPACING.afterSm, after: SPACING.afterSm },
+                                                    indent: { left: convertInchesToTwip(0.05) },
+                                                    children: [new TextRun({ text: area.name || '---', size: FONT_SIZE, color: '1A1A1A', font: FONT })],
+                                                })],
+                                            }),
+                                            new TableCell({
+                                                borders: CELL_FULL,
+                                                width: { size: TWIP_WIDTHS.value, type: WidthType.DXA },
+                                                children: [new Paragraph({
+                                                    spacing: { before: SPACING.afterSm, after: SPACING.afterSm },
+                                                    alignment: AlignmentType.RIGHT,
+                                                    indent: { right: convertInchesToTwip(0.05) },
+                                                    children: [new TextRun({ text: formatMetric(area.calculatedAreaM2), size: FONT_SIZE, color: '1A1A1A', font: FONT })],
+                                                })],
+                                            }),
+                                        ]})),
+                                        // Total row
+                                        new TableRow({ children: [
+                                            new TableCell({
+                                                borders: { top: { style: BorderStyle.SINGLE, size: 2, color: BORDER_COLOR }, bottom: { style: BorderStyle.SINGLE, size: 2, color: BORDER_COLOR }, left: MEDIUM_BORDER, right: MEDIUM_BORDER },
+                                                width: { size: TWIP_WIDTHS.label, type: WidthType.DXA },
+                                                children: [new Paragraph({
+                                                    spacing: { before: SPACING.beforeMd, after: SPACING.afterMd },
+                                                    indent: { left: convertInchesToTwip(0.05) },
+                                                    children: [new TextRun({ text: 'TOTAL', bold: true, size: FONT_SIZE, color: '1A1A1A', font: FONT })],
+                                                })],
+                                            }),
+                                            new TableCell({
+                                                borders: { top: { style: BorderStyle.SINGLE, size: 2, color: BORDER_COLOR }, bottom: { style: BorderStyle.SINGLE, size: 2, color: BORDER_COLOR }, left: MEDIUM_BORDER, right: MEDIUM_BORDER },
+                                                width: { size: TWIP_WIDTHS.value, type: WidthType.DXA },
+                                                children: [new Paragraph({
+                                                    spacing: { before: SPACING.beforeMd, after: SPACING.afterMd },
+                                                    alignment: AlignmentType.RIGHT,
+                                                    indent: { right: convertInchesToTwip(0.05) },
+                                                    children: [new TextRun({ text: formatMetric(data.totalArea), bold: true, size: FONT_SIZE, color: '1A1A1A', font: FONT })],
+                                                })],
+                                            }),
+                                        ]}),
+                                    ],
+                                }),
+                            ],
                         }),
+                        // RIGHT CELL: Plan photo
                         new TableCell({
                             borders: CELL_FULL,
-                            width: { size: TWIP_WIDTHS.value, type: WidthType.DXA },
-                            shading: { type: 'clear', fill: 'F9FAFB' },
-                            children: [new Paragraph({
-                                spacing: { before: 60, after: 60 },
-                                alignment: AlignmentType.RIGHT,
-                                indent: { right: convertInchesToTwip(0.1) },
-                                children: [new TextRun({ text: 'AREA (m2)', bold: true, size: FONT_SIZE_SM, color: '6B7280', font: FONT })],
-                            })],
-                        }),
-                    ]}),
-                    // Data rows
-                    ...data.areas.map(area => new TableRow({ children: [
-                        new TableCell({
-                            borders: CELL_FULL,
-                            width: { size: TWIP_WIDTHS.label, type: WidthType.DXA },
-                            children: [new Paragraph({
-                                spacing: { before: 40, after: 40 },
-                                indent: { left: convertInchesToTwip(0.1) },
-                                children: [new TextRun({ text: area.name || '---', size: FONT_SIZE, color: '1A1A1A', font: FONT })],
-                            })],
-                        }),
-                        new TableCell({
-                            borders: CELL_FULL,
-                            width: { size: TWIP_WIDTHS.value, type: WidthType.DXA },
-                            children: [new Paragraph({
-                                spacing: { before: 40, after: 40 },
-                                alignment: AlignmentType.RIGHT,
-                                indent: { right: convertInchesToTwip(0.1) },
-                                children: [new TextRun({ text: formatMetric(area.calculatedAreaM2), size: FONT_SIZE, color: '1A1A1A', font: FONT })],
-                            })],
-                        }),
-                    ]})),
-                    // Total row
-                    new TableRow({ children: [
-                        new TableCell({
-                            borders: { top: { style: BorderStyle.SINGLE, size: 2, color: BORDER_COLOR }, bottom: { style: BorderStyle.SINGLE, size: 2, color: BORDER_COLOR }, left: MEDIUM_BORDER, right: MEDIUM_BORDER },
-                            width: { size: TWIP_WIDTHS.label, type: WidthType.DXA },
-                            children: [new Paragraph({
-                                spacing: { before: 80, after: 80 },
-                                indent: { left: convertInchesToTwip(0.1) },
-                                children: [new TextRun({ text: 'TOTAL', bold: true, size: FONT_SIZE, color: '1A1A1A', font: FONT })],
-                            })],
-                        }),
-                        new TableCell({
-                            borders: { top: { style: BorderStyle.SINGLE, size: 2, color: BORDER_COLOR }, bottom: { style: BorderStyle.SINGLE, size: 2, color: BORDER_COLOR }, left: MEDIUM_BORDER, right: MEDIUM_BORDER },
-                            width: { size: TWIP_WIDTHS.value, type: WidthType.DXA },
-                            children: [new Paragraph({
-                                spacing: { before: 80, after: 80 },
-                                alignment: AlignmentType.RIGHT,
-                                indent: { right: convertInchesToTwip(0.1) },
-                                children: [new TextRun({ text: formatMetric(data.totalArea), bold: true, size: FONT_SIZE, color: '1A1A1A', font: FONT })],
-                            })],
+                            width: { size: TWIP_WIDTHS.half, type: WidthType.DXA },
+                            children: [
+                                new Paragraph({
+                                    spacing: { before: SPACING.beforeMd, after: SPACING.afterMd },
+                                    alignment: AlignmentType.CENTER,
+                                    children: [new TextRun({ text: 'PLANO DEL INMUEBLE', bold: true, size: FONT_SIZE_LG, color: '111827', font: FONT })],
+                                }),
+                                ...(() => {
+                                    if (data.planPhoto) {
+                                        const imgBuf = imageBuffers.find(b => b.url === data.planPhoto.url);
+                                        if (imgBuf) {
+                                            const fmt = getDocxImageFormat(imgBuf.contentType);
+                                            return [new Paragraph({
+                                                spacing: { before: SPACING.beforeSm, after: SPACING.afterSm },
+                                                alignment: AlignmentType.CENTER,
+                                                children: [new ImageRun({
+                                                    data: imgBuf.buffer,
+                                                    transformation: { width: 280, height: 200 },
+                                                    type: fmt,
+                                                })],
+                                            })];
+                                        }
+                                    }
+                                    return [new Paragraph({
+                                        spacing: { before: SPACING.beforeXl, after: SPACING.afterSm },
+                                        alignment: AlignmentType.CENTER,
+                                        children: [new TextRun({ text: 'Plano no disponible', italics: true, size: FONT_SIZE, color: '9CA3AF', font: FONT })],
+                                    })];
+                                })(),
+                            ],
                         }),
                     ]}),
                 ],
+            }),
+
+            // Compliance text
+            new Paragraph({
+                spacing: { before: SPACING.beforeLg, after: SPACING.afterMd },
+                children: [new TextRun({
+                    text: complianceText,
+                    bold: true, size: FONT_SIZE, color: '166534', font: FONT,
+                })],
             }),
             new Paragraph({
                 spacing: { before: SPACING.beforeLg },
