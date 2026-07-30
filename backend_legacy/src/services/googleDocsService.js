@@ -1058,7 +1058,7 @@ async function createGoogleDoc(reportData) {
     const folderId = process.env.GOOGLE_DOCS_FOLDER_ID || null;
     const result = await uploadDocxToDrive(sa.driveClient, docxBuffer, title, folderId);
 
-    logger.info(`[GoogleDocs] DOCX created (via iLovePDF): ${result.url}`);
+    logger.info(`[GoogleDocs] DOCX created (via LibreOffice): ${result.url}`);
 
     return {
         documentId: result.documentId,
@@ -1079,7 +1079,7 @@ async function createUserGoogleDoc(reportData, userTokens) {
 
     const result = await uploadDocxToDrive(driveClient, docxBuffer, title, null);
 
-    logger.info(`[GoogleDocs] User DOCX created (via iLovePDF): ${result.url}`);
+    logger.info(`[GoogleDocs] User DOCX created (via LibreOffice): ${result.url}`);
 
     return {
         documentId: result.documentId,

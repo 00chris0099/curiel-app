@@ -78,8 +78,8 @@ class PdfCacheService {
     async saveCache(inspectionId, cloudUrl, contentHash) {
         try {
             await prisma.inspecciones.$executeRawUnsafe(
-                `INSERT INTO inspection_summaries (inspection_id, cached_report_url, cached_report_at, report_content_hash)
-                 VALUES ($1::uuid, $2, NOW(), $3)
+                `INSERT INTO inspection_summaries (id, inspection_id, cached_report_url, cached_report_at, report_content_hash)
+                 VALUES (gen_random_uuid(), $1::uuid, $2, NOW(), $3)
                  ON CONFLICT (inspection_id) DO UPDATE SET
                      cached_report_url = $2,
                      cached_report_at = NOW(),
