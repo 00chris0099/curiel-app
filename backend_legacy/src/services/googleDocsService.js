@@ -977,10 +977,10 @@ function formatMetric(value, suffix = '') {
 
 // ─── UPLOAD TO GOOGLE DRIVE ─────────────────────────────────────────────────────
 
-async function uploadPdfAsGoogleDoc(driveClient, pdfBuffer, title, folderId) {
+async function uploadPdfToDrive(driveClient, pdfBuffer, title, folderId) {
     const fileMetadata = {
         name: title,
-        mimeType: 'application/vnd.google-apps.document',
+        mimeType: 'application/pdf',
     };
     if (folderId) {
         fileMetadata.parents = [folderId];
@@ -992,13 +992,14 @@ async function uploadPdfAsGoogleDoc(driveClient, pdfBuffer, title, folderId) {
             mimeType: 'application/pdf',
             body: Readable.from(pdfBuffer),
         },
-        fields: 'id, webViewLink',
+        fields: 'id, webViewLink, webContentLink',
         supportsAllDrives: true,
     });
 
     return {
         documentId: res.data.id,
-        url: res.data.webViewLink || `https://docs.google.com/document/d/${res.data.id}/edit`,
+        url: res.data.webViewLink || `https://drive.google.com/file/d/${res.data.id}/view`,
+        downloadUrl: res.data.webContentLink || null,
     };
 }
 
@@ -1053,9 +1054,9 @@ async function createGoogleDoc(reportData) {
     const pdfBuffer = await generatePdfBuffer(reportData);
 
     const folderId = process.env.GOOGLE_DOCS_FOLDER_ID || null;
-    const result = await uploadPdfAsGoogleDoc(sa.driveClient, pdfBuffer, title, folderId);
+    const result = await uploadPdfToDrive(sa.driveClient, pdfBuffer, title, folderId);
 
-    logger.info(`[GoogleDocs] Document ready (via PDF): ${result.url}`);
+    logger.info(`[GoogleDocs] PDF uploaded to Drive: ${result.url}`);
 
     return {
         documentId: result.documentId,
@@ -1072,9 +1073,9 @@ async function createUserGoogleDoc(reportData, userTokens) {
     const title = `Informe de Inspeccion — ${reportData.inspection.projectName}`;
     const pdfBuffer = await generatePdfBuffer(reportData);
 
-    const result = await uploadPdfAsGoogleDoc(driveClient, pdfBuffer, title, null);
+    const result = await uploadPdfToDrive(driveClient, pdfBuffer, title, null);
 
-    logger.info(`[GoogleDocs] User document ready (via PDF): ${result.url}`);
+    logger.info(`[GoogleDocs] User PDF uploaded to Drive: ${result.url}`);
 
     return {
         documentId: result.documentId,
