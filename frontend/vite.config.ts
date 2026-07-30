@@ -35,22 +35,6 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        runtimeCaching: [
-          {
-            urlPattern: new RegExp(`^https?://${(process.env.VITE_API_URL || 'aimachristian-curielbackend.ajcxjb.easypanel.host').replace(/^https?:\/\//, '').replace(/\/api\/.*$/, '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\/api\\/.*/i`),
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'api-cache',
-              expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 5 * 60
-              },
-              cacheableResponse: {
-                statuses: [0, 200]
-              }
-            }
-          }
-        ],
         navigateFallback: null,
         cleanupOutdatedCaches: true,
       },
