@@ -214,7 +214,7 @@ async function createGoogleDoc(reportData) {
     await cleanupDrive(driveClient);
 
     const folderId = process.env.GOOGLE_DOCS_FOLDER_ID || null;
-    const html = buildReportHtml(reportData);
+    const html = await buildReportHtml(reportData);
 
     const result = await uploadHtmlAsGoogleDoc(driveClient, html, title, folderId);
 
@@ -243,7 +243,7 @@ async function createUserGoogleDoc(reportData, userTokens) {
     const driveClient = google.drive({ version: 'v3', auth: oauth2Client });
 
     const title = `Informe de Inspección — ${reportData.inspection.projectName}`;
-    const html = buildReportHtml(reportData);
+    const html = await buildReportHtml(reportData);
 
     const result = await uploadHtmlAsGoogleDoc(driveClient, html, title, null);
 
