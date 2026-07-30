@@ -384,7 +384,7 @@ async function buildDocx(reportData) {
         properties: {
             page: {
                 size: { width: convertInchesToTwip(8.27), height: convertInchesToTwip(11.69) },
-                margin: { top: convertInchesToTwip(1.0), bottom: convertInchesToTwip(0.7), left: convertInchesToTwip(1.0), right: convertInchesToTwip(1.0) },
+                margin: { top: convertInchesToTwip(1.0), bottom: convertInchesToTwip(0.7), left: convertInchesToTwip(0.7), right: convertInchesToTwip(0.7) },
             },
         },
         children: [
@@ -518,7 +518,7 @@ async function buildDocx(reportData) {
         properties: {
             page: {
                 size: { width: convertInchesToTwip(8.27), height: convertInchesToTwip(11.69) },
-                margin: { top: convertInchesToTwip(1.0), bottom: convertInchesToTwip(0.7), left: convertInchesToTwip(1.0), right: convertInchesToTwip(1.0) },
+                margin: { top: convertInchesToTwip(1.0), bottom: convertInchesToTwip(0.7), left: convertInchesToTwip(0.7), right: convertInchesToTwip(0.7) },
             },
         },
         children: [
@@ -651,13 +651,27 @@ async function buildDocx(reportData) {
                 ],
             }),
 
-            // Compliance text
-            new Paragraph({
-                spacing: { before: SPACING.beforeLg, after: SPACING.afterMd },
-                children: [new TextRun({
-                    text: complianceText,
-                    bold: true, size: FONT_SIZE, color: '166534', font: FONT,
-                })],
+            // Compliance text - green box like PDF
+            new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                rows: [
+                    new TableRow({ children: [
+                        new TableCell({
+                            borders: { top: { style: BorderStyle.SINGLE, size: 1, color: '86EFAC' }, bottom: { style: BorderStyle.SINGLE, size: 1, color: '86EFAC' }, left: { style: BorderStyle.SINGLE, size: 1, color: '86EFAC' }, right: { style: BorderStyle.SINGLE, size: 1, color: '86EFAC' } },
+                            shading: { type: 'clear', fill: 'F0FDF4' },
+                            children: [
+                                new Paragraph({
+                                    spacing: { before: SPACING.beforeSm, after: SPACING.afterSm },
+                                    indent: { left: convertInchesToTwip(0.1) },
+                                    children: [new TextRun({
+                                        text: complianceText,
+                                        bold: true, size: FONT_SIZE, color: '166534', font: FONT,
+                                    })],
+                                }),
+                            ],
+                        }),
+                    ]}),
+                ],
             }),
             new Paragraph({
                 spacing: { before: SPACING.beforeLg },
@@ -703,7 +717,7 @@ async function buildDocx(reportData) {
             properties: {
                 page: {
                     size: { width: convertInchesToTwip(8.27), height: convertInchesToTwip(11.69) },
-                    margin: { top: convertInchesToTwip(1.0), bottom: convertInchesToTwip(0.7), left: convertInchesToTwip(1.0), right: convertInchesToTwip(1.0) },
+                    margin: { top: convertInchesToTwip(1.0), bottom: convertInchesToTwip(0.7), left: convertInchesToTwip(0.7), right: convertInchesToTwip(0.7) },
                 },
             },
             children: sectionChildren,
@@ -748,7 +762,7 @@ async function buildDocx(reportData) {
         properties: {
             page: {
                 size: { width: convertInchesToTwip(8.27), height: convertInchesToTwip(11.69) },
-                margin: { top: convertInchesToTwip(1.0), bottom: convertInchesToTwip(0.7), left: convertInchesToTwip(1.0), right: convertInchesToTwip(1.0) },
+                margin: { top: convertInchesToTwip(1.0), bottom: convertInchesToTwip(0.7), left: convertInchesToTwip(0.7), right: convertInchesToTwip(0.7) },
             },
         },
         children: recChildren,
@@ -864,7 +878,7 @@ async function buildDocx(reportData) {
         properties: {
             page: {
                 size: { width: convertInchesToTwip(8.27), height: convertInchesToTwip(11.69) },
-                margin: { top: convertInchesToTwip(1.0), bottom: convertInchesToTwip(0.7), left: convertInchesToTwip(1.0), right: convertInchesToTwip(1.0) },
+                margin: { top: convertInchesToTwip(1.0), bottom: convertInchesToTwip(0.7), left: convertInchesToTwip(0.7), right: convertInchesToTwip(0.7) },
             },
         },
         children: cierreChildren,
@@ -876,18 +890,38 @@ async function buildDocx(reportData) {
 
     const buildSectionHeader = () => new Header({
         children: [
-            new Paragraph({
-                alignment: AlignmentType.LEFT,
-                spacing: { after: 0 },
-                children: [
-                    new TextRun({ text: 'Protegemos la inversion de tu departamento', italics: true, size: FONT_SIZE_SM, color: '6B7280', font: FONT }),
-                    new TextRun({ children: [Tab.RIGHT] }),
-                    new TextRun({ children: [Tab.RIGHT] }),
-                    ...(logoImageBuf ? [new ImageRun({
-                        data: logoImageBuf.buffer,
-                        transformation: { width: 80, height: 28 },
-                        type: getDocxImageFormat(logoImageBuf.contentType),
-                    })] : []),
+            new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                columnWidths: [convertInchesToTwip(2.5), convertInchesToTwip(2.5), convertInchesToTwip(1.5)],
+                rows: [
+                    new TableRow({ children: [
+                        new TableCell({
+                            borders: { top: NO_BORDER, bottom: NO_BORDER, left: NO_BORDER, right: NO_BORDER },
+                            width: { size: convertInchesToTwip(2.5), type: WidthType.DXA },
+                            children: [new Paragraph({
+                                spacing: { before: 0, after: 0 },
+                                children: [new TextRun({ text: 'Protegemos la inversion de tu departamento', italics: true, size: FONT_SIZE_SM, color: '6B7280', font: FONT })],
+                            })],
+                        }),
+                        new TableCell({
+                            borders: { top: NO_BORDER, bottom: NO_BORDER, left: NO_BORDER, right: NO_BORDER },
+                            width: { size: convertInchesToTwip(2.5), type: WidthType.DXA },
+                            children: [],
+                        }),
+                        new TableCell({
+                            borders: { top: NO_BORDER, bottom: NO_BORDER, left: NO_BORDER, right: NO_BORDER },
+                            width: { size: convertInchesToTwip(1.5), type: WidthType.DXA },
+                            children: [new Paragraph({
+                                alignment: AlignmentType.RIGHT,
+                                spacing: { before: 0, after: 0 },
+                                children: logoImageBuf ? [new ImageRun({
+                                    data: logoImageBuf.buffer,
+                                    transformation: { width: 100, height: 36 },
+                                    type: getDocxImageFormat(logoImageBuf.contentType),
+                                })] : [],
+                            })],
+                        }),
+                    ]}),
                 ],
             }),
         ],
@@ -898,7 +932,7 @@ async function buildDocx(reportData) {
             new Paragraph({
                 alignment: AlignmentType.CENTER,
                 spacing: { before: 0, after: 0 },
-                border: { top: { style: BorderStyle.SINGLE, size: 1, color: 'E57A1A' } },
+                border: { top: { style: BorderStyle.SINGLE, size: 3, color: 'E57A1A' } },
                 children: [
                     new TextRun({ text: '  983 893 067  |  info@tudepacheck.com  ', size: FONT_SIZE_SM, color: '9CA3AF', font: FONT }),
                 ],
