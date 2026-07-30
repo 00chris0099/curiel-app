@@ -130,6 +130,12 @@ module.exports = {
     companyTagline: process.env.COMPANY_TAGLINE || 'Tu hogar, nuestro compromiso'
   },
 
+  // iLovePDF
+  ilovepdf: {
+    publicKey: process.env.ILOVEPDF_PUBLIC_KEY || null,
+    secretKey: process.env.ILOVEPDF_SECRET_KEY || null,
+  },
+
   // Redis Cache
   redis: {
     url: process.env.REDIS_URL || null

@@ -10,6 +10,7 @@ const http = require('http');
 const puppeteer = require('puppeteer');
 const logger = require('../utils/logger');
 const { buildInspectionReportHtml } = require('../pdf/inspectionReportTemplate');
+const { pdfToDocx } = require('./ilovepdfService');
 
 const SCOPES = [
     'https://www.googleapis.com/auth/documents',
@@ -977,10 +978,10 @@ function formatMetric(value, suffix = '') {
 
 // ─── UPLOAD TO GOOGLE DRIVE ─────────────────────────────────────────────────────
 
-async function uploadPdfToDrive(driveClient, pdfBuffer, title, folderId) {
+async function uploadDocxToDrive(driveClient, docxBuffer, title, folderId) {
     const fileMetadata = {
         name: title,
-        mimeType: 'application/pdf',
+        mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     };
     if (folderId) {
         fileMetadata.parents = [folderId];
@@ -989,17 +990,16 @@ async function uploadPdfToDrive(driveClient, pdfBuffer, title, folderId) {
     const res = await driveClient.files.create({
         requestBody: fileMetadata,
         media: {
-            mimeType: 'application/pdf',
-            body: Readable.from(pdfBuffer),
+            mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            body: Readable.from(docxBuffer),
         },
-        fields: 'id, webViewLink, webContentLink',
+        fields: 'id, webViewLink',
         supportsAllDrives: true,
     });
 
     return {
         documentId: res.data.id,
-        url: res.data.webViewLink || `https://drive.google.com/file/d/${res.data.id}/view`,
-        downloadUrl: res.data.webContentLink || null,
+        url: res.data.webViewLink || `https://docs.google.com/document/d/${res.data.id}/edit`,
     };
 }
 
@@ -1044,7 +1044,7 @@ async function generatePdfBuffer(reportData) {
     }
 }
 
-// ─── PUBLIC: CREATE SERVICE ACCOUNT DOC (PDF → Google Drive) ────────────────────
+// ─── PUBLIC: CREATE SERVICE ACCOUNT DOC (PDF→DOCX→Google Drive) ────────────────
 
 async function createGoogleDoc(reportData) {
     const sa = createServiceAccountClients();
@@ -1053,10 +1053,12 @@ async function createGoogleDoc(reportData) {
     const title = `Informe de Inspeccion — ${reportData.inspection.projectName}`;
     const pdfBuffer = await generatePdfBuffer(reportData);
 
-    const folderId = process.env.GOOGLE_DOCS_FOLDER_ID || null;
-    const result = await uploadPdfToDrive(sa.driveClient, pdfBuffer, title, folderId);
+    const { docxBuffer } = await pdfToDocx(pdfBuffer, `${title}.pdf`);
 
-    logger.info(`[GoogleDocs] PDF uploaded to Drive: ${result.url}`);
+    const folderId = process.env.GOOGLE_DOCS_FOLDER_ID || null;
+    const result = await uploadDocxToDrive(sa.driveClient, docxBuffer, title, folderId);
+
+    logger.info(`[GoogleDocs] DOCX created (via iLovePDF): ${result.url}`);
 
     return {
         documentId: result.documentId,
@@ -1065,7 +1067,7 @@ async function createGoogleDoc(reportData) {
     };
 }
 
-// ─── PUBLIC: CREATE USER DOC (OAUTH, PDF → Google Drive) ──────────────────────
+// ─── PUBLIC: CREATE USER DOC (OAUTH, PDF→DOCX→Google Drive) ───────────────────
 
 async function createUserGoogleDoc(reportData, userTokens) {
     const driveClient = getDriveClient(userTokens);
@@ -1073,9 +1075,11 @@ async function createUserGoogleDoc(reportData, userTokens) {
     const title = `Informe de Inspeccion — ${reportData.inspection.projectName}`;
     const pdfBuffer = await generatePdfBuffer(reportData);
 
-    const result = await uploadPdfToDrive(driveClient, pdfBuffer, title, null);
+    const { docxBuffer } = await pdfToDocx(pdfBuffer, `${title}.pdf`);
 
-    logger.info(`[GoogleDocs] User PDF uploaded to Drive: ${result.url}`);
+    const result = await uploadDocxToDrive(driveClient, docxBuffer, title, null);
+
+    logger.info(`[GoogleDocs] User DOCX created (via iLovePDF): ${result.url}`);
 
     return {
         documentId: result.documentId,

@@ -144,10 +144,10 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
             }
             if ('url' in result) {
                 window.open(result.url, '_blank');
-                toast.success('PDF subido a Drive');
+                toast.success('Documento creado en Google Docs');
             }
         } catch (err: unknown) {
-            toast.error(getApiErrorMessage(err, 'No se pudo subir el PDF'));
+            toast.error(getApiErrorMessage(err, 'No se pudo crear el documento'));
         } finally {
             setIsOpeningDocs(false);
         }
@@ -204,7 +204,7 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
                             </>
                         )}
 
-                        {/* Abrir PDF en Drive */}
+                        {/* Editar en Google Docs */}
                         <button
                             onClick={handleOpenInDocs}
                             disabled={isOpeningDocs}
@@ -219,11 +219,11 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                                     <polyline points="14 2 14 8 20 8" />
-                                    <line x1="12" y1="18" x2="12" y2="12" />
-                                    <polyline points="9 15 12 12 15 15" />
+                                    <line x1="16" y1="13" x2="8" y2="13" />
+                                    <line x1="16" y1="17" x2="8" y2="17" />
                                 </svg>
                             )}
-                            <span className="hidden sm:inline">{isOpeningDocs ? 'Subiendo...' : 'Abrir PDF en Drive'}</span>
+                            <span className="hidden sm:inline">{isOpeningDocs ? 'Abriendo...' : 'Editar en Docs'}</span>
                         </button>
 
                         {/* Cerrar */}
