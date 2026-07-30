@@ -1,7 +1,8 @@
 const { google } = require('googleapis');
 const {
     Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, ImageRun,
-    AlignmentType, BorderStyle, WidthType, PageBreak, convertInchesToTwip, HeadingLevel
+    AlignmentType, BorderStyle, WidthType, PageBreak, convertInchesToTwip, HeadingLevel,
+    Header, Footer, PageNumber, Tab, TabStopType, TabStopPosition
 } = require('docx');
 const { Readable } = require('stream');
 const https = require('https');
@@ -370,6 +371,7 @@ async function buildDocx(reportData) {
     if (data.inspectorSignature?.signatureUrl) allImageUrls.add(data.inspectorSignature.signatureUrl);
     if (data.buildingPhoto?.url) allImageUrls.add(data.buildingPhoto.url);
     if (data.planPhoto?.url) allImageUrls.add(data.planPhoto.url);
+    if (reportData.logoUrl) allImageUrls.add(reportData.logoUrl);
 
     for (const url of allImageUrls) {
         const result = await getImageBuffer(url);
@@ -867,6 +869,47 @@ async function buildDocx(reportData) {
         },
         children: cierreChildren,
     });
+
+    // ── ADD HEADERS & FOOTERS TO ALL SECTIONS ──────────────────────────────────
+
+    const logoImageBuf = reportData.logoUrl ? imageBuffers.find(b => b.url === reportData.logoUrl) : null;
+
+    const buildSectionHeader = () => new Header({
+        children: [
+            new Paragraph({
+                alignment: AlignmentType.LEFT,
+                spacing: { after: 0 },
+                children: [
+                    new TextRun({ text: 'Protegemos la inversion de tu departamento', italics: true, size: FONT_SIZE_SM, color: '6B7280', font: FONT }),
+                    new TextRun({ children: [Tab.RIGHT] }),
+                    new TextRun({ children: [Tab.RIGHT] }),
+                    ...(logoImageBuf ? [new ImageRun({
+                        data: logoImageBuf.buffer,
+                        transformation: { width: 80, height: 28 },
+                        type: getDocxImageFormat(logoImageBuf.contentType),
+                    })] : []),
+                ],
+            }),
+        ],
+    });
+
+    const buildSectionFooter = () => new Footer({
+        children: [
+            new Paragraph({
+                alignment: AlignmentType.CENTER,
+                spacing: { before: 0, after: 0 },
+                border: { top: { style: BorderStyle.SINGLE, size: 1, color: 'E57A1A' } },
+                children: [
+                    new TextRun({ text: '  983 893 067  |  info@tudepacheck.com  ', size: FONT_SIZE_SM, color: '9CA3AF', font: FONT }),
+                ],
+            }),
+        ],
+    });
+
+    for (const section of sections) {
+        section.headers = { default: buildSectionHeader() };
+        section.footers = { default: buildSectionFooter() };
+    }
 
     // ── BUILD DOCUMENT ──────────────────────────────────────────────────────────
 

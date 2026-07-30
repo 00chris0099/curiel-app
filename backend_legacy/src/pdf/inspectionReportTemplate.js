@@ -129,13 +129,13 @@ const buildInspectionReportHtml = (reportData) => {
     const logoSrc = logoUrl || LOGO_BASE64;
 
     const FOOTER_HTML = `
-        <div style="position:fixed; bottom:0; left:0; right:0; height:55px; overflow:hidden; z-index:100;">
-            <svg viewBox="0 0 827 55" preserveAspectRatio="none" style="width:100%; height:100%; display:block;">
-                <path d="M0,20 C100,10 200,5 350,12 C500,19 650,35 827,10 L827,55 L0,55 Z" fill="#e57a1a"/>
-                <path d="M0,25 C150,15 300,8 500,18 C650,26 750,38 827,20 L827,55 L0,55 Z" fill="#d4710f"/>
-                <path d="M0,30 C120,22 280,15 450,22 C600,28 730,40 827,25 L827,55 L0,55 Z" fill="#c0660a"/>
+        <div style="position:fixed; bottom:0; left:0; right:0; height:50px; overflow:visible; z-index:100; margin:0; padding:0;">
+            <svg viewBox="0 0 827 50" preserveAspectRatio="none" style="width:100%; height:50px; display:block; margin:0; padding:0;">
+                <path d="M0,18 C100,8 200,3 350,10 C500,17 650,33 827,8 L827,50 L0,50 Z" fill="#e57a1a"/>
+                <path d="M0,23 C150,13 300,6 500,16 C650,24 750,36 827,18 L827,50 L0,50 Z" fill="#d4710f"/>
+                <path d="M0,28 C120,20 280,13 450,20 C600,26 730,38 827,23 L827,50 L0,50 Z" fill="#c0660a"/>
             </svg>
-            <div style="position:absolute; bottom:12px; left:0; right:0; display:flex; justify-content:center; align-items:center; gap:32px; font-size:9pt; color:#fff; font-weight:600;">
+            <div style="position:absolute; bottom:10px; left:0; right:0; display:flex; justify-content:center; align-items:center; gap:32px; font-size:9pt; color:#fff; font-weight:600;">
                 <span style="display:flex; align-items:center; gap:6px;">${WHATSAPP_SVG} 983 893 067</span>
                 <span style="display:flex; align-items:center; gap:6px;">${EMAIL_SVG} info@tudepacheck.com</span>
             </div>
@@ -143,15 +143,15 @@ const buildInspectionReportHtml = (reportData) => {
     `;
 
     const buildHeader = (pageNum) => `
-        <div style="position:fixed; top:0; left:0; right:0; height:42px; display:flex; align-items:center; justify-content:space-between; padding:0 18mm; border-bottom:1px solid #e5e7eb; background:#fff; z-index:100;">
-            <div style="display:flex; align-items:center;">
-                ${logoSrc ? `<img src="${logoSrc}" alt="Logo" style="height:28px; width:auto;" />` : ''}
-            </div>
-            <div style="font-size:8.5pt; color:#6b7280; font-style:italic; text-align:center;">
-                Protegemos la inversion de tu departamento
-            </div>
+        <div style="position:fixed; top:0; left:0; right:0; height:50px; display:flex; align-items:center; justify-content:space-between; padding:0 18mm; border-bottom:1px solid #e5e7eb; background:#fff; z-index:100;">
             <div style="font-size:8.5pt; color:#9ca3af; white-space:nowrap;">
                 Pagina ${pageNum}
+            </div>
+            <div style="font-size:9pt; color:#6b7280; font-style:italic; text-align:center;">
+                Protegemos la inversion de tu departamento
+            </div>
+            <div style="display:flex; align-items:center;">
+                ${logoSrc ? `<img src="${logoSrc}" alt="Logo" style="height:36px; width:auto;" />` : ''}
             </div>
         </div>
     `;
@@ -165,7 +165,7 @@ const buildInspectionReportHtml = (reportData) => {
     <style>
         @page {
             size: A4;
-            margin: 48px 18mm 60px 18mm;
+            margin: 50px 18mm 0px 18mm;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
