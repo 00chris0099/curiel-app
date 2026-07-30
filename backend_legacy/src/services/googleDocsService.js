@@ -1,4 +1,5 @@
 const { google } = require('googleapis');
+const { Readable } = require('stream');
 const logger = require('../utils/logger');
 const { buildInspectionReportHtml } = require('../pdf/inspectionReportTemplate');
 
@@ -124,7 +125,7 @@ async function uploadHtmlAsGoogleDoc(driveClient, html, title, folderId) {
         requestBody: fileMetadata,
         media: {
             mimeType: 'text/html',
-            body: Buffer.from(html, 'utf-8'),
+            body: Readable.from(Buffer.from(html, 'utf-8')),
         },
         fields: 'id, webViewLink',
         supportsAllDrives: true,
