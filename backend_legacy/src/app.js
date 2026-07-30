@@ -20,7 +20,9 @@ const app = express();
 app.set('trust proxy', 1);
 
 // Seguridad
-app.use(helmet());
+app.use(helmet({
+    contentSecurityPolicy: false,
+}));
 
 // Request ID — genera UUID unico por request para tracing
 app.use(requestId);
