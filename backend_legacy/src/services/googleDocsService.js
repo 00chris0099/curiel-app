@@ -129,8 +129,24 @@ const TWIP_WIDTHS = {
 const FONT = 'Arial';
 const FONT_SIZE = 21;   // 10.5pt in half-points
 const FONT_SIZE_SM = 18; // 9pt
+const FONT_SIZE_MD = 20; // 10pt
 const FONT_SIZE_LG = 32; // 16pt
 const FONT_SIZE_TITLE = 52; // 26pt
+
+const SPACING = {
+    afterNone: 0,
+    afterSm: 40,
+    afterMd: 80,
+    afterLg: 120,
+    afterXl: 200,
+    afterXxl: 300,
+    beforeSm: 40,
+    beforeMd: 80,
+    beforeLg: 120,
+    beforeXl: 160,
+    beforeXxl: 200,
+    beforeXxl2: 300,
+};
 
 function setCellBorders(cell, borders) {
     cell.options.borders = borders;
@@ -209,7 +225,7 @@ function sectionTitle(text) {
 
 function bodyParagraph(text, opts = {}) {
     return new Paragraph({
-        spacing: { before: opts.before || 0, after: opts.after || 80 },
+        spacing: { before: opts.before || SPACING.afterNone, after: opts.after || SPACING.afterMd },
         alignment: opts.align,
         children: [new TextRun({
             text,
@@ -222,12 +238,45 @@ function bodyParagraph(text, opts = {}) {
     });
 }
 
+function multiRunParagraph(opts = {}) {
+    return new Paragraph({
+        spacing: { before: opts.before || SPACING.afterNone, after: opts.after || SPACING.afterMd },
+        alignment: opts.align,
+        children: opts.runs || [],
+    });
+}
+
 function bulletItem(text) {
     return new Paragraph({
-        spacing: { before: 40, after: 40 },
+        spacing: { before: SPACING.beforeSm, after: SPACING.afterSm },
         indent: { left: convertInchesToTwip(0.3), hanging: convertInchesToTwip(0.15) },
         children: [new TextRun({ text: '•  ', size: FONT_SIZE, font: FONT }), new TextRun({ text, size: FONT_SIZE, color: '1A1A1A', font: FONT })],
     });
+}
+
+function emptyParagraph() {
+    return new Paragraph({ spacing: { before: SPACING.afterSm, after: SPACING.afterSm }, children: [] });
+}
+
+function photoWithCaption(photo, imageBuffers, opts = {}) {
+    const children = [];
+    const imgBuf = imageBuffers.find(b => b.url === photo.url);
+    if (imgBuf) {
+        const fmt = getDocxImageFormat(imgBuf.contentType);
+        children.push(new Paragraph({
+            spacing: { before: SPACING.beforeMd, after: SPACING.afterSm },
+            alignment: AlignmentType.CENTER,
+            children: [new ImageRun({
+                data: imgBuf.buffer,
+                transformation: { width: opts.width || 520, height: opts.height || 290 },
+                type: fmt,
+            })],
+        }));
+    }
+    if (photo.caption) {
+        children.push(bodyParagraph(photo.caption, { italic: true, color: '6B7280', size: FONT_SIZE_SM, after: SPACING.afterLg }));
+    }
+    return children;
 }
 
 // ─── REPORT DATA EXTRACTION ─────────────────────────────────────────────────────
@@ -334,25 +383,25 @@ async function buildDocx(reportData) {
             },
         },
         children: [
-            new Paragraph({ spacing: { before: convertInchesToTwip(1.5), after: 400 }, children: [] }),
+            new Paragraph({ spacing: { before: convertInchesToTwip(1.5), after: SPACING.afterXxl }, children: [] }),
             new Paragraph({
-                spacing: { after: 200 },
+                spacing: { after: SPACING.afterXl },
                 children: [new TextRun({ text: 'CURIEL', bold: true, size: 72, color: '1F2937', font: FONT })],
             }),
             new Paragraph({
-                spacing: { after: 200 },
+                spacing: { after: SPACING.afterXl },
                 border: { bottom: { style: BorderStyle.SINGLE, size: 2, color: BLUE } },
                 children: [new TextRun({ text: 'INFORME DE INSPECCION', bold: true, size: FONT_SIZE_TITLE, color: '111827', font: FONT })],
             }),
             new Paragraph({
-                spacing: { after: 300 },
+                spacing: { after: SPACING.afterXxl },
                 children: [new TextRun({
                     text: 'Informe tecnico profesional elaborado con criterios inmobiliarios, metricos y fotograficos para revision tecnica integral del inmueble.',
                     italics: true, size: FONT_SIZE, color: '6B7280', font: FONT,
                 })],
             }),
 
-            // General info box (on cover)
+            // General info box (on cover) - same structure as PDF
             new Table({
                 width: { size: 100, type: WidthType.PERCENTAGE },
                 columnWidths: [TWIP_WIDTHS.label, TWIP_WIDTHS.value],
@@ -363,7 +412,7 @@ async function buildDocx(reportData) {
                             borders: { top: BLUE_BORDER, bottom: { style: BorderStyle.SINGLE, size: 1, color: BLUE }, left: MEDIUM_BORDER, right: MEDIUM_BORDER },
                             shading: { type: 'clear', fill: 'EFF6FF' },
                             children: [new Paragraph({
-                                spacing: { before: 80, after: 80 },
+                                spacing: { before: SPACING.beforeMd, after: SPACING.afterMd },
                                 indent: { left: convertInchesToTwip(0.1) },
                                 children: [new TextRun({ text: 'INFORMACION GENERAL', bold: true, size: FONT_SIZE_LG, color: '111827', font: FONT })],
                             })],
@@ -375,7 +424,7 @@ async function buildDocx(reportData) {
                         { label: 'Distrito', value: data.district },
                         { label: 'Provincia', value: 'Lima' },
                         { label: 'Edificio', value: data.buildingName },
-                        { label: 'Fecha', value: formatDateEs(data.inspection.scheduledDate) },
+                        { label: 'Fecha de inspeccion', value: formatDateEs(data.inspection.scheduledDate) },
                         { label: 'Inmueble', value: data.apartmentNumber },
                         { label: 'Servicio', value: data.serviceType },
                     ].map(r => new TableRow({ children: [
@@ -384,7 +433,7 @@ async function buildDocx(reportData) {
                             width: { size: TWIP_WIDTHS.label, type: WidthType.DXA },
                             shading: { type: 'clear', fill: 'F9FAFB' },
                             children: [new Paragraph({
-                                spacing: { before: 40, after: 40 },
+                                spacing: { before: SPACING.beforeSm, after: SPACING.afterSm },
                                 indent: { left: convertInchesToTwip(0.1) },
                                 children: [new TextRun({ text: r.label, bold: true, size: FONT_SIZE_SM, color: '374151', font: FONT })],
                             })],
@@ -393,7 +442,7 @@ async function buildDocx(reportData) {
                             borders: CELL_FULL,
                             width: { size: TWIP_WIDTHS.value, type: WidthType.DXA },
                             children: [new Paragraph({
-                                spacing: { before: 40, after: 40 },
+                                spacing: { before: SPACING.beforeSm, after: SPACING.afterSm },
                                 indent: { left: convertInchesToTwip(0.1) },
                                 children: [new TextRun({ text: r.value || '---', size: FONT_SIZE, color: '1A1A1A', font: FONT })],
                             })],
@@ -409,25 +458,25 @@ async function buildDocx(reportData) {
                     if (imgBuf) {
                         const fmt = getDocxImageFormat(imgBuf.contentType);
                         return [new Paragraph({
-                            spacing: { before: 200, after: 0 },
+                            spacing: { before: SPACING.beforeXl, after: SPACING.afterNone },
                             border: { top: { style: BorderStyle.SINGLE, size: 1, color: BORDER_COLOR }, bottom: { style: BorderStyle.SINGLE, size: 1, color: BORDER_COLOR }, left: MEDIUM_BORDER, right: MEDIUM_BORDER },
                             alignment: AlignmentType.CENTER,
                             children: [new ImageRun({
                                 data: imgBuf.buffer,
-                                transformation: { width: 500, height: 280 },
+                                transformation: { width: 540, height: 300 },
                                 type: fmt,
                             })],
                         })];
                     }
                 }
                 return [new Paragraph({
-                    spacing: { before: 200, after: 0 },
+                    spacing: { before: SPACING.beforeXl, after: SPACING.afterNone },
                     alignment: AlignmentType.CENTER,
                     children: [new TextRun({ text: 'Foto del edificio no disponible', italics: true, size: FONT_SIZE, color: '9CA3AF', font: FONT })],
                 })];
             })(),
 
-            new Paragraph({ spacing: { before: 600 }, children: [] }),
+            new Paragraph({ spacing: { before: SPACING.beforeXxl2 }, children: [] }),
             new Paragraph({
                 border: { top: { style: BorderStyle.SINGLE, size: 1, color: BORDER_COLOR } },
                 spacing: { before: 100 },
@@ -536,7 +585,7 @@ async function buildDocx(reportData) {
                 ],
             }),
             new Paragraph({
-                spacing: { before: 120 },
+                spacing: { before: SPACING.beforeLg },
                 children: [new TextRun({
                     text: 'El area total corresponde a la suma de las mediciones individuales de cada ambiente inspeccionado.',
                     italics: true, size: FONT_SIZE_SM, color: '6B7280', font: FONT,
@@ -556,37 +605,22 @@ async function buildDocx(reportData) {
             sectionChildren.push(bodyParagraph('No se registraron observaciones tecnicas en esta seccion.', { italic: true, color: '9CA3AF' }));
         } else {
             for (const obs of section.observations) {
-                sectionChildren.push(bodyParagraph(`Observacion ${obs.sequence}`, { bold: true, color: '374151', before: 160 }));
+                sectionChildren.push(bodyParagraph(`Observacion ${obs.sequence}`, { bold: true, color: '374151', before: SPACING.beforeXl, after: SPACING.afterSm }));
 
-                // Photos
+                // Photos with captions
                 for (const photo of (obs.photos || [])) {
-                    const imgBuf = imageBuffers.find(b => b.url === photo.url);
-                    if (imgBuf) {
-                        const fmt = getDocxImageFormat(imgBuf.contentType);
-                        sectionChildren.push(new Paragraph({
-                            spacing: { before: 80, after: 40 },
-                            alignment: AlignmentType.CENTER,
-                            children: [new ImageRun({
-                                data: imgBuf.buffer,
-                                transformation: { width: 480, height: 270 },
-                                type: fmt,
-                            })],
-                        }));
-                        if (photo.caption) {
-                            sectionChildren.push(bodyParagraph(photo.caption, { italic: true, color: '6B7280', size: FONT_SIZE_SM, after: 120 }));
-                        }
-                    }
+                    sectionChildren.push(...photoWithCaption(photo, imageBuffers, { width: 520, height: 290 }));
                 }
 
                 // Description
-                sectionChildren.push(bodyParagraph(obs.description || '', { after: 80 }));
+                sectionChildren.push(bodyParagraph(obs.description || '', { after: SPACING.afterMd }));
 
-                // Metadata
+                // Metadata - same format as PDF: Type · Severity · Metric · Recommendation
                 const metaParts = [`Tipo: ${obs.type || '---'}`];
                 if (obs.severity) metaParts.push(`Severidad: ${obs.severity}`);
                 if (obs.metricValue) metaParts.push(`Metrica: ${formatMetric(obs.metricValue, obs.metricUnit ? ` ${obs.metricUnit}` : '')}`);
                 if (obs.recommendation) metaParts.push(`Recomendacion: ${obs.recommendation}`);
-                sectionChildren.push(bodyParagraph(metaParts.join('  ·  '), { italic: true, color: '6B7280', size: FONT_SIZE_SM, after: 200 }));
+                sectionChildren.push(bodyParagraph(metaParts.join('  ·  '), { italic: true, color: '6B7280', size: FONT_SIZE_SM, after: SPACING.afterXl }));
             }
         }
 
@@ -612,7 +646,7 @@ async function buildDocx(reportData) {
                         borders: { top: BLUE_BORDER, bottom: { style: BorderStyle.SINGLE, size: 1, color: BLUE }, left: MEDIUM_BORDER, right: MEDIUM_BORDER },
                         shading: { type: 'clear', fill: 'EFF6FF' },
                         children: [new Paragraph({
-                            spacing: { before: 80, after: 80 },
+                            spacing: { before: SPACING.beforeMd, after: SPACING.afterMd },
                             indent: { left: convertInchesToTwip(0.1) },
                             children: [new TextRun({ text: 'RECOMENDACIONES', bold: true, size: FONT_SIZE_LG, color: '111827', font: FONT })],
                         })],
@@ -622,12 +656,12 @@ async function buildDocx(reportData) {
                     new TableCell({
                         borders: CELL_FULL,
                         children: [
-                            new Paragraph({ spacing: { before: 40, after: 40 }, children: [] }),
+                            emptyParagraph(),
                             ...(data.allRecs.length > 0
                                 ? data.allRecs.map(rec => bulletItem(rec))
                                 : [bodyParagraph('No se generaron recomendaciones automaticas.', { italic: true, color: '9CA3AF' })]
                             ),
-                            new Paragraph({ spacing: { before: 40, after: 40 }, children: [] }),
+                            emptyParagraph(),
                         ],
                     }),
                 ]}),
@@ -696,14 +730,14 @@ async function buildDocx(reportData) {
 
         // Conclusion
         new Paragraph({
-            spacing: { before: 300, after: 120 },
+            spacing: { before: SPACING.beforeXxl2, after: SPACING.afterLg },
             children: [new TextRun({
                 text: data.summary?.generalConclusion || 'Sin conclusion general registrada.',
                 size: FONT_SIZE, color: '1A1A1A', font: FONT,
             })],
         }),
         new Paragraph({
-            spacing: { after: 200 },
+            spacing: { after: SPACING.afterXl },
             children: [new TextRun({
                 text: 'Este informe consolida los hallazgos observados en la fecha de inspeccion y debe complementarse con las acciones correctivas correspondientes para el inmueble evaluado.',
                 italics: true, size: FONT_SIZE_SM, color: '9CA3AF', font: FONT,
@@ -712,7 +746,7 @@ async function buildDocx(reportData) {
 
         // Signature block
         new Paragraph({
-            spacing: { after: 120 },
+            spacing: { after: SPACING.afterLg },
             children: [new TextRun({
                 text: 'El presente informe fue realizado e inspeccionado por:',
                 size: FONT_SIZE_SM, color: '6B7280', font: FONT,
@@ -726,21 +760,21 @@ async function buildDocx(reportData) {
                 if (imgBuf) {
                     const fmt = getDocxImageFormat(imgBuf.contentType);
                     return [new Paragraph({
-                        spacing: { before: 80, after: 80 },
+                        spacing: { before: SPACING.beforeMd, after: SPACING.afterMd },
                         children: [new ImageRun({
                             data: imgBuf.buffer,
-                            transformation: { width: 180, height: 70 },
+                            transformation: { width: 200, height: 80 },
                             type: fmt,
                         })],
                     })];
                 }
             }
-            return [bodyParagraph('Firma pendiente', { italic: true, color: '9CA3AF', size: FONT_SIZE_SM, after: 80 })];
+            return [bodyParagraph('Firma pendiente', { italic: true, color: '9CA3AF', size: FONT_SIZE_SM, after: SPACING.afterMd })];
         })(),
 
         // Signature line
         new Paragraph({
-            spacing: { before: 40, after: 80 },
+            spacing: { before: SPACING.beforeSm, after: SPACING.afterMd },
             border: { bottom: { style: BorderStyle.SINGLE, size: 2, color: '1A1A1A' } },
             children: [],
         }),
