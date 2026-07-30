@@ -81,15 +81,8 @@ router.get('/google/callback', async (req, res) => {
         saveTokens(userId, tokens);
 
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-        const docsUrl = `https://docs.google.com/document/create?title=${encodeURIComponent('Informe de Inspección')}`;
-        res.send(`
-            <html><body><script>
-                if (window.opener) {
-                    window.opener.postMessage({ type: 'google-auth-success', userId: '${userId}', inspectionId: '${inspectionId}' }, '${frontendUrl}');
-                }
-                window.location.href = '${frontendUrl}/inspections${inspectionId ? '/' + inspectionId : ''}?google_auth=success';
-            </script></body></html>
-        `);
+        const redirectUrl = `${frontendUrl}/inspections${inspectionId ? '/' + inspectionId : ''}?google_auth=success`;
+        res.redirect(redirectUrl);
     } catch (err) {
         logger.error('[GoogleAuth] Error exchanging code', { error: err.message });
         res.redirect(`${frontendUrl}/inspections?error=google_auth_exchange_failed`);

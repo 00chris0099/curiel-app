@@ -161,16 +161,9 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
             if ('requiresAuth' in result && result.requiresAuth) {
                 const token = localStorage.getItem('accessToken') || '';
                 const authUrl = `${result.authUrl}&token=${encodeURIComponent(token)}`;
-                const popup = window.open(authUrl, 'google-auth', 'width=600,height=700');
-                const handler = (event: MessageEvent) => {
-                    if (event.data?.type === 'google-auth-success') {
-                        popup?.close();
-                        window.removeEventListener('message', handler);
-                        toast.success('Google autenticado. Creando documento...');
-                        handleOpenInDocs();
-                    }
-                };
-                window.addEventListener('message', handler);
+                window.open(authUrl, 'google-auth', 'width=600,height=700');
+                toast.success('Autoriza con tu cuenta de Google en la ventana emergente');
+                setIsOpeningDocs(false);
                 return;
             }
             if ('url' in result) {
