@@ -159,7 +159,7 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
         try {
             const result = await inspectionService.openInGoogleDocs(inspectionId);
             if ('requiresAuth' in result && result.requiresAuth) {
-                const token = localStorage.getItem('token') || '';
+                const token = localStorage.getItem('accessToken') || '';
                 const authUrl = `${result.authUrl}&token=${encodeURIComponent(token)}`;
                 const popup = window.open(authUrl, 'google-auth', 'width=600,height=700');
                 const handler = (event: MessageEvent) => {
