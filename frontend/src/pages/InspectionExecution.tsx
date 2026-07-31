@@ -57,13 +57,15 @@ export const InspectionExecution = () => {
     const [summaryForm, setSummaryForm] = useState<SummaryFormState>(emptySummaryForm);
     const [queueItems, setQueueItems] = useState<OfflineSyncItem[]>([]);
 
-    const loadExecution = useCallback(async () => {
+    const loadExecution = useCallback(async (isInitialLoad = false) => {
         if (!id) {
             navigate('/inspections', { replace: true });
             return;
         }
 
-        setIsLoading(true);
+        if (isInitialLoad) {
+            setIsLoading(true);
+        }
         setErrorMessage(null);
 
         try {
@@ -114,7 +116,7 @@ export const InspectionExecution = () => {
     });
 
     useEffect(() => {
-        loadExecution();
+        loadExecution(true);
     }, [loadExecution]);
 
     const prevIsOnlineRef = useRef(isOnline);

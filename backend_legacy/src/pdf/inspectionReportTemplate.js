@@ -73,8 +73,8 @@ const buildObservationPhotos = (photos) => {
         return `<p style="color:#9ca3af; font-style:italic; font-size:10pt;">Sin evidencia fotografica.</p>`;
     }
     return photos.map((photo) => `
-        <div style="margin-bottom:8px; page-break-inside:avoid;">
-            <img src="${photo.url}" alt="${escapeHtml(photo.caption || 'Evidencia fotografica')}" style="width:100%; max-height:200px; object-fit:contain; display:block; border:1px solid #e5e7eb;" />
+        <div style="margin-bottom:12px; break-inside:avoid;">
+            <img src="${photo.url}" alt="${escapeHtml(photo.caption || 'Evidencia fotografica')}" style="max-width:100%; max-height:200px; object-fit:contain; display:block; border:1px solid #e5e7eb; background:#f9fafb;" />
             ${photo.caption ? `<p style="font-size:9pt; color:#6b7280; margin-top:3px;">${escapeHtml(photo.caption)}</p>` : ''}
         </div>
     `).join('');
@@ -233,8 +233,8 @@ const buildInspectionReportHtml = (reportData) => {
         </table>
 
         ${buildingPhoto ? `
-        <div style="border:1px solid #d1d5db; overflow:hidden; margin-top:6mm;">
-            <img src="${buildingPhoto.url}" alt="Foto del edificio" style="width:100%; height:220px; object-fit:cover; display:block;" />
+        <div style="border:1px solid #d1d5db; overflow:hidden; margin-top:6mm; display:flex; justify-content:center; background:#f9fafb;">
+            <img src="${buildingPhoto.url}" alt="Foto del edificio" style="max-width:100%; max-height:280px; object-fit:contain; display:block;" />
         </div>
         ` : `
         <div style="width:100%; height:180px; display:flex; align-items:center; justify-content:center; color:#9ca3af; font-style:italic; background:#f9fafb; border:1px solid #e5e7eb;">
