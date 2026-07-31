@@ -421,7 +421,7 @@ export const InspectionExecution = () => {
                 action: 'create',
                 clientId: createLocalId('local-photo'),
                 data: {
-                    type: 'area',
+                    type: type === 'observacion' ? 'area' : type as 'edificio' | 'plano' | 'area' | 'general',
                     caption: caption.trim() || undefined,
                     areaId,
                 },
