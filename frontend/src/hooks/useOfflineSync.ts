@@ -24,6 +24,10 @@ export const useOfflineSync = (
             return
         }
 
+        if (isSyncing) {
+            return
+        }
+
         setIsSyncing(true)
         setLastSyncError(null)
 

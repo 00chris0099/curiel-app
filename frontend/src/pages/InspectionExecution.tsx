@@ -175,10 +175,6 @@ export const InspectionExecution = () => {
         await addSyncQueueItem(item);
         await refreshPendingCount();
         await loadExecution();
-
-        if (isOnline) {
-            await syncNow();
-        }
     };
 
     const handleCreateDefaultAreas = async () => {
