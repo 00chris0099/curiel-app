@@ -27,12 +27,28 @@ export const ModuleObsMetrica = memo(({
         return (Number(murosArea.calculatedAreaM2) / totalArea) * 100;
     }, [areas]);
 
-    useEffect(() => {
-        setText(metricObs?.description || '');
-    }, [metricObs?.description]);
+    const formalText = useMemo(() => {
+        if (murosYVanosPercentage === null) {
+            return '';
+        }
+        const pct = murosYVanosPercentage.toFixed(1);
+        if (murosYVanosPercentage <= 12) {
+            return `Cumple el área total del departamento con ${pct}% de muros y vanos, es aceptable.`;
+        } else {
+            return `El área total del departamento presenta ${pct}% de muros y vanos, supera el límite aceptable del 12%. Se recomienda revisar la distribución espacial.`;
+        }
+    }, [murosYVanosPercentage]);
 
     useEffect(() => {
-        if (!text || text === (metricObs?.description || '')) return;
+        if (metricObs?.description) {
+            setText(metricObs.description);
+        } else if (formalText) {
+            setText(formalText);
+        }
+    }, [metricObs?.description, formalText]);
+
+    useEffect(() => {
+        if (!text || text === (metricObs?.description || formalText)) return;
 
         const timer = setTimeout(() => {
             setIsSaving(true);
@@ -58,7 +74,7 @@ export const ModuleObsMetrica = memo(({
             )}
             <div className="flex items-center justify-between">
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Registra observaciones de tipo métrico: mediciones, cotas, desviaciones dimensionales, etc.
+                    Observaciones métricas para el informe.
                 </p>
                 {isSaving && (
                     <span className="flex items-center gap-1 text-xs text-gray-500">
