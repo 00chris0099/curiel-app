@@ -265,6 +265,15 @@ export const removeSyncQueueItem = async (id: string) => {
   await db.delete('syncQueue', id)
 }
 
+export const removeSyncQueueItemByClientId = async (clientId: string) => {
+  const db = await dbPromise
+  const allItems = await db.getAll('syncQueue')
+  const item = allItems.find((i) => 'clientId' in i && i.clientId === clientId)
+  if (item) {
+    await db.delete('syncQueue', item.id)
+  }
+}
+
 export const getInspectionQueueItems = async (inspectionId: string) => {
   const db = await dbPromise
   return db.getAllFromIndex('syncQueue', 'by-inspection', inspectionId)

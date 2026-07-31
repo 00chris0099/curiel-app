@@ -28,6 +28,7 @@ import {
     getExecutionSnapshot,
     mergeExecutionWithQueue,
     saveExecutionSnapshot,
+    removeSyncQueueItemByClientId,
     type OfflineSyncItem,
 } from '../utils/offlineDb';
 import {
@@ -491,6 +492,12 @@ export const InspectionExecution = () => {
 
     const handleDeletePhoto = async (photoId: string) => {
         try {
+            if (photoId.startsWith('local-')) {
+                await removeSyncQueueItemByClientId(photoId);
+                await loadExecution();
+                toast.success('Foto eliminada');
+                return;
+            }
             await inspectionService.deletePhoto(photoId);
             await loadExecution();
             toast.success('Foto eliminada');
