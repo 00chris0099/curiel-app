@@ -8,6 +8,7 @@ import type {
 } from '../../types';
 
 export const areaStatusOptions: ExecutionAreaStatus[] = ['pendiente', 'en_revision', 'observado', 'aprobado'];
+export const areaCategoryOptions = ['interior', 'social', 'cocina', 'servicio', 'exterior', 'privado', 'baño', 'estructura/acabados'] as const;
 export const observationSeverityOptions: ObservationSeverity[] = ['leve', 'media', 'alta', 'critica'];
 export const observationTypeOptions: ObservationType[] = ['humedad', 'electrico', 'sanitario', 'acabados', 'carpinteria', 'estructura', 'seguridad', 'otro'];
 export const observationStatusOptions: ObservationResolutionStatus[] = ['pendiente', 'corregido', 'requiere_revision'];

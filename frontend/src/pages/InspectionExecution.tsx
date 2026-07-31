@@ -38,7 +38,6 @@ import {
     type SummaryFormState,
     emptySummaryForm,
 } from './execution/executionTypes';
-import { ExecutionHeader } from './execution/ExecutionHeader';
 import { ModuleGrid } from './execution/ModuleGrid';
 import { ModuleEdificio } from './execution/ModuleEdificio';
 import { ModuleFotoPlano } from './execution/ModuleFotoPlano';
@@ -168,7 +167,7 @@ export const InspectionExecution = () => {
     const queueMutation = async (
         item: Parameters<typeof addSyncQueueItem>[0],
         _preferredAreaId?: string | null,
-        successMessage = 'Guardado offline'
+        _successMessage = 'Guardado offline'
     ) => {
         await addSyncQueueItem(item);
         await refreshPendingCount();
@@ -177,8 +176,6 @@ export const InspectionExecution = () => {
         if (isOnline) {
             await syncNow();
             await loadExecution();
-        } else {
-            toast.success(successMessage);
         }
     };
 
@@ -206,12 +203,10 @@ export const InspectionExecution = () => {
 
                 await refreshPendingCount();
                 await loadExecution();
-                toast.success(missingAreas.length > 0 ? 'Áreas base guardadas offline' : 'Las áreas base ya estaban registradas');
                 return;
             }
 
-            const result = await inspectionService.createDefaultAreas(id);
-            toast.success(result.createdCount > 0 ? 'Áreas base creadas correctamente' : 'Las áreas base ya existían');
+            await inspectionService.createDefaultAreas(id);
             await loadExecution();
         });
     };
@@ -562,14 +557,6 @@ export const InspectionExecution = () => {
 
     return (
         <div className="flex min-h-[calc(100vh-8rem)] flex-col pb-24 lg:pb-10">
-            {/* Header */}
-            <ExecutionHeader
-                projectName={inspection.projectName}
-                canComplete={false}
-                busyAction={busyAction}
-                onComplete={handleCompleteInspection}
-            />
-
             {/* 6 Modules Grid */}
             <div className="mt-4 flex-1">
                 <ModuleGrid modules={moduleDefinitions}>
@@ -600,6 +587,7 @@ export const InspectionExecution = () => {
                         onDeleteArea={handleDeleteArea}
                     />
                     <ModuleObsMetrica
+                        areas={areas}
                         observations={observations}
                         canEdit={canEditExecutionContent}
                         onSaveMetric={handleSaveMetric}

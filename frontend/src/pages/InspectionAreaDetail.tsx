@@ -293,7 +293,7 @@ export const InspectionAreaDetail = () => {
     };
 
     const handleDeleteObservation = async (observationId: string) => {
-        if (!id || !window.confirm('¿Eliminar esta observación técnica?')) return;
+        if (!id) return;
 
         try {
             await addSyncQueueItem({
@@ -317,7 +317,7 @@ export const InspectionAreaDetail = () => {
     };
 
     const handleDeletePhoto = async (photoId: string) => {
-        if (!id || !window.confirm('¿Eliminar esta foto?')) return;
+        if (!id) return;
 
         try {
             await inspectionService.deletePhoto(photoId);

@@ -76,18 +76,24 @@ function App() {
       <Toaster
         position="top-right"
         toastOptions={{
-          duration: 3000,
+          duration: 2000,
           style: {
             background: isDark ? '#1f2937' : '#fff',
             color: isDark ? '#f9fafb' : '#111827',
+            fontSize: '13px',
+            padding: '8px 12px',
+            borderRadius: '10px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
           },
           success: {
+            duration: 1500,
             iconTheme: {
               primary: '#10b981',
               secondary: '#fff',
             },
           },
           error: {
+            duration: 3000,
             iconTheme: {
               primary: '#ef4444',
               secondary: '#fff',

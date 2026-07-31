@@ -1,8 +1,9 @@
 import { memo, useState, useRef, type FormEvent } from 'react';
 import { CustomIcon } from '../../components/CustomIcon';
 import { getAreaCategoryIcon } from '../../utils/iconSystem';
-import type { InspectionArea, InspectionObservation } from '../../types';
+import type { InspectionArea, InspectionObservation, ObservationSeverity } from '../../types';
 import type { InspectionExecutionData } from '../../types';
+import { observationSeverityOptions } from './executionConstants';
 
 type ModuleObservacionesProps = {
     areas: InspectionArea[];
@@ -10,7 +11,7 @@ type ModuleObservacionesProps = {
     photos: InspectionExecutionData['photos'];
     busyAction: string | null;
     canEdit: boolean;
-    onSaveObservation: (form: { areaId: string; title: string; description: string; severity: 'leve'; type: 'otro'; status: 'pendiente' }, editingId?: string) => void;
+    onSaveObservation: (form: { areaId: string; title: string; description: string; severity: ObservationSeverity; type: 'otro'; status: 'pendiente' }, editingId?: string) => void;
     onDeleteObservation: (observationId: string) => void;
     onUploadPhoto: (event: FormEvent<HTMLFormElement>, type: string, caption: string, file: File | null, areaId?: string) => void;
     onDeletePhoto: (photoId: string) => void;
@@ -28,6 +29,7 @@ export const ModuleObservaciones = memo(({
 }: ModuleObservacionesProps) => {
     const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
     const [description, setDescription] = useState('');
+    const [severity, setSeverity] = useState<ObservationSeverity>('leve');
     const [file, setFile] = useState<File | null>(null);
     const cameraInputRef = useRef<HTMLInputElement>(null);
     const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -43,11 +45,12 @@ export const ModuleObservaciones = memo(({
             areaId: selectedAreaId,
             title: selectedArea?.name || 'Observación',
             description: description.trim(),
-            severity: 'leve',
+            severity,
             type: 'otro',
             status: 'pendiente',
         });
         setDescription('');
+        setSeverity('leve');
     };
 
     const handleSubmitPhoto = (e: FormEvent<HTMLFormElement>) => {
@@ -218,6 +221,25 @@ export const ModuleObservaciones = memo(({
 
                 {canEdit && (
                     <form onSubmit={handleSubmitObservation} className="space-y-2">
+                        <div className="flex gap-1.5">
+                            {observationSeverityOptions.map((s) => (
+                                <button
+                                    key={s}
+                                    type="button"
+                                    onClick={() => setSeverity(s)}
+                                    className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                                        severity === s
+                                            ? s === 'leve' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                            : s === 'media' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                            : s === 'alta' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                                            : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                            : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+                                    }`}
+                                >
+                                    {s.charAt(0).toUpperCase() + s.slice(1)}
+                                </button>
+                            ))}
+                        </div>
                         <textarea
                             className="input min-h-[100px] text-sm"
                             placeholder="Describe la observación..."

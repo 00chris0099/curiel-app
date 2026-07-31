@@ -27,7 +27,7 @@ app.use(helmet({
 // Request ID — genera UUID unico por request para tracing
 app.use(requestId);
 
-// CORS
+// CORS — must be before rate limiter so OPTIONS preflight is not blocked
 app.use(cors({
     origin: config.server.corsOrigin,
     credentials: true

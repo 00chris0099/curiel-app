@@ -35,7 +35,6 @@ export const ModuleFotoPlano = memo(({
     };
 
     const handleDelete = async (photoId: string) => {
-        if (!window.confirm('¿Eliminar esta foto del plano?')) return;
         setDeletingId(photoId);
         try {
             await onDeletePhoto(photoId);

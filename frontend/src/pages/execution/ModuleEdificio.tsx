@@ -35,7 +35,6 @@ export const ModuleEdificio = memo(({
     };
 
     const handleDelete = async (photoId: string) => {
-        if (!window.confirm('¿Eliminar esta foto del edificio?')) return;
         setDeletingId(photoId);
         try {
             await onDeletePhoto(photoId);

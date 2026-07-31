@@ -2,6 +2,7 @@ import { memo, useMemo, useState, type FormEvent } from 'react';
 import { CustomIcon } from '../../components/CustomIcon';
 import { getAreaCategoryIcon } from '../../utils/iconSystem';
 import { type AreaFormState, emptyAreaForm } from './executionTypes';
+import { areaCategoryOptions } from './executionConstants';
 import type { InspectionArea } from '../../types';
 import type { OfflineSyncItem } from '../../utils/offlineDb';
 
@@ -103,7 +104,12 @@ export const ModuleAreas = memo(({
                 <form onSubmit={handleSubmit} className="space-y-3 rounded-2xl border border-dashed border-gray-300 p-3 dark:border-gray-600">
                     <div className="grid grid-cols-1 gap-2">
                         <input className="input" placeholder="Nombre del área" value={form.name} onChange={(e) => setForm((c) => ({ ...c, name: e.target.value }))} required />
-                        <input className="input" placeholder="Categoría" value={form.category} onChange={(e) => setForm((c) => ({ ...c, category: e.target.value }))} />
+                        <select className="input" value={form.category} onChange={(e) => setForm((c) => ({ ...c, category: e.target.value }))}>
+                            <option value="">Seleccionar categoría</option>
+                            {areaCategoryOptions.map((cat) => (
+                                <option key={cat} value={cat}>{cat.charAt(0).toUpperCase() + cat.slice(1)}</option>
+                            ))}
+                        </select>
                         <input className="input" type="number" min="0" step="0.01" placeholder="Área (m²)" value={form.lengthM} onChange={(e) => setForm((c) => ({ ...c, lengthM: e.target.value, widthM: e.target.value }))} />
                     </div>
                     <div className="flex gap-2">
@@ -126,7 +132,12 @@ export const ModuleAreas = memo(({
                                 /* Edit mode */
                                 <form onSubmit={handleSaveEdit} className="space-y-2 rounded-2xl border border-primary-300 bg-primary-50/50 p-3 dark:border-primary-700 dark:bg-primary-900/10">
                                     <input className="input text-sm" placeholder="Nombre" value={editForm.name} onChange={(e) => setEditForm((c) => ({ ...c, name: e.target.value }))} required />
-                                    <input className="input text-sm" placeholder="Categoría" value={editForm.category} onChange={(e) => setEditForm((c) => ({ ...c, category: e.target.value }))} />
+                                    <select className="input text-sm" value={editForm.category} onChange={(e) => setEditForm((c) => ({ ...c, category: e.target.value }))}>
+                                        <option value="">Seleccionar categoría</option>
+                                        {areaCategoryOptions.map((cat) => (
+                                            <option key={cat} value={cat}>{cat.charAt(0).toUpperCase() + cat.slice(1)}</option>
+                                        ))}
+                                    </select>
                                     <input className="input text-sm" type="number" min="0" step="0.01" placeholder="Área (m²)" value={editForm.lengthM} onChange={(e) => setEditForm((c) => ({ ...c, lengthM: e.target.value, widthM: e.target.value }))} />
                                     <div className="flex gap-2">
                                         <button type="submit" className="btn btn-primary text-sm flex-1">Guardar</button>
