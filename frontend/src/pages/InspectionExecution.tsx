@@ -178,7 +178,6 @@ export const InspectionExecution = () => {
 
         if (isOnline) {
             await syncNow();
-            await loadExecution();
         }
     };
 
