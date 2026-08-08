@@ -135,17 +135,9 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
         setIsOpeningDocs(true);
         try {
             const result = await inspectionService.openInGoogleDocs(inspectionId);
-            if ('requiresAuth' in result && result.requiresAuth) {
-                const token = localStorage.getItem('accessToken') || '';
-                const authUrl = `${result.authUrl}&token=${encodeURIComponent(token)}`;
-                window.open(authUrl, 'google-auth', 'width=600,height=700');
-                toast.success('Autoriza con tu cuenta de Google en la ventana emergente');
-                setIsOpeningDocs(false);
-                return;
-            }
-            if ('url' in result) {
+            if (result.url) {
                 window.open(result.url, '_blank');
-                toast.success('Documento creado en Google Docs');
+                toast.success('Documento abierto para edicion');
             }
         } catch (err: unknown) {
             toast.error(getApiErrorMessage(err, 'No se pudo crear el documento'));

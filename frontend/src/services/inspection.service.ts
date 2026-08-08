@@ -299,11 +299,8 @@ const inspectionService = {
         return response.data.data;
     },
 
-    async openInGoogleDocs(id: string): Promise<{ url: string; documentId: string; title: string } | { requiresAuth: boolean; authUrl: string }> {
+    async openInGoogleDocs(id: string): Promise<{ url: string; title: string }> {
         const response = await apiClient.post(`/inspections/${id}/report/open-in-docs`, {}, { timeout: 120000 });
-        if (response.data.requiresAuth) {
-            return { requiresAuth: true, authUrl: response.data.data.authUrl };
-        }
         return response.data.data;
     },
 

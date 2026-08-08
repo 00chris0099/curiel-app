@@ -2,8 +2,9 @@ const inspectionReportService = require('../services/inspectionReportService');
 const reportJobQueue = require('../services/reportJobQueue');
 const { asyncHandler, AppError } = require('../middlewares/errorHandler');
 const { createAuditLog } = require('../middlewares/auditLog');
+const logger = require('../utils/logger');
 const { buildInspectionReportHtml } = require('../pdf/inspectionReportTemplate');
-const { createGoogleDoc, createUserGoogleDoc, downloadAndSaveToDrive } = require('../services/googleDocsService');
+const { downloadAndSaveToDrive } = require('../services/googleDocsService');
 const { getTokens } = require('../services/googleTokenStore');
 
 const downloadInspectionReport = asyncHandler(async (req, res) => {
@@ -157,19 +158,7 @@ const openInGoogleDocs = asyncHandler(async (req, res) => {
     const inspectorSignature = signatures.find(s => s.signatureType === 'inspector') || null;
     const recommendationGroups = inspectionReportService._buildRecommendationGroups(sortedObservations, summary);
 
-    const userTokens = getTokens(req.userId);
-
-    if (!userTokens || userTokens.expired) {
-        const backendUrl = process.env.BACKEND_URL || 'http://localhost:4000';
-        const authUrl = `${backendUrl}/api/v1/auth/google?inspectionId=${inspectionId}`;
-        return res.json({
-            success: false,
-            requiresAuth: true,
-            data: { authUrl }
-        });
-    }
-
-    const result = await createUserGoogleDoc({
+    const html = buildInspectionReportHtml({
         inspection,
         metadata,
         areas: sortedAreas,
@@ -178,16 +167,51 @@ const openInGoogleDocs = asyncHandler(async (req, res) => {
         summary: summary ? { ...summary } : null,
         recommendations: recommendationGroups,
         inspectorSignature: inspectorSignature ? { ...inspectorSignature } : null,
-    }, userTokens);
+        logoUrl: require('../config').pdf.companyLogo,
+        generatedAt: new Date().toISOString()
+    });
+
+    const webhookUrl = process.env.N8N_TRANSFORM_WEBHOOK || 'https://aimachristian-n8n.ajcxjb.easypanel.host/webhook/transformarhtml';
+
+    let webhookResult;
+    try {
+        webhookResult = await fetch(webhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                inspectionId,
+                projectName: inspection.projectName,
+                clientName: inspection.clientName,
+                html,
+            }),
+            signal: AbortSignal.timeout(120000),
+        });
+    } catch (fetchErr) {
+        logger.error('[WebHook] Error sending HTML to transform webhook', { error: fetchErr.message });
+        throw new AppError('No se pudo procesar el documento en el servicio externo', 502, 'WEBHOOK_ERROR');
+    }
+
+    if (!webhookResult.ok) {
+        const text = await webhookResult.text().catch(() => '');
+        logger.error('[WebHook] Transform webhook returned error', { status: webhookResult.status, body: text });
+        throw new AppError('El servicio externo retornó un error', 502, 'WEBHOOK_RESPONSE_ERROR');
+    }
+
+    const responseData = await webhookResult.json().catch(() => null);
+    const docUrl = responseData?.url || responseData?.documentUrl || responseData?.data?.url || null;
+
+    if (!docUrl) {
+        logger.error('[WebHook] No URL in webhook response', { data: responseData });
+        throw new AppError('El servicio externo no retornó una URL de documento', 502, 'WEBHOOK_NO_URL');
+    }
 
     await createAuditLog(req.userId, 'open_in_google_docs', 'Inspection', inspectionId);
 
     return res.json({
         success: true,
         data: {
-            url: result.url,
-            documentId: result.documentId,
-            title: result.title
+            url: docUrl,
+            title: `Informe de Inspeccion — ${inspection.projectName}`
         }
     });
 });
