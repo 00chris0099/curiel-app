@@ -293,7 +293,15 @@ class InspectionExecutionService {
         }
 
         if (payload.type === 'area' && !areaId) {
-            throw new AppError('Las fotos de área deben asociarse a un área', 400, 'AREA_REQUIRED');
+            const firstArea = await prisma.inspecciones.inspectionArea.findFirst({
+                where: { inspectionId },
+                orderBy: { sortOrder: 'asc' }
+            });
+            if (firstArea) {
+                areaId = firstArea.id;
+            } else {
+                throw new AppError('Las fotos de área deben asociarse a un área. Crea al menos un área primero.', 400, 'AREA_REQUIRED');
+            }
         }
 
         let url = payload.url || null;
@@ -309,6 +317,16 @@ class InspectionExecutionService {
 
         if (!url) {
             throw new AppError('Debes adjuntar una foto o indicar una URL válida', 400, 'PHOTO_SOURCE_REQUIRED');
+        }
+
+        const existingPhoto = await prisma.media.photo.findFirst({
+            where: { inspectionId, url }
+        });
+        if (existingPhoto) {
+            return {
+                photo: this._serializePhoto(existingPhoto),
+                summary: this._serializeSummary(await this._recalculateSummary(inspectionId))
+            };
         }
 
         const photo = await prisma.media.photo.create({

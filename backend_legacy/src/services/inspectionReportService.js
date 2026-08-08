@@ -36,7 +36,7 @@ const defaultExecutablePath =
     '/usr/bin/chromium';
 
 const pdfBufferCache = new Map();
-const PDF_BUFFER_TTL = 30 * 60 * 1000;
+const PDF_BUFFER_TTL = 2 * 60 * 60 * 1000;
 
 class InspectionReportService {
     async generateInspectionReport(inspectionId, userId, userRole, isMasterAdmin = false) {
@@ -125,6 +125,28 @@ class InspectionReportService {
                     fromCache: true
                 };
             }
+            if (cached.cloudUrl) {
+                logger.info('PDF cache hit (DB cloud URL, fetching buffer)', { inspectionId });
+                try {
+                    const response = await fetch(cached.cloudUrl);
+                    if (response.ok) {
+                        const arrayBuf = await response.arrayBuffer();
+                        const cloudBuffer = Buffer.from(arrayBuf);
+                        if (cloudBuffer.length >= 1000 && cloudBuffer.subarray(0, 4).toString() === '%PDF') {
+                            pdfBufferCache.set(inspectionId, { buffer: cloudBuffer, ts: Date.now() });
+                            return {
+                                buffer: cloudBuffer,
+                                filename: this._buildFileName(inspection),
+                                cloudUrl: cached.cloudUrl,
+                                cloudExpiresAt: cached.expiresAt,
+                                fromCache: true
+                            };
+                        }
+                    }
+                } catch (fetchErr) {
+                    logger.warn('Cloud fetch failed, regenerating PDF', { error: fetchErr.message });
+                }
+            }
             logger.info('PDF cache hit (DB, regenerating buffer)', { inspectionId });
         }
 
@@ -164,7 +186,9 @@ class InspectionReportService {
 
             const page = await browser.newPage();
             await page.setViewport({ width: 1240, height: 1754, deviceScaleFactor: 1.5 });
-            await page.setContent(html, { waitUntil: 'networkidle0' });
+            page.setDefaultNavigationTimeout(60000);
+            page.setDefaultTimeout(60000);
+            await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
             const pdfBinary = await page.pdf({
                 format: 'A4',

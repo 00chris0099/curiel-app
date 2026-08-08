@@ -87,7 +87,9 @@ async function generatePdfBuffer(reportData) {
 
         const page = await browser.newPage();
         await page.setViewport({ width: 1240, height: 1754, deviceScaleFactor: 1.5 });
-        await page.setContent(html, { waitUntil: 'networkidle0' });
+        page.setDefaultNavigationTimeout(60000);
+        page.setDefaultTimeout(60000);
+        await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
         const pdfBinary = await page.pdf({
             format: 'A4',
@@ -102,6 +104,30 @@ async function generatePdfBuffer(reportData) {
 }
 
 // ─── UPLOAD TO GOOGLE DRIVE ─────────────────────────────────────────────────────
+
+async function findExistingDocByName(driveClient, title, folderId) {
+    try {
+        const query = `name = '${title}' and trashed = false and mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'`;
+        const res = await driveClient.files.list({
+            q: query,
+            fields: 'files(id, webViewLink, name, createdTime)',
+            orderBy: 'createdTime desc',
+            pageSize: 1,
+            supportsAllDrives: true,
+            includeItemsFromAllDrives: true,
+        });
+        if (res.data.files && res.data.files.length > 0) {
+            const file = res.data.files[0];
+            return {
+                documentId: file.id,
+                url: file.webViewLink || `https://docs.google.com/document/d/${file.id}/edit`,
+            };
+        }
+    } catch (err) {
+        logger.warn('[GoogleDocs] Error searching for existing doc', { error: err.message });
+    }
+    return null;
+}
 
 async function uploadPdfToDrive(driveClient, pdfBuffer, title, folderId) {
     const fileMetadata = {
@@ -160,11 +186,18 @@ async function createGoogleDoc(reportData) {
     if (!sa) throw new Error('Google service account not configured');
 
     const title = `Informe de Inspeccion — ${reportData.inspection.projectName}`;
+    const folderId = process.env.GOOGLE_DOCS_FOLDER_ID || null;
+
+    const existing = await findExistingDocByName(sa.driveClient, title, folderId);
+    if (existing) {
+        logger.info(`[GoogleDocs] Reusing existing service account doc: ${existing.url}`);
+        return { documentId: existing.documentId, url: existing.url, title };
+    }
+
     const pdfBuffer = await generatePdfBuffer(reportData);
 
     const { docxBuffer } = await pdfToDocx(pdfBuffer, `${title}.pdf`);
 
-    const folderId = process.env.GOOGLE_DOCS_FOLDER_ID || null;
     const result = await uploadDocxToDrive(sa.driveClient, docxBuffer, title, folderId);
 
     logger.info(`[GoogleDocs] DOCX created (via LibreOffice): ${result.url}`);
@@ -182,6 +215,13 @@ async function createUserGoogleDoc(reportData, userTokens) {
     const driveClient = getDriveClient(userTokens);
 
     const title = `Informe de Inspeccion — ${reportData.inspection.projectName}`;
+
+    const existing = await findExistingDocByName(driveClient, title, null);
+    if (existing) {
+        logger.info(`[GoogleDocs] Reusing existing user doc: ${existing.url}`);
+        return { documentId: existing.documentId, url: existing.url, title };
+    }
+
     const pdfBuffer = await generatePdfBuffer(reportData);
 
     const { docxBuffer } = await pdfToDocx(pdfBuffer, `${title}.pdf`);

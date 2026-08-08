@@ -18,8 +18,8 @@ const startWeeklyEvaluation = () => {
             sunday.setDate(monday.getDate() + 6);
             sunday.setHours(23, 59, 59, 999);
 
-            const weekStart = monday.toISOString().split('T')[0];
-            const weekEnd = sunday.toISOString().split('T')[0];
+            const weekStart = monday.toISOString();
+            const weekEnd = sunday.toISOString();
 
             const supervisor = await prisma.auth.user.findFirst({
                 where: {

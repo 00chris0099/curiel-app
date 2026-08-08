@@ -145,8 +145,16 @@ class EvaluationService {
     }
 
     async generateWeeklyEvaluation(userId, weekStart, weekEnd, supervisorId) {
+        const startDt = new Date(weekStart);
+        const endDt = new Date(weekEnd);
+        endDt.setHours(23, 59, 59, 999);
+
         const existing = await prisma.alertas.evaluation.findFirst({
-            where: { evaluatedUserId: userId, weekStart, weekEnd }
+            where: {
+                evaluatedUserId: userId,
+                weekStart: startDt,
+                weekEnd: endDt
+            }
         });
 
         if (existing) {
@@ -159,8 +167,8 @@ class EvaluationService {
             data: {
                 evaluatedUserId: userId,
                 supervisorId,
-                weekStart,
-                weekEnd,
+                weekStart: startDt,
+                weekEnd: endDt,
                 ...kpis,
                 status: 'borrador'
             }
