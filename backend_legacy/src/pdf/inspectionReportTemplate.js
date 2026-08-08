@@ -51,6 +51,10 @@ const buildSectionModels = (areas, observations, photos) => {
     let observationCounter = 1;
 
     return areas.map((area) => {
+        const areaPhotos = photos
+            .filter((p) => p.areaId === area.id && !p.observationId)
+            .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
         const areaObservations = observations
             .filter((obs) => obs.areaId === area.id)
             .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
@@ -63,6 +67,7 @@ const buildSectionModels = (areas, observations, photos) => {
         return {
             title: area.name.toUpperCase(),
             areas: [area],
+            areaPhotos,
             observations: areaObservations
         };
     });
@@ -78,6 +83,23 @@ const buildObservationPhotos = (photos) => {
             ${photo.caption ? `<p style="font-size:9pt; color:#6b7280; margin-top:3px;">${escapeHtml(photo.caption)}</p>` : ''}
         </div>
     `).join('');
+};
+
+const buildAreaPhotos = (photos) => {
+    if (!photos || !photos.length) return '';
+    return `
+        <div style="margin-bottom:16px;">
+            <p style="font-size:10pt; font-weight:700; color:#374151; margin-bottom:8px; padding-bottom:4px; border-bottom:1px solid #e5e7eb;">Evidencia del area</p>
+            <div style="display:flex; flex-wrap:wrap; gap:12px;">
+                ${photos.map((photo) => `
+                    <div style="flex:1; min-width:200px; max-width:48%; break-inside:avoid;">
+                        <img src="${photo.url}" alt="${escapeHtml(photo.caption || 'Foto del area')}" style="width:100%; max-height:220px; object-fit:contain; display:block; border:1px solid #e5e7eb; background:#f9fafb;" />
+                        ${photo.caption ? `<p style="font-size:9pt; color:#6b7280; margin-top:4px; font-style:italic;">${escapeHtml(photo.caption)}</p>` : '<p style="font-size:9pt; color:#dc2626; margin-top:4px; font-style:italic;">Nota obligatoria pendiente</p>'}
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
 };
 
 const buildInspectionReportHtml = (reportData) => {
@@ -304,6 +326,7 @@ const buildInspectionReportHtml = (reportData) => {
 
     <!-- SECCIONES POR AMBIENTE -->
     ${sections.map((section) => {
+        const areaPhotosBlock = buildAreaPhotos(section.areaPhotos);
         const observationBlocks = section.observations.length
             ? section.observations.map((obs) => `
                 <div style="margin-bottom:16px; page-break-inside:avoid;">
@@ -327,6 +350,7 @@ const buildInspectionReportHtml = (reportData) => {
                 <h2 style="font-size:16pt; font-weight:700; text-transform:uppercase; color:#111827; letter-spacing:0.02em; margin-bottom:12px; padding-bottom:6px; border-bottom:2px solid #2563eb;">
                     ${escapeHtml(section.title)}
                 </h2>
+                ${areaPhotosBlock}
                 ${observationBlocks}
             </div>
         `;
