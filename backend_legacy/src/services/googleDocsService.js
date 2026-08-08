@@ -90,6 +90,12 @@ async function generatePdfBuffer(reportData) {
         page.setDefaultNavigationTimeout(60000);
         page.setDefaultTimeout(60000);
         await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.evaluate(() => Promise.all(
+            // eslint-disable-next-line no-undef
+            Array.from(document.images).map(img =>
+                img.complete ? Promise.resolve() : new Promise((res) => { img.onload = res; img.onerror = res; })
+            )
+        ));
 
         const pdfBinary = await page.pdf({
             format: 'A4',
