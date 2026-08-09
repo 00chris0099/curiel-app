@@ -202,7 +202,15 @@ class InspectionReportService {
             const pdfBinary = await page.pdf({
                 format: 'A4',
                 printBackground: true,
-                preferCSSPageSize: true
+                preferCSSPageSize: true,
+                displayHeaderFooter: true,
+                headerTemplate: `
+                    <div style="width:100%; padding:0 18mm; margin:0; font-size:8pt; color:#9ca3af; font-family:Arial,sans-serif;">
+                        <span style="float:right;">Pagina <span class="pageNumber"></span> de <span class="totalPages"></span></span>
+                    </div>
+                `,
+                footerTemplate: '<span></span>',
+                margin: { top: '56px', bottom: '60px', left: '0', right: '0' }
             });
 
             const pdfBuffer = Buffer.from(pdfBinary);

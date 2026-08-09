@@ -151,28 +151,41 @@ const buildInspectionReportHtml = (reportData) => {
     const logoSrc = logoUrl || LOGO_BASE64;
 
     const FOOTER_HTML = `
-        <div style="position:fixed; bottom:0; left:0; right:0; height:50px; overflow:visible; z-index:100; margin:0; padding:0;">
-            <svg viewBox="0 0 1000 50" preserveAspectRatio="none" style="width:100vw; height:50px; display:block; margin:0; padding:0;">
-                <path d="M0,0 L1000,0 L1000,50 L0,50 Z" fill="#24385A"/>
+        <div style="position:fixed; bottom:0; left:0; right:0; height:60px; overflow:visible; z-index:100; margin:0; padding:0;">
+            <svg viewBox="0 0 1000 60" preserveAspectRatio="none" style="width:100vw; height:60px; display:block; margin:0; padding:0;">
+                <defs>
+                    <linearGradient id="footerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" style="stop-color:#1a2744;stop-opacity:1" />
+                        <stop offset="50%" style="stop-color:#24385A;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#1a2744;stop-opacity:1" />
+                    </linearGradient>
+                </defs>
+                <path d="M0,8 L1000,8 L1000,60 L0,60 Z" fill="url(#footerGrad)"/>
+                <path d="M0,8 Q500,0 1000,8 L1000,12 Q500,4 0,12 Z" fill="#2d4a7a"/>
             </svg>
-            <div style="position:absolute; bottom:12px; left:0; right:0; display:flex; justify-content:center; align-items:center; gap:32px; font-size:9pt; color:#fff; font-weight:600;">
-                <span style="display:flex; align-items:center; gap:6px;">${WHATSAPP_SVG} 983 893 067</span>
-                <span style="display:flex; align-items:center; gap:6px;">${EMAIL_SVG} info@tudepacheck.com</span>
+            <div style="position:absolute; bottom:16px; left:0; right:0; display:flex; justify-content:center; align-items:center; gap:40px; font-size:9pt; color:#fff; font-weight:500;">
+                <span style="display:flex; align-items:center; gap:8px;">
+                    <span style="display:flex; align-items:center; justify-content:center; width:24px; height:24px; background:rgba(255,255,255,0.15); border-radius:50%;">${WHATSAPP_SVG}</span>
+                    983 893 067
+                </span>
+                <span style="width:1px; height:20px; background:rgba(255,255,255,0.3);"></span>
+                <span style="display:flex; align-items:center; gap:8px;">
+                    <span style="display:flex; align-items:center; justify-content:center; width:24px; height:24px; background:rgba(255,255,255,0.15); border-radius:50%;">${EMAIL_SVG}</span>
+                    info@tudepacheck.com
+                </span>
             </div>
         </div>
     `;
 
-    const buildHeader = (pageNum) => `
-        <div style="position:fixed; top:0; left:0; right:0; height:50px; display:flex; align-items:center; justify-content:space-between; padding:0 18mm; border-bottom:1px solid #e5e7eb; background:#fff; z-index:100;">
-            <div style="font-size:8.5pt; color:#9ca3af; white-space:nowrap;">
-                Pagina ${pageNum}
+    const buildHeader = () => `
+        <div style="position:fixed; top:0; left:0; right:0; height:56px; display:flex; align-items:center; justify-content:space-between; padding:0 18mm; border-bottom:2px solid #24385A; background:#fff; z-index:100;">
+            <div style="display:flex; align-items:center;">
+                ${logoSrc ? `<img src="${logoSrc}" alt="Logo" style="height:48px; width:auto;" />` : ''}
             </div>
-            <div style="font-size:9pt; color:#6b7280; font-style:italic; text-align:center;">
+            <div style="font-size:9pt; color:#6b7280; font-style:italic; text-align:center; flex:1; padding:0 16px;">
                 Protegemos la inversion de tu departamento
             </div>
-            <div style="display:flex; align-items:center;">
-                ${logoSrc ? `<img src="${logoSrc}" alt="Logo" style="height:36px; width:auto;" />` : ''}
-            </div>
+            <div style="width:80px;"></div>
         </div>
     `;
 
@@ -185,7 +198,7 @@ const buildInspectionReportHtml = (reportData) => {
     <style>
         @page {
             size: A4;
-            margin: 50px 0 0 0;
+            margin: 56px 0 60px 0;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -207,8 +220,8 @@ const buildInspectionReportHtml = (reportData) => {
 
     <!-- PORTADA -->
     <div style="page-break-after:always;">
-        ${buildHeader(1)}
-        <div style="padding-top:18mm;"></div>
+        ${buildHeader()}
+        <div style="padding-top:20mm;"></div>
 
         <h1 style="font-size:26pt; font-weight:700; color:#111827; margin-bottom:6mm;">INFORME DE INSPECCION</h1>
         <p style="font-size:10.5pt; color:#6b7280; max-width:400px; margin-bottom:8mm; line-height:1.5;">
@@ -272,8 +285,8 @@ const buildInspectionReportHtml = (reportData) => {
 
     <!-- INSPECCION METRICA - SPLIT: tabla izquierda + plano derecha -->
     <div class="page-break">
-        ${buildHeader(2)}
-        <div style="padding-top:18mm;"></div>
+        ${buildHeader()}
+        <div style="padding-top:20mm;"></div>
 
         <div style="display:flex; gap:16px; align-items:flex-start;">
             <!-- Left: Metric Table (50%) -->
@@ -345,8 +358,8 @@ const buildInspectionReportHtml = (reportData) => {
 
         return `
             <div class="page-break">
-                ${buildHeader('X')}
-                <div style="padding-top:18mm;"></div>
+                ${buildHeader()}
+                <div style="padding-top:20mm;"></div>
                 <h2 style="font-size:16pt; font-weight:700; text-transform:uppercase; color:#111827; letter-spacing:0.02em; margin-bottom:12px; padding-bottom:6px; border-bottom:2px solid #2563eb;">
                     ${escapeHtml(section.title)}
                 </h2>
@@ -359,7 +372,7 @@ const buildInspectionReportHtml = (reportData) => {
     <!-- RECOMENDACIONES -->
     <div class="page-break">
         ${buildHeader('X')}
-        <div style="padding-top:18mm;"></div>
+        <div style="padding-top:20mm;"></div>
         <table style="width:100%; border-collapse:collapse; ${BOX}" cellpadding="0" cellspacing="0">
             <tr>
                 <td style="${SECTION_TITLE}">RECOMENDACIONES</td>
@@ -380,7 +393,7 @@ const buildInspectionReportHtml = (reportData) => {
     <!-- CIERRE TECNICO - CUADRO -->
     <div class="page-break">
         ${buildHeader('X')}
-        <div style="padding-top:18mm;"></div>
+        <div style="padding-top:20mm;"></div>
         <table style="width:100%; border-collapse:collapse; ${BOX}" cellpadding="0" cellspacing="0">
             <tr>
                 <td colspan="2" style="${SECTION_TITLE}">CIERRE TECNICO</td>
