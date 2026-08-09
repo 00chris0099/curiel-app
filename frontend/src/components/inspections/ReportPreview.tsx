@@ -131,16 +131,22 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
         return () => scrollEl.removeEventListener('scroll', handleScroll);
     }, [pageCount, zoom, renderPage]);
 
-    const handleOpenInDocs = async () => {
+    const handleOpenInAdobe = async () => {
         setIsOpeningDocs(true);
         try {
-            const result = await inspectionService.openInGoogleDocs(inspectionId);
-            if (result.url) {
-                window.open(result.url, '_blank');
-                toast.success('Documento abierto para edicion');
-            }
+            const blob = await inspectionService.downloadReport(inspectionId);
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `informe-inspeccion-${projectName}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+            window.open('https://www.adobe.com/pe/acrobat/online/pdf-editor.html', '_blank');
+            toast.success('PDF descargado. Subelo en Adobe Acrobat para editarlo.');
         } catch (err: unknown) {
-            toast.error(getApiErrorMessage(err, 'No se pudo crear el documento'));
+            toast.error(getApiErrorMessage(err, 'No se pudo descargar el informe'));
         } finally {
             setIsOpeningDocs(false);
         }
@@ -228,11 +234,11 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
                             </>
                         )}
 
-                        {/* Editar en Google Docs */}
+                        {/* Editar en Adobe Acrobat */}
                         <button
-                            onClick={handleOpenInDocs}
+                            onClick={handleOpenInAdobe}
                             disabled={isOpeningDocs}
-                            className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
+                            className="flex items-center gap-1.5 rounded-lg bg-red-600 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
                         >
                             {isOpeningDocs ? (
                                 <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
@@ -247,7 +253,7 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
                                     <line x1="16" y1="17" x2="8" y2="17" />
                                 </svg>
                             )}
-                            <span className="hidden sm:inline">{isOpeningDocs ? 'Abriendo...' : 'Editar en Docs'}</span>
+                            <span className="hidden sm:inline">{isOpeningDocs ? 'Descargando...' : 'Editar en Adobe'}</span>
                         </button>
 
                         {/* Descargar PDF + Drive */}
