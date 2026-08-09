@@ -150,7 +150,7 @@ class ClientService {
         });
     }
 
-    async deleteClient(clientId) {
+    async deleteClient(clientId, isMasterAdmin = false) {
         const client = await prisma.admin.client.findUnique({
             where: { id: clientId }
         });
@@ -167,7 +167,7 @@ class ClientService {
             where: { clientId }
         });
 
-        if (inspectionCount > 0) {
+        if (!isMasterAdmin && inspectionCount > 0) {
             throw new AppError('No se puede eliminar un cliente con inspecciones asociadas', 400, 'CLIENT_HAS_INSPECTIONS');
         }
 

@@ -46,7 +46,7 @@ const clientService = {
         return response.data;
     },
 
-    async delete(id: string): Promise<ApiResponse<{ deleted: boolean; clientId: string }>> {
+    async delete(id: string, isMasterAdmin: boolean): Promise<ApiResponse<{ deleted: boolean; clientId: string }>> {
         const response = await apiClient.delete<ApiResponse<{ deleted: boolean; clientId: string }>>(
             `/clients/${id}`
         );

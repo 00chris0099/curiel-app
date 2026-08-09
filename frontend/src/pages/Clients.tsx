@@ -156,20 +156,19 @@ export const Clients = () => {
         }
     };
 
-    const handleDelete = async (client: Client) => {
-        const name = client.razonSocial || `${client.firstName} ${client.lastName}`;
-        if (!window.confirm(`Eliminar cliente "${name}"? Esta accion no se puede deshacer.`)) {
-            return;
-        }
-
-        try {
-            await clientService.delete(client.id);
-            toast.success('Cliente eliminado exitosamente');
-            loadClients();
-        } catch (error: unknown) {
-            toast.error(getApiErrorMessage(error, 'Error al eliminar cliente'));
-        }
-    };
+const handleDelete = async (client: Client) => {
+    const name = client.razonSocial || `${client.firstName} ${client.lastName}`;
+    if (!isMasterAdmin && !window.confirm(`Eliminar cliente protectado "${name}"? Esta accion no se puede deshacer.`)) {
+        return;
+    }
+    try {
+        await clientService.delete(client.id, isMasterAdmin);
+        toast.success('Cliente eliminado exitosamente');
+        loadClients();
+    } catch (error: unknown) {
+        toast.error(getApiErrorMessage(error, 'Error al eliminar cliente'));
+    }
+};
 
     const getClientDisplayName = (client: Client) => {
         if (client.razonSocial) return client.razonSocial;
