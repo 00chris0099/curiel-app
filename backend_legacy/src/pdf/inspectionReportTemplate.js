@@ -112,6 +112,7 @@ const buildInspectionReportHtml = (reportData) => {
         summary,
         recommendations,
         inspectorSignature,
+        adminSignature,
         logoUrl,
         generatedAt
     } = reportData;
@@ -428,17 +429,36 @@ const buildInspectionReportHtml = (reportData) => {
                 Este informe consolida los hallazgos observados en la fecha de inspeccion y debe complementarse con las acciones correctivas correspondientes para el inmueble evaluado.
             </p>
 
-            <p style="font-size:9.5pt; color:#6b7280; margin-bottom:12px;">
-                El presente informe fue realizado e inspeccionado por:
-            </p>
-            ${inspectorSignature?.signatureUrl
-                ? `<img src="${inspectorSignature.signatureUrl}" alt="Firma del inspector" style="max-height:80px; max-width:200px; object-fit:contain; margin-bottom:8px;" />`
-                : `<p style="color:#9ca3af; font-style:italic; font-size:9.5pt; margin-bottom:8px;">Firma pendiente</p>`
-            }
-            <hr style="border:none; border-top:2px solid #1a1a1a; width:220px; margin-bottom:8px;" />
-            <p style="font-size:10.5pt; font-weight:700; color:#1a1a1a;">${escapeHtml(inspectorName)}</p>
-            <p style="font-size:9.5pt; color:#6b7280;">${escapeHtml(inspectorRole)}</p>
-            ${inspectorRole === 'arquitecto' ? `<p style="font-size:9.5pt; color:#6b7280;">CAP: ${escapeHtml(capValue || 'No registrado')}</p>` : ''}
+            <div style="display:flex; gap:40px; margin-bottom:12px;">
+                <!-- Firma del Inspector -->
+                <div style="flex:1;">
+                    <p style="font-size:9.5pt; color:#6b7280; margin-bottom:12px;">
+                        El presente informe fue realizado e inspeccionado por:
+                    </p>
+                    ${inspectorSignature?.signatureUrl
+                        ? `<img src="${inspectorSignature.signatureUrl}" alt="Firma del inspector" style="max-height:80px; max-width:200px; object-fit:contain; margin-bottom:8px;" />`
+                        : `<p style="color:#9ca3af; font-style:italic; font-size:9.5pt; margin-bottom:8px;">Firma pendiente</p>`
+                    }
+                    <hr style="border:none; border-top:2px solid #1a1a1a; width:220px; margin-bottom:8px;" />
+                    <p style="font-size:10.5pt; font-weight:700; color:#1a1a1a;">${escapeHtml(inspectorName)}</p>
+                    <p style="font-size:9.5pt; color:#6b7280;">${escapeHtml(inspectorRole)}</p>
+                    ${inspectorRole === 'arquitecto' ? `<p style="font-size:9.5pt; color:#6b7280;">CAP: ${escapeHtml(capValue || 'No registrado')}</p>` : ''}
+                </div>
+
+                <!-- Firma del Administrador -->
+                <div style="flex:1;">
+                    <p style="font-size:9.5pt; color:#6b7280; margin-bottom:12px;">
+                        Vo.Bo. del administrador:
+                    </p>
+                    ${adminSignature?.url
+                        ? `<img src="${adminSignature.url}" alt="Firma del administrador" style="max-height:80px; max-width:200px; object-fit:contain; margin-bottom:8px;" />`
+                        : `<p style="color:#9ca3af; font-style:italic; font-size:9.5pt; margin-bottom:8px;">Firma pendiente</p>`
+                    }
+                    <hr style="border:none; border-top:2px solid #1a1a1a; width:220px; margin-bottom:8px;" />
+                    <p style="font-size:10.5pt; font-weight:700; color:#1a1a1a;">Administrador</p>
+                    <p style="font-size:9.5pt; color:#6b7280;">CURIEL</p>
+                </div>
+            </div>
         </div>
     </div>
 

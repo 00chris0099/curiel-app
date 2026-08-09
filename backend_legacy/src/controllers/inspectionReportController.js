@@ -6,6 +6,7 @@ const logger = require('../utils/logger');
 const { buildInspectionReportHtml } = require('../pdf/inspectionReportTemplate');
 const { downloadAndSaveToDrive } = require('../services/googleDocsService');
 const { getTokens } = require('../services/googleTokenStore');
+const adminSignatureService = require('../services/adminSignatureService');
 
 const downloadInspectionReport = asyncHandler(async (req, res) => {
     const jobStatus = reportJobQueue.getStatus(req.params.id);
@@ -98,6 +99,7 @@ const getReportPreview = asyncHandler(async (req, res) => {
     const sortedObservations = observations.map(obs => ({ ...obs }));
     const inspectorSignature = signatures.find(s => s.signatureType === 'inspector') || null;
     const recommendationGroups = inspectionReportService._buildRecommendationGroups(sortedObservations, summary);
+    const adminSignature = await adminSignatureService.getSignature();
 
     const html = buildInspectionReportHtml({
         inspection,
@@ -108,6 +110,7 @@ const getReportPreview = asyncHandler(async (req, res) => {
         summary: summary ? { ...summary } : null,
         recommendations: recommendationGroups,
         inspectorSignature: inspectorSignature ? { ...inspectorSignature } : null,
+        adminSignature,
         logoUrl: require('../config').pdf.companyLogo,
         generatedAt: new Date().toISOString()
     });
@@ -157,6 +160,7 @@ const openInGoogleDocs = asyncHandler(async (req, res) => {
     const sortedObservations = observations.map(obs => ({ ...obs }));
     const inspectorSignature = signatures.find(s => s.signatureType === 'inspector') || null;
     const recommendationGroups = inspectionReportService._buildRecommendationGroups(sortedObservations, summary);
+    const adminSignature = await adminSignatureService.getSignature();
 
     const html = buildInspectionReportHtml({
         inspection,
@@ -167,6 +171,7 @@ const openInGoogleDocs = asyncHandler(async (req, res) => {
         summary: summary ? { ...summary } : null,
         recommendations: recommendationGroups,
         inspectorSignature: inspectorSignature ? { ...inspectorSignature } : null,
+        adminSignature,
         logoUrl: require('../config').pdf.companyLogo,
         generatedAt: new Date().toISOString()
     });
@@ -257,6 +262,7 @@ const downloadAndSaveToDriveController = asyncHandler(async (req, res) => {
     const sortedObservations = observations.map(obs => ({ ...obs }));
     const inspectorSignature = signatures.find(s => s.signatureType === 'inspector') || null;
     const recommendationGroups = inspectionReportService._buildRecommendationGroups(sortedObservations, summary);
+    const adminSignature = await adminSignatureService.getSignature();
 
     const userTokens = getTokens(req.userId);
 
@@ -279,6 +285,7 @@ const downloadAndSaveToDriveController = asyncHandler(async (req, res) => {
         summary: summary ? { ...summary } : null,
         recommendations: recommendationGroups,
         inspectorSignature: inspectorSignature ? { ...inspectorSignature } : null,
+        adminSignature,
     }, userTokens);
 
     await createAuditLog(req.userId, 'download_and_save_to_drive', 'Inspection', inspectionId);

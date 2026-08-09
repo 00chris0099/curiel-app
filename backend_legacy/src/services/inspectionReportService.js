@@ -7,6 +7,7 @@ const { AppError } = require('../middlewares/errorHandler');
 const { buildInspectionReportHtml } = require('../pdf/inspectionReportTemplate');
 const { uploadPdf } = require('../utils/cloudinaryStorage');
 const pdfCacheService = require('./pdfCacheService');
+const adminSignatureService = require('./adminSignatureService');
 
 const severityOrder = {
     critica: 0,
@@ -105,6 +106,7 @@ class InspectionReportService {
             });
         const serializedPhotos = photos.map(p => ({ ...p }));
         const inspectorSignature = signatures.find(s => s.signatureType === 'inspector') || null;
+        const adminSignature = await adminSignatureService.getSignature();
 
         const contentHash = pdfCacheService.computeContentHash({
             templateVersion: REPORT_TEMPLATE_VERSION,
@@ -163,6 +165,7 @@ class InspectionReportService {
             summary: summary ? { ...summary } : null,
             recommendations: recommendationGroups,
             inspectorSignature: inspectorSignature ? { ...inspectorSignature } : null,
+            adminSignature,
             logoUrl: config.pdf.companyLogo,
             generatedAt: new Date().toISOString()
         });
