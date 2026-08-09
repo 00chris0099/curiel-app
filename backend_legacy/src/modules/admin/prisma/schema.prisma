@@ -84,3 +84,11 @@ model ApiKey {
   @@index([createdById])
   @@map("api_keys")
 }
+
+model AdminSetting {
+  key       String    @id @db.VarChar(100)
+  value     String?   @db.Text
+  updatedAt DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@map("admin_settings")
+}
