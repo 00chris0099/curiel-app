@@ -8,6 +8,7 @@ import ConnectionStatus from '../components/ConnectionStatus';
 import { useOfflineSync } from '../hooks/useOfflineSync';
 import inspectionService from '../services/inspection.service';
 import { useAuthStore } from '../store/authStore';
+import { useConfirmDialog } from '../components/common/useConfirmDialog';
 import type {
     ExecutionAreaStatus,
     InspectionArea,
@@ -73,6 +74,7 @@ export const InspectionAreaDetail = () => {
     const { id, areaId } = useParams<{ id: string; areaId: string }>();
     const navigate = useNavigate();
     const { user } = useAuthStore();
+    const { confirm, ConfirmDialog } = useConfirmDialog();
     const [execution, setExecution] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -371,11 +373,17 @@ export const InspectionAreaDetail = () => {
         }
     };
 
-    const handleBack = () => {
+    const handleBack = async () => {
         if (hasUnsavedChanges) {
-            const confirm = window.confirm('Hay cambios sin guardar. ¿Deseas guardar antes de salir?');
-            if (confirm) {
-                // Trigger save
+            const confirmed = await confirm({
+                title: 'Cambios sin guardar',
+                message: 'Hay cambios sin guardar en esta área. ¿Deseas guardar antes de salir?',
+                confirmText: 'Guardar y salir',
+                cancelText: 'Salir sin guardar',
+                variant: 'warning'
+            });
+
+            if (confirmed) {
                 document.getElementById('area-form')?.dispatchEvent(new Event('submit', { cancelable: true }));
                 return;
             }
@@ -406,6 +414,7 @@ export const InspectionAreaDetail = () => {
 
     return (
         <div className="space-y-5 sm:space-y-6">
+            <ConfirmDialog />
             {/* Header with back button */}
             <div className="flex items-start gap-3 sm:items-center sm:gap-4">
                 <button

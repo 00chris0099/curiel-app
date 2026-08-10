@@ -8,6 +8,7 @@ import ConnectionStatus from '../components/ConnectionStatus';
 import { useOfflineSync } from '../hooks/useOfflineSync';
 import inspectionService from '../services/inspection.service';
 import { useAuthStore } from '../store/authStore';
+import { useConfirmDialog } from '../components/common/useConfirmDialog';
 import type {
     CreateInspectionAreaDto,
     CreateInspectionObservationDto,
@@ -51,6 +52,7 @@ export const InspectionExecution = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { user } = useAuthStore();
+    const { confirm, ConfirmDialog } = useConfirmDialog();
     const [execution, setExecution] = useState<InspectionExecutionData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -450,7 +452,13 @@ export const InspectionExecution = () => {
             return;
         }
 
-        const confirmed = window.confirm('¿Deseas finalizar esta inspección y enviarla a revisión?');
+        const confirmed = await confirm({
+            title: 'Finalizar Inspección',
+            message: '¿Deseas finalizar esta inspección y enviarla a revisión?',
+            confirmText: 'Sí, finalizar',
+            cancelText: 'Cancelar',
+            variant: 'info'
+        });
         if (!confirmed) return;
 
         await withBusyAction('complete-inspection', async () => {
@@ -561,6 +569,7 @@ export const InspectionExecution = () => {
 
     return (
         <div className="flex min-h-[calc(100vh-8rem)] flex-col pb-24 lg:pb-10">
+            <ConfirmDialog />
             {/* 6 Modules Grid */}
             <div className="mt-4 flex-1">
                 <ModuleGrid modules={moduleDefinitions}>

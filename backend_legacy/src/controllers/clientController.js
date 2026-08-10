@@ -85,7 +85,7 @@ const updateClient = asyncHandler(async (req, res) => {
  * @access  Private/Admin
  */
 const deleteClient = asyncHandler(async (req, res) => {
-    const result = await clientService.deleteClient(req.params.id);
+    const result = await clientService.deleteClient(req.params.id, req.isMasterAdmin);
 
     await createAuditLog(req.userId, 'delete_client', 'Client', result.clientId);
 

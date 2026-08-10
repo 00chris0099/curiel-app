@@ -171,6 +171,13 @@ class ClientService {
             throw new AppError('No se puede eliminar un cliente con inspecciones asociadas', 400, 'CLIENT_HAS_INSPECTIONS');
         }
 
+        if (isMasterAdmin && inspectionCount > 0) {
+            await prisma.inspecciones.inspection.updateMany({
+                where: { clientId },
+                data: { clientId: null }
+            });
+        }
+
         await prisma.admin.client.delete({ where: { id: clientId } });
 
         return { deleted: true, clientId };

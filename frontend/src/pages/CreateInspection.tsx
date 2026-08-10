@@ -21,6 +21,8 @@ import {
     DEPARTMENT_SERVICE_OPTIONS,
     SERVICE_TYPE_TO_BACKEND_TYPE,
 } from '../utils/inspectionMetadata';
+import { AddressMapPicker } from '../components/common/AddressMapPicker';
+import { filterDocumentInput, filterPhoneInput, validateDocument, validatePhone } from '../utils/validation';
 import { getReviewPointIcon } from '../utils/iconSystem';
 import {
     contactChannelOptions,
@@ -126,9 +128,25 @@ export const CreateInspection = () => {
         }));
     };
 
-    const handleQuickCreateChange = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const handleQuickCreateChange = (
+        event: ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    ) => {
         const { name, value } = event.target;
-        setQuickCreateForm((current) => ({ ...current, [name]: value }));
+        setQuickCreateForm((current) => {
+            let newValue = value;
+            if (name === 'documentNumber') {
+                newValue = filterDocumentInput(current.documentType, value);
+            } else if (name === 'phone') {
+                newValue = filterPhoneInput(value);
+            } else if (name === 'documentType') {
+                return {
+                    ...current,
+                    documentType: value as ClientDocumentType,
+                    documentNumber: filterDocumentInput(value, current.documentNumber)
+                };
+            }
+            return { ...current, [name]: newValue };
+        });
     };
 
     const handleQuickCreateSubmit = async () => {
@@ -137,6 +155,19 @@ export const CreateInspection = () => {
             toast.error('Documento, nombre, apellido y correo son obligatorios');
             return;
         }
+
+        const docValidation = validateDocument(documentType, documentNumber);
+        if (!docValidation.isValid) {
+            toast.error(docValidation.error || 'Número de documento inválido');
+            return;
+        }
+
+        const phoneValidation = validatePhone(phone);
+        if (!phoneValidation.isValid) {
+            toast.error(phoneValidation.error || 'Número celular inválido');
+            return;
+        }
+
         setIsCreatingClient(true);
         try {
             const response = await clientService.create({
@@ -702,18 +733,12 @@ export const CreateInspection = () => {
                                         </div>
 
                                         <div className="md:col-span-2">
-                                            <label htmlFor="exactAddress" className="mb-2 block text-sm font-medium">
-                                                Dirección exacta <span className="text-red-500">*</span>
-                                            </label>
-                                            <input
-                                                id="exactAddress"
-                                                name="exactAddress"
-                                                type="text"
+                                            <AddressMapPicker
+                                                address={formData.exactAddress}
+                                                onAddressChange={(newAddr) => setFormData((prev) => ({ ...prev, exactAddress: newAddr }))}
+                                                label="Dirección exacta"
+                                                placeholder="Buscar dirección en el mapa o ingresar manualmente..."
                                                 required
-                                                value={formData.exactAddress}
-                                                onChange={handleChange}
-                                                className="input"
-                                                placeholder="Av./Calle, número, urbanización o referencia"
                                             />
                                         </div>
 

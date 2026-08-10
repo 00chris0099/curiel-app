@@ -6,6 +6,8 @@ import { getApiErrorMessage } from '../api/axios';
 import { useAuthStore } from '../store/authStore';
 import userService from '../services/user.service';
 import type { CreateUserDto, UpdateUserDto, User, UserRole, UserStats } from '../types';
+import { useConfirmDialog } from '../components/common/useConfirmDialog';
+import { filterPhoneInput, validatePhone } from '../utils/validation';
 
 type UserFormState = {
     firstName: string;
@@ -41,6 +43,7 @@ const roleBadgeColors: Record<UserRole, string> = {
 
 export const Users = () => {
     const { user, refreshProfile } = useAuthStore();
+    const { confirm, ConfirmDialog } = useConfirmDialog();
     const [users, setUsers] = useState<User[]>([]);
     const [stats, setStats] = useState<UserStats | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -135,8 +138,16 @@ export const Users = () => {
         }
 
         if (!email) {
-            toast.error('El correo electronico es obligatorio');
+            toast.error('El correo electrónico es obligatorio');
             return;
+        }
+
+        if (phone) {
+            const phoneValidation = validatePhone(phone);
+            if (!phoneValidation.isValid) {
+                toast.error(phoneValidation.error || 'Teléfono inválido');
+                return;
+            }
         }
 
         if (!form.role) {
@@ -200,9 +211,14 @@ export const Users = () => {
         const nextStatus = !selectedUser.isActive;
         const actionLabel = nextStatus ? 'activar' : 'desactivar';
 
-        if (!window.confirm(`¿Seguro que deseas ${actionLabel} a ${selectedUser.fullName}?`)) {
-            return;
-        }
+        const confirmed = await confirm({
+            title: `${nextStatus ? 'Activar' : 'Desactivar'} Usuario`,
+            message: `¿Estás seguro de que deseas ${actionLabel} a "${selectedUser.fullName}"?`,
+            confirmText: nextStatus ? 'Activar' : 'Desactivar',
+            variant: nextStatus ? 'info' : 'warning'
+        });
+
+        if (!confirmed) return;
 
         try {
             await userService.toggleUserStatus(selectedUser.id, nextStatus);
@@ -219,9 +235,14 @@ export const Users = () => {
     };
 
     const handleDelete = async (selectedUser: User) => {
-        if (!window.confirm(`¿Seguro que deseas deshabilitar a ${selectedUser.fullName}?`)) {
-            return;
-        }
+        const confirmed = await confirm({
+            title: 'Deshabilitar Usuario',
+            message: `¿Estás seguro de que deseas deshabilitar a "${selectedUser.fullName}"?`,
+            confirmText: 'Deshabilitar',
+            variant: 'danger'
+        });
+
+        if (!confirmed) return;
 
         try {
             await userService.deleteUser(selectedUser.id);
@@ -238,9 +259,14 @@ export const Users = () => {
     };
 
     const handleTransferMaster = async (selectedUser: User) => {
-        if (!window.confirm(`¿Transferir el master admin a ${selectedUser.fullName}?`)) {
-            return;
-        }
+        const confirmed = await confirm({
+            title: 'Transferir Master Admin',
+            message: `¿Deseas transferir el rol de Master Admin a "${selectedUser.fullName}"?`,
+            confirmText: 'Transferir',
+            variant: 'warning'
+        });
+
+        if (!confirmed) return;
 
         try {
             await userService.transferMasterAdmin(selectedUser.id);
@@ -277,6 +303,8 @@ export const Users = () => {
 
     return (
         <div className="space-y-6 pb-10 animate-in fade-in duration-300">
+            <ConfirmDialog />
+
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Usuarios</h1>
@@ -333,7 +361,7 @@ export const Users = () => {
                                 <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Usuario</th>
                                 <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Rol</th>
                                 <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Estado</th>
-                                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Telefono</th>
+                                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Teléfono</th>
                                 <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400">Acciones</th>
                             </tr>
                         </thead>
@@ -378,7 +406,7 @@ export const Users = () => {
 
                 {totalPages > 1 && (
                     <div className="flex items-center justify-between border-t border-gray-100 px-5 py-3 dark:border-gray-800">
-                        <p className="text-xs text-gray-500">Pagina {page} de {totalPages}</p>
+                        <p className="text-xs text-gray-500">Página {page} de {totalPages}</p>
                         <div className="flex gap-2">
                             <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="btn btn-secondary text-xs">Anterior</button>
                             <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="btn btn-secondary text-xs">Siguiente</button>
@@ -397,9 +425,9 @@ export const Users = () => {
                                 <div><label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Apellido</label><input className="input" value={form.lastName} onChange={(event) => setForm((c) => ({ ...c, lastName: event.target.value }))} /></div>
                             </div>
                             <div><label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Correo</label><input type="email" className="input" value={form.email} disabled={isEditing} onChange={(event) => setForm((c) => ({ ...c, email: event.target.value }))} /></div>
-                            {!isEditing && <div><label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Contrasena</label><input type="password" className="input" value={form.password} onChange={(event) => setForm((c) => ({ ...c, password: event.target.value }))} /></div>}
+                            {!isEditing && <div><label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Contraseña</label><input type="password" className="input" value={form.password} onChange={(event) => setForm((c) => ({ ...c, password: event.target.value }))} /></div>}
                             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                <div><label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Telefono</label><input className="input" value={form.phone} onChange={(event) => setForm((c) => ({ ...c, phone: event.target.value }))} /></div>
+                                <div><label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Teléfono</label><input className="input" value={form.phone} onChange={(event) => setForm((c) => ({ ...c, phone: filterPhoneInput(event.target.value) }))} placeholder="Ej. 987654321" /></div>
                                 <div><label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Rol</label><select className="input" value={form.role} onChange={(event) => setForm((c) => ({ ...c, role: event.target.value as UserRole }))}><option value="admin">Admin</option><option value="supervisor">Supervisor</option><option value="arquitecto">Arquitecto</option><option value="inspector">Inspector</option></select></div>
                             </div>
                             <div className="flex gap-3 pt-2">

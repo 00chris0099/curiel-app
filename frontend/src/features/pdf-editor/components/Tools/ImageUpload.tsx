@@ -1,5 +1,6 @@
 import { useCallback, useRef } from 'react';
 import { Upload } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 interface ImageUploadProps {
   onImageSelect: (file: File) => void;
@@ -16,12 +17,12 @@ export function ImageUpload({ onImageSelect, accept = 'image/*', maxSize = 10 * 
       if (!file) return;
 
       if (file.size > maxSize) {
-        alert(`El archivo excede el tamaño máximo de ${maxSize / 1024 / 1024}MB`);
+        toast.error(`El archivo excede el tamaño máximo de ${maxSize / 1024 / 1024}MB`);
         return;
       }
 
       if (!file.type.startsWith('image/')) {
-        alert('Solo se permiten archivos de imagen');
+        toast.error('Solo se permiten archivos de imagen');
         return;
       }
 
@@ -40,12 +41,12 @@ export function ImageUpload({ onImageSelect, accept = 'image/*', maxSize = 10 * 
       if (!file) return;
 
       if (file.size > maxSize) {
-        alert(`El archivo excede el tamaño máximo de ${maxSize / 1024 / 1024}MB`);
+        toast.error(`El archivo excede el tamaño máximo de ${maxSize / 1024 / 1024}MB`);
         return;
       }
 
       if (!file.type.startsWith('image/')) {
-        alert('Solo se permiten archivos de imagen');
+        toast.error('Solo se permiten archivos de imagen');
         return;
       }
 

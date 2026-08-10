@@ -3,10 +3,12 @@ import toast from 'react-hot-toast';
 import apiClient, { getApiErrorMessage } from '../api/axios';
 import { CustomIcon } from '../components/CustomIcon';
 import apiKeyService, { type ApiKey } from '../services/apiKey.service';
+import { useConfirmDialog } from '../components/common/useConfirmDialog';
 
 type TabType = 'api_keys' | 'secret_tokens';
 
 export const Config = () => {
+    const { confirm, ConfirmDialog } = useConfirmDialog();
     const [activeTab, setActiveTab] = useState<TabType>('api_keys');
     const [keys, setKeys] = useState<ApiKey[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -23,9 +25,9 @@ export const Config = () => {
         try {
             const typeFilter = activeTab === 'secret_tokens' ? 'secret_token' : 'api_key';
             const response = await apiKeyService.getAll({ type: typeFilter });
-            setKeys(response.data);
+            setKeys(response.data ?? []);
         } catch (error: unknown) {
-            toast.error(getApiErrorMessage(error, 'Error al cargar API keys'));
+            toast.error(getApiErrorMessage(error, 'Error al cargar llaves'));
         } finally {
             setIsLoading(false);
         }
@@ -35,18 +37,17 @@ export const Config = () => {
         loadKeys();
     }, [loadKeys]);
 
-    const loadSignature = useCallback(async () => {
-        try {
-            const response = await apiClient.get('/admin/settings/signature');
-            setSignatureUrl(response.data.data?.url || null);
-        } catch {
-            // silently ignore — signature might not exist yet
-        }
-    }, []);
-
     useEffect(() => {
+        const loadSignature = async () => {
+            try {
+                const response = await apiClient.get('/admin/settings/signature');
+                setSignatureUrl(response.data?.data?.signatureUrl || null);
+            } catch {
+                setSignatureUrl(null);
+            }
+        };
         loadSignature();
-    }, [loadSignature]);
+    }, []);
 
     const handleUploadSignature = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -58,7 +59,7 @@ export const Config = () => {
         }
 
         if (file.size > 2 * 1024 * 1024) {
-            toast.error('El archivo no puede superar 2MB');
+            toast.error('La imagen no debe superar 2MB');
             return;
         }
 
@@ -66,11 +67,11 @@ export const Config = () => {
         try {
             const formData = new FormData();
             formData.append('signature', file);
-            await apiClient.put('/admin/settings/signature', formData, {
+            const response = await apiClient.put('/admin/settings/signature', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
+            setSignatureUrl(response.data?.data?.signatureUrl || null);
             toast.success('Firma actualizada');
-            loadSignature();
         } catch (error: unknown) {
             toast.error(getApiErrorMessage(error, 'Error al subir firma'));
         } finally {
@@ -80,7 +81,13 @@ export const Config = () => {
     };
 
     const handleDeleteSignature = async () => {
-        if (!confirm('¿Eliminar la firma del administrador?')) return;
+        const confirmed = await confirm({
+            title: 'Eliminar Firma',
+            message: '¿Estás seguro de eliminar la firma del administrador?',
+            confirmText: 'Eliminar',
+            variant: 'danger'
+        });
+        if (!confirmed) return;
         try {
             await apiClient.delete('/admin/settings/signature');
             setSignatureUrl(null);
@@ -119,7 +126,13 @@ export const Config = () => {
     };
 
     const handleRevoke = async (id: string) => {
-        if (!confirm('¿Revocar esta key? No podra usarse mas.')) return;
+        const confirmed = await confirm({
+            title: 'Revocar API Key',
+            message: '¿Estás seguro de revocar esta key? No podrá usarse más.',
+            confirmText: 'Revocar',
+            variant: 'warning'
+        });
+        if (!confirmed) return;
         try {
             await apiKeyService.revoke(id);
             toast.success('API key revocada');
@@ -130,7 +143,13 @@ export const Config = () => {
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm('¿Eliminar esta key permanentemente?')) return;
+        const confirmed = await confirm({
+            title: 'Eliminar API Key',
+            message: '¿Estás seguro de eliminar esta key permanentemente?',
+            confirmText: 'Eliminar',
+            variant: 'danger'
+        });
+        if (!confirmed) return;
         try {
             await apiKeyService.delete(id);
             toast.success('API key eliminada');
@@ -164,6 +183,7 @@ export const Config = () => {
 
     return (
         <div className="space-y-6 pb-10 animate-in fade-in duration-300">
+            <ConfirmDialog />
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Configuracion</h1>

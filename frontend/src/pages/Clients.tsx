@@ -7,6 +7,9 @@ import { getApiErrorMessage } from '../api/axios';
 import { useAuthStore } from '../store/authStore';
 import clientService from '../services/client.service';
 import type { Client, CreateClientDto, ClientDocumentType } from '../types';
+import { useConfirmDialog } from '../components/common/useConfirmDialog';
+import { AddressMapPicker } from '../components/common/AddressMapPicker';
+import { filterDocumentInput, filterPhoneInput, validateDocument, validatePhone } from '../utils/validation';
 
 type ClientFormState = {
     documentType: ClientDocumentType;
@@ -48,6 +51,8 @@ export const Clients = () => {
     const navigate = useNavigate();
     const { user } = useAuthStore();
     const isMasterAdmin = user?.isMasterAdmin === true;
+    const { confirm, ConfirmDialog } = useConfirmDialog();
+
     const [clients, setClients] = useState<Client[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -124,6 +129,20 @@ export const Clients = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Validaciones estrictas de cliente
+        const docValidation = validateDocument(form.documentType, form.documentNumber);
+        if (!docValidation.isValid) {
+            toast.error(docValidation.error || 'Número de documento inválido');
+            return;
+        }
+
+        const phoneValidation = validatePhone(form.phone);
+        if (!phoneValidation.isValid) {
+            toast.error(phoneValidation.error || 'Número celular inválido');
+            return;
+        }
+
         setIsSubmitting(true);
 
         try {
@@ -156,19 +175,26 @@ export const Clients = () => {
         }
     };
 
-const handleDelete = async (client: Client) => {
-    const name = client.razonSocial || `${client.firstName} ${client.lastName}`;
-    if (!isMasterAdmin && !window.confirm(`Eliminar cliente protectado "${name}"? Esta accion no se puede deshacer.`)) {
-        return;
-    }
-    try {
-        await clientService.delete(client.id, isMasterAdmin);
-        toast.success('Cliente eliminado exitosamente');
-        loadClients();
-    } catch (error: unknown) {
-        toast.error(getApiErrorMessage(error, 'Error al eliminar cliente'));
-    }
-};
+    const handleDelete = async (client: Client) => {
+        const name = client.razonSocial || `${client.firstName} ${client.lastName}`;
+        const confirmed = await confirm({
+            title: 'Eliminar Cliente',
+            message: `¿Deseas eliminar al cliente "${name}"?\nEsta acción no se puede deshacer.${isMasterAdmin ? ' Como SuperAdmin, las inspecciones asociadas se conservarán desvinculadas.' : ''}`,
+            confirmText: 'Sí, eliminar',
+            cancelText: 'Cancelar',
+            variant: 'danger'
+        });
+
+        if (!confirmed) return;
+
+        try {
+            await clientService.delete(client.id, isMasterAdmin);
+            toast.success('Cliente eliminado exitosamente');
+            loadClients();
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, 'Error al eliminar cliente'));
+        }
+    };
 
     const getClientDisplayName = (client: Client) => {
         if (client.razonSocial) return client.razonSocial;
@@ -185,6 +211,8 @@ const handleDelete = async (client: Client) => {
 
     return (
         <div className="space-y-6 pb-10 animate-in fade-in duration-300">
+            <ConfirmDialog />
+
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Clientes</h1>
@@ -197,88 +225,93 @@ const handleDelete = async (client: Client) => {
             </div>
 
             {isFormVisible && (
-                <div className="rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+                <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
                     <h2 className="text-lg font-bold text-gray-900 dark:text-white">{isEditing ? 'Editar Cliente' : 'Nuevo Cliente'}</h2>
-                    <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+                    <form onSubmit={handleSubmit} className="mt-5 space-y-5">
                         <div className="grid gap-4 sm:grid-cols-2">
                             {/* Document Type */}
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                                     Tipo de documento
                                 </label>
                                 <select
                                     value={form.documentType}
-                                    onChange={(e) =>
-                                        setForm({ ...form, documentType: e.target.value as ClientDocumentType })
-                                    }
-                                    className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-[#17324a] focus:outline-none focus:ring-2 focus:ring-[#17324a]/20"
+                                    onChange={(e) => {
+                                        const newType = e.target.value as ClientDocumentType;
+                                        setForm({
+                                            ...form,
+                                            documentType: newType,
+                                            documentNumber: filterDocumentInput(newType, form.documentNumber)
+                                        });
+                                    }}
+                                    className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
                                 >
-                                    <option value="dni">DNI</option>
-                                    <option value="ruc">RUC</option>
-                                    <option value="ce">CE</option>
+                                    <option value="dni">DNI (8 dígitos)</option>
+                                    <option value="ruc">RUC (11 dígitos)</option>
+                                    <option value="ce">CE (Carnet Extranjería)</option>
                                 </select>
                             </div>
 
                             {/* Document Number */}
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                                    Numero de documento *
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                    Número de documento *
                                 </label>
                                 <input
                                     type="text"
                                     required
                                     value={form.documentNumber}
-                                    onChange={(e) => setForm({ ...form, documentNumber: e.target.value })}
-                                    className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-[#17324a] focus:outline-none focus:ring-2 focus:ring-[#17324a]/20"
-                                    placeholder="Ej: 12345678"
+                                    onChange={(e) => setForm({ ...form, documentNumber: filterDocumentInput(form.documentType, e.target.value) })}
+                                    className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                                    placeholder={form.documentType === 'dni' ? 'Ej. 73043172 (8 dígitos)' : form.documentType === 'ruc' ? 'Ej. 20123456789 (11 dígitos)' : 'Número de documento'}
                                 />
                             </div>
 
                             {/* First Name */}
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                                     Nombre
                                 </label>
                                 <input
                                     type="text"
                                     value={form.firstName}
                                     onChange={(e) => setForm({ ...form, firstName: e.target.value })}
-                                    className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-[#17324a] focus:outline-none focus:ring-2 focus:ring-[#17324a]/20"
+                                    className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
                                     placeholder="Nombre"
                                 />
                             </div>
 
                             {/* Last Name */}
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                                     Apellido
                                 </label>
                                 <input
                                     type="text"
                                     value={form.lastName}
                                     onChange={(e) => setForm({ ...form, lastName: e.target.value })}
-                                    className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-[#17324a] focus:outline-none focus:ring-2 focus:ring-[#17324a]/20"
+                                    className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
                                     placeholder="Apellido"
                                 />
                             </div>
 
                             {/* Razon Social */}
                             <div className="sm:col-span-2">
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                                    Razon Social
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                    Razón Social
                                 </label>
                                 <input
                                     type="text"
                                     value={form.razonSocial}
                                     onChange={(e) => setForm({ ...form, razonSocial: e.target.value })}
-                                    className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-[#17324a] focus:outline-none focus:ring-2 focus:ring-[#17324a]/20"
-                                    placeholder="Razon social (opcional si tiene nombre)"
+                                    className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                                    placeholder="Razón social (empresa o negocio)"
                                 />
                             </div>
 
                             {/* Email */}
-                            <div className="sm:col-span-2">
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                                     Email *
                                 </label>
                                 <input
@@ -286,36 +319,32 @@ const handleDelete = async (client: Client) => {
                                     required
                                     value={form.email}
                                     onChange={(e) => setForm({ ...form, email: e.target.value })}
-                                    className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-[#17324a] focus:outline-none focus:ring-2 focus:ring-[#17324a]/20"
+                                    className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
                                     placeholder="correo@ejemplo.com"
                                 />
                             </div>
 
-                            {/* Phone */}
+                            {/* Phone / Celular */}
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                                    Telefono
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                    Teléfono / Celular
                                 </label>
                                 <input
                                     type="text"
                                     value={form.phone}
-                                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                                    className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-[#17324a] focus:outline-none focus:ring-2 focus:ring-[#17324a]/20"
-                                    placeholder="Telefono"
+                                    onChange={(e) => setForm({ ...form, phone: filterPhoneInput(e.target.value) })}
+                                    className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                                    placeholder="Ej. 955250185 (9 dígitos)"
                                 />
                             </div>
 
-                            {/* Address */}
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                                    Direccion
-                                </label>
-                                <input
-                                    type="text"
-                                    value={form.address}
-                                    onChange={(e) => setForm({ ...form, address: e.target.value })}
-                                    className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-[#17324a] focus:outline-none focus:ring-2 focus:ring-[#17324a]/20"
-                                    placeholder="Direccion"
+                            {/* Address with Map Picker & Autocomplete */}
+                            <div className="sm:col-span-2">
+                                <AddressMapPicker
+                                    address={form.address}
+                                    onAddressChange={(newAddr) => setForm((prev) => ({ ...prev, address: newAddr }))}
+                                    label="Dirección"
+                                    placeholder="Buscar dirección en el mapa..."
                                 />
                             </div>
 
@@ -330,21 +359,21 @@ const handleDelete = async (client: Client) => {
                                             className="h-4 w-4 rounded border-slate-300 text-[#17324a] focus:ring-[#17324a]"
                                         />
                                         <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                                            Proteger de auto-eliminacion
+                                            Proteger de auto-eliminación
                                         </span>
                                     </label>
                                     <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                                        Los clientes protegidos no se eliminan automaticamente a los 15 dias.
+                                        Los clientes protegidos no se eliminan automáticamente a los 15 días.
                                     </p>
                                 </div>
                             )}
                         </div>
 
-                        <div className="flex justify-end gap-3">
+                        <div className="flex justify-end gap-3 pt-2">
                             <button
                                 type="button"
                                 onClick={resetForm}
-                                            className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-5 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700"
+                                className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-5 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700"
                             >
                                 Cancelar
                             </button>
@@ -385,7 +414,7 @@ const handleDelete = async (client: Client) => {
             </div>
 
             {/* Clients Table */}
-            <div className="rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+            <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 overflow-hidden shadow-sm">
                 {clients.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16">
                         <CustomIcon name="users" size="lg" tone="mist" />
@@ -395,17 +424,17 @@ const handleDelete = async (client: Client) => {
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm">
                             <thead>
-                                <tr className="border-b border-slate-100 bg-slate-50/50">
+                                <tr className="border-b border-slate-100 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-800/40">
                                     <th className="px-6 py-4 font-semibold text-slate-600 dark:text-slate-400">Cliente</th>
                                     <th className="px-6 py-4 font-semibold text-slate-600 dark:text-slate-400">Documento</th>
                                     <th className="px-6 py-4 font-semibold text-slate-600 dark:text-slate-400">Email</th>
-                                    <th className="px-6 py-4 font-semibold text-slate-600 dark:text-slate-400">Telefono</th>
+                                    <th className="px-6 py-4 font-semibold text-slate-600 dark:text-slate-400">Teléfono</th>
                                     <th className="px-6 py-4 font-semibold text-slate-600 dark:text-slate-400">Acciones</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100">
+                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                 {clients.map((client) => (
-                                    <tr key={client.id} className="transition-colors hover:bg-slate-50/50">
+                                    <tr key={client.id} className="transition-colors hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
                                                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#17324a]/10">
@@ -427,7 +456,7 @@ const handleDelete = async (client: Client) => {
                                             <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${documentTypeBadgeColors[client.documentType]}`}>
                                                 {documentTypeLabels[client.documentType]}
                                             </span>
-                                            <span className="ml-2 text-slate-700 dark:text-slate-300">{client.documentNumber}</span>
+                                            <span className="ml-2 text-slate-700 dark:text-slate-300 font-mono text-xs">{client.documentNumber}</span>
                                         </td>
                                         <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{client.email}</td>
                                         <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{client.phone || '-'}</td>
@@ -435,21 +464,21 @@ const handleDelete = async (client: Client) => {
                                             <div className="flex items-center gap-2">
                                                 <button
                                                     onClick={() => navigate(`/clients/${client.id}`)}
-                                                    className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+                                                    className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
                                                     title="Ver detalles"
                                                 >
                                                     <CustomIcon name="search" size="sm" tone="mist" />
                                                 </button>
                                                 <button
                                                     onClick={() => handleEdit(client)}
-                                                    className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+                                                    className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
                                                     title="Editar"
                                                 >
                                                     <CustomIcon name="pencil" size="sm" tone="mist" />
                                                 </button>
                                                 <button
                                                     onClick={() => handleDelete(client)}
-                                                    className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                                                    className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30"
                                                     title="Eliminar"
                                                 >
                                                     <CustomIcon name="trash" size="sm" tone="mist" />
@@ -467,7 +496,7 @@ const handleDelete = async (client: Client) => {
             {totalPages > 1 && (
                 <div className="flex items-center justify-between">
                     <p className="text-sm text-slate-500 dark:text-slate-400">
-                        Pagina {page} de {totalPages}
+                        Página {page} de {totalPages}
                     </p>
                     <div className="flex gap-2">
                         <button
