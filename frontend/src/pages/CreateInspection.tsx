@@ -346,17 +346,17 @@ export const CreateInspection = () => {
             </div>
 
             {/* Progress Bar */}
-            <div className="card py-4">
-                <div className="flex items-center justify-between">
+            <div className="card py-3 px-3 sm:py-4 sm:px-6">
+                <div className="flex items-center justify-between gap-1 sm:gap-2">
                     {stepLabels.map((label, index) => (
-                        <div key={label} className="flex items-center">
-                            <div className="flex flex-col items-center">
+                        <div key={label} className="flex flex-1 items-center last:flex-initial">
+                            <div className="flex flex-col items-center min-w-0 flex-1 sm:flex-initial">
                                 <div
-                                    className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold transition-colors ${
+                                    className={`flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full text-xs sm:text-sm font-semibold transition-colors shrink-0 ${
                                         index < currentStep
-                                            ? 'bg-green-500 text-white'
+                                            ? 'bg-emerald-600 text-white'
                                             : index === currentStep
-                                            ? 'bg-primary-600 text-white'
+                                            ? 'bg-[#17324a] text-white ring-2 ring-[#17324a]/20 dark:bg-blue-600'
                                             : 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
                                     }`}
                                 >
@@ -366,15 +366,15 @@ export const CreateInspection = () => {
                                         index + 1
                                     )}
                                 </div>
-                                <span className={`mt-1.5 text-xs font-medium ${
-                                    index <= currentStep ? 'text-gray-900 dark:text-gray-100' : 'text-gray-500 dark:text-gray-400'
+                                <span className={`mt-1 text-[10px] sm:text-xs font-medium truncate max-w-[70px] sm:max-w-none text-center ${
+                                    index <= currentStep ? 'text-gray-900 font-bold dark:text-gray-100' : 'text-gray-400 dark:text-gray-500'
                                 }`}>
                                     {label}
                                 </span>
                             </div>
                             {index < stepLabels.length - 1 && (
-                                <div className={`mx-2 h-0.5 w-12 sm:w-20 ${
-                                    index < currentStep ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700'
+                                <div className={`mx-1 sm:mx-3 h-0.5 flex-1 transition-colors ${
+                                    index < currentStep ? 'bg-emerald-500' : 'bg-gray-200 dark:bg-gray-700'
                                 }`} />
                             )}
                         </div>
@@ -1081,20 +1081,31 @@ export const CreateInspection = () => {
                                 </div>
                             </div>
 
-                            <div className="space-y-3 text-sm text-gray-600 dark:text-gray-300">
-                                <div className="flex items-center justify-between gap-4 rounded-xl bg-gray-50 px-4 py-3 dark:bg-gray-800/80">
-                                    <span className="inline-flex items-center gap-2"><CustomIcon name="clipboard-check" size="xs" tone="white" />Servicio</span>
-                                    <span className="font-medium text-gray-900 dark:text-white">{formData.serviceType}</span>
+                            <div className="space-y-2 text-xs sm:text-sm text-gray-600 dark:text-gray-300">
+                                <div className="flex flex-col gap-1 rounded-xl bg-gray-50 p-3 dark:bg-gray-800/80 sm:flex-row sm:items-center sm:justify-between sm:px-4 sm:py-3">
+                                    <span className="inline-flex items-center gap-2 font-medium text-gray-500 dark:text-gray-400">
+                                        <CustomIcon name="clipboard-check" size="xs" tone="mist" />
+                                        Servicio
+                                    </span>
+                                    <span className="font-semibold text-gray-900 dark:text-white break-words sm:text-right">
+                                        {formData.serviceType}
+                                    </span>
                                 </div>
-                                <div className="flex items-center justify-between gap-4 rounded-xl bg-gray-50 px-4 py-3 dark:bg-gray-800/80">
-                                    <span className="inline-flex items-center gap-2"><CustomIcon name="map-pin" size="xs" tone="white" />Ubicación</span>
-                                    <span className="font-medium text-right text-gray-900 dark:text-white">
+                                <div className="flex flex-col gap-1 rounded-xl bg-gray-50 p-3 dark:bg-gray-800/80 sm:flex-row sm:items-center sm:justify-between sm:px-4 sm:py-3">
+                                    <span className="inline-flex items-center gap-2 font-medium text-gray-500 dark:text-gray-400">
+                                        <CustomIcon name="map-pin" size="xs" tone="mist" />
+                                        Ubicación
+                                    </span>
+                                    <span className="font-semibold text-gray-900 dark:text-white break-words sm:text-right">
                                         {formData.district || 'Distrito pendiente'}
                                     </span>
                                 </div>
-                                <div className="flex items-center justify-between gap-4 rounded-xl bg-gray-50 px-4 py-3 dark:bg-gray-800/80">
-                                    <span className="inline-flex items-center gap-2"><CustomIcon name="house" size="xs" tone="white" />Inmueble</span>
-                                    <span className="font-medium text-right text-gray-900 dark:text-white">
+                                <div className="flex flex-col gap-1 rounded-xl bg-gray-50 p-3 dark:bg-gray-800/80 sm:flex-row sm:items-center sm:justify-between sm:px-4 sm:py-3">
+                                    <span className="inline-flex items-center gap-2 font-medium text-gray-500 dark:text-gray-400">
+                                        <CustomIcon name="house" size="xs" tone="mist" />
+                                        Inmueble
+                                    </span>
+                                    <span className="font-semibold text-gray-900 dark:text-white break-words sm:text-right">
                                         {formData.propertyType} {formData.apartmentNumber || '--'}
                                     </span>
                                 </div>
