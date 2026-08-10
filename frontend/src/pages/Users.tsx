@@ -34,11 +34,11 @@ const roleLabels: Record<UserRole, string> = {
     inspector: 'Inspector',
 };
 
-const roleBadgeColors: Record<UserRole, string> = {
-    admin: 'badge-danger',
-    supervisor: 'badge-warning',
-    arquitecto: 'badge-info',
-    inspector: 'badge-success',
+const roleBadgeStyles: Record<UserRole, string> = {
+    admin: 'bg-rose-500/10 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300 border border-rose-500/20',
+    supervisor: 'bg-amber-500/10 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300 border border-amber-500/20',
+    arquitecto: 'bg-blue-500/10 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300 border border-blue-500/20',
+    inspector: 'bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300 border border-emerald-500/20',
 };
 
 export const Users = () => {
@@ -142,26 +142,8 @@ export const Users = () => {
             return;
         }
 
-        if (phone) {
-            const phoneValidation = validatePhone(phone);
-            if (!phoneValidation.isValid) {
-                toast.error(phoneValidation.error || 'Teléfono inválido');
-                return;
-            }
-        }
-
-        if (!form.role) {
-            toast.error('Debes seleccionar un rol');
-            return;
-        }
-
-        if (!isEditing && !form.password.trim()) {
-            toast.error('Email y contraseña son obligatorios');
-            return;
-        }
-
-        if (!isEditing && form.password.trim().length < 8) {
-            toast.error('La contraseña debe tener al menos 8 caracteres');
+        if (phone && !validatePhone(phone)) {
+            toast.error('El teléfono debe tener 9 dígitos y empezar con 9');
             return;
         }
 
@@ -169,33 +151,42 @@ export const Users = () => {
 
         try {
             if (isEditing && editingUser) {
-                const payload: UpdateUserDto = {
+                const updatePayload: UpdateUserDto = {
                     firstName,
                     lastName,
                     phone: phone || undefined,
                     role: form.role,
                 };
-
-                await userService.updateUser(editingUser.id, payload);
+                await userService.updateUser(editingUser.id, updatePayload);
                 toast.success('Usuario actualizado correctamente');
             } else {
-                const payload: CreateUserDto = {
-                    fullName,
+                if (!form.password) {
+                    toast.error('La contraseña es obligatoria para nuevos usuarios');
+                    setIsSubmitting(false);
+                    return;
+                }
+
+                if (form.password.length < 6) {
+                    toast.error('La contraseña debe tener al menos 6 caracteres');
+                    setIsSubmitting(false);
+                    return;
+                }
+
+                const createPayload: CreateUserDto = {
                     firstName,
                     lastName,
                     email,
+                    password: form.password,
                     phone: phone || undefined,
                     role: form.role,
-                    password: form.password.trim(),
                 };
-
-                await userService.createUser(payload);
+                await userService.createUser(createPayload);
                 toast.success('Usuario creado correctamente');
             }
 
             await loadUsers();
 
-            if (isEditing && editingUser?.id === user?.id) {
+            if (editingUser?.id === user?.id) {
                 await refreshProfile();
             }
 
@@ -302,51 +293,75 @@ export const Users = () => {
     }
 
     return (
-        <div className="space-y-6 pb-10 animate-in fade-in duration-300">
+        <div className="space-y-6 sm:space-y-8 pb-10 animate-in fade-in duration-300">
             <ConfirmDialog />
 
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            {/* Header */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Usuarios</h1>
-                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Gestiona las cuentas del sistema.</p>
+                    <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">Usuarios</h1>
+                    <p className="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400">Gestiona las cuentas y accesos del sistema.</p>
                 </div>
-                <button onClick={handleCreate} className={`btn flex items-center gap-2 ${isFormVisible ? 'btn-secondary' : 'btn-primary'}`}>
+                <button
+                    onClick={handleCreate}
+                    className={`btn flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-semibold ${
+                        isFormVisible ? 'btn-secondary' : 'btn-primary'
+                    }`}
+                >
                     <CustomIcon name={isFormVisible ? 'dots-three' : 'plus'} size="xs" tone={isFormVisible ? 'mist' : 'white'} />
                     {isFormVisible ? 'Cerrar' : 'Nuevo usuario'}
                 </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            {/* Metrics */}
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
                 {[
                     { label: 'Total', value: stats?.total ?? 0, color: 'text-gray-900 dark:text-white' },
                     { label: 'Activos', value: stats?.active ?? 0, color: 'text-emerald-600 dark:text-emerald-400' },
-                    { label: 'Admins', value: roleCounts.admin, color: 'text-red-600 dark:text-red-400' },
+                    { label: 'Admins', value: roleCounts.admin, color: 'text-rose-600 dark:text-rose-400' },
                     { label: 'Supervisores', value: roleCounts.supervisor, color: 'text-amber-600 dark:text-amber-400' },
                     { label: 'Arquitectos', value: roleCounts.arquitecto, color: 'text-blue-600 dark:text-blue-400' },
                     { label: 'Inspectores', value: roleCounts.inspector, color: 'text-emerald-600 dark:text-emerald-400' },
                 ].map((stat) => (
-                    <div key={stat.label} className="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-gray-900 sm:p-4">
-                        <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400">{stat.label}</p>
-                        <p className={`mt-1 text-xl font-bold ${stat.color}`}>{stat.value}</p>
+                    <div key={stat.label} className="rounded-2xl border border-gray-200 bg-white p-3.5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                        <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{stat.label}</p>
+                        <p className={`mt-1 text-xl font-extrabold ${stat.color}`}>{stat.value}</p>
                     </div>
                 ))}
             </div>
 
-            <div className="rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
-                <div className="border-b border-gray-100 px-5 py-3 dark:border-gray-800">
+            {/* User List Container */}
+            <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 shadow-sm overflow-hidden">
+                {/* Search & Filters */}
+                <div className="border-b border-gray-100 p-4 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30">
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                         <div className="relative">
-                            <CustomIcon name="search" size="xs" tone="mist" />
-                            <input value={search} onChange={(event) => setSearch(event.target.value)} className="input pl-9" placeholder="Buscar por nombre o email..." />
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2">
+                                <CustomIcon name="search" size="xs" tone="mist" />
+                            </span>
+                            <input
+                                value={search}
+                                onChange={(event) => setSearch(event.target.value)}
+                                className="input pl-9 text-xs sm:text-sm"
+                                placeholder="Buscar por nombre o email..."
+                            />
                         </div>
-                        <select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value as UserRole | '')} className="input">
+                        <select
+                            value={roleFilter}
+                            onChange={(event) => setRoleFilter(event.target.value as UserRole | '')}
+                            className="input text-xs sm:text-sm"
+                        >
                             <option value="">Todos los roles</option>
                             <option value="admin">Administrador</option>
                             <option value="supervisor">Supervisor</option>
                             <option value="arquitecto">Arquitecto</option>
                             <option value="inspector">Inspector</option>
                         </select>
-                        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as 'all' | 'active' | 'inactive')} className="input">
+                        <select
+                            value={statusFilter}
+                            onChange={(event) => setStatusFilter(event.target.value as 'all' | 'active' | 'inactive')}
+                            className="input text-xs sm:text-sm"
+                        >
                             <option value="all">Todos los estados</option>
                             <option value="active">Activos</option>
                             <option value="inactive">Inactivos</option>
@@ -354,47 +369,95 @@ export const Users = () => {
                     </div>
                 </div>
 
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead className="border-b border-gray-100 bg-gray-50 dark:border-gray-800 dark:bg-gray-800/50">
-                            <tr>
-                                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Usuario</th>
-                                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Rol</th>
-                                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Estado</th>
-                                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Teléfono</th>
-                                <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400">Acciones</th>
+                {/* Desktop Table View */}
+                <div className="hidden sm:block overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                        <thead>
+                            <tr className="border-b border-gray-100 bg-gray-50/80 dark:border-gray-800 dark:bg-gray-800/60 text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                                <th className="px-5 py-3.5">Usuario</th>
+                                <th className="px-5 py-3.5">Rol</th>
+                                <th className="px-5 py-3.5">Estado</th>
+                                <th className="px-5 py-3.5">Teléfono</th>
+                                <th className="px-5 py-3.5 text-right">Acciones</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                             {users.length === 0 ? (
-                                <tr><td colSpan={5} className="px-5 py-10 text-center text-sm text-gray-500">No se encontraron usuarios.</td></tr>
+                                <tr>
+                                    <td colSpan={5} className="px-5 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
+                                        No se encontraron usuarios.
+                                    </td>
+                                </tr>
                             ) : users.map((listedUser) => {
                                 const canTransferMaster = Boolean(user?.isMasterAdmin && !listedUser.isMasterAdmin && listedUser.isActive);
                                 return (
-                                    <tr key={listedUser.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                                        <td className="px-5 py-3">
+                                    <tr key={listedUser.id} className="transition-colors hover:bg-gray-50/80 dark:hover:bg-gray-800/50">
+                                        <td className="px-5 py-3.5">
                                             <div className="flex items-center gap-3">
-                                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#17324a] text-xs font-bold text-white">
+                                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#17324a] text-xs font-extrabold text-white shadow-sm">
                                                     {listedUser.fullName?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                                                 </div>
                                                 <div className="min-w-0">
                                                     <div className="flex items-center gap-2">
-                                                        <p className="text-sm font-medium text-gray-900 dark:text-white">{listedUser.fullName}</p>
-                                                        {listedUser.isMasterAdmin && <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">Master</span>}
+                                                        <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{listedUser.fullName}</p>
+                                                        {listedUser.isMasterAdmin && (
+                                                            <span className="rounded-lg bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-400">
+                                                                Master
+                                                            </span>
+                                                        )}
                                                     </div>
-                                                    <p className="text-xs text-gray-500 dark:text-gray-400">{listedUser.email}</p>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{listedUser.email}</p>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-5 py-3"><span className={`badge ${roleBadgeColors[listedUser.role]}`}>{roleLabels[listedUser.role]}</span></td>
-                                        <td className="px-5 py-3"><span className={`badge ${listedUser.isActive ? 'badge-success' : 'badge-danger'}`}>{listedUser.isActive ? 'Activo' : 'Inactivo'}</span></td>
-                                        <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-400">{listedUser.phone || '-'}</td>
-                                        <td className="px-5 py-3">
-                                            <div className="flex items-center justify-end gap-1">
-                                                {canTransferMaster && <button onClick={() => handleTransferMaster(listedUser)} className="rounded px-2 py-1 text-xs font-medium text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-900/20">Transferir</button>}
-                                                <button onClick={() => handleEdit(listedUser)} className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800"><CustomIcon name="pencil" size="xs" tone="mist" /></button>
-                                                <button onClick={() => handleToggleStatus(listedUser)} disabled={Boolean(listedUser.isMasterAdmin && listedUser.isActive)} className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:opacity-50 dark:hover:bg-gray-800"><CustomIcon name={listedUser.isActive ? 'x-circle' : 'check-circle'} size="xs" tone={listedUser.isActive ? 'rose' : 'sage'} /></button>
-                                                <button onClick={() => handleDelete(listedUser)} disabled={Boolean(listedUser.isMasterAdmin)} className="rounded p-1.5 text-red-400 hover:bg-red-50 disabled:opacity-50 dark:hover:bg-red-900/20"><CustomIcon name="trash" size="xs" tone="rose" /></button>
+                                        <td className="px-5 py-3.5">
+                                            <span className={`inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-semibold ${roleBadgeStyles[listedUser.role] || roleBadgeStyles.inspector}`}>
+                                                {roleLabels[listedUser.role] || listedUser.role}
+                                            </span>
+                                        </td>
+                                        <td className="px-5 py-3.5">
+                                            <span className={`inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-semibold ${
+                                                listedUser.isActive
+                                                    ? 'bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300 border border-emerald-500/20'
+                                                    : 'bg-rose-500/10 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300 border border-rose-500/20'
+                                            }`}>
+                                                {listedUser.isActive ? 'Activo' : 'Inactivo'}
+                                            </span>
+                                        </td>
+                                        <td className="px-5 py-3.5 text-xs text-gray-600 dark:text-gray-300">{listedUser.phone || '-'}</td>
+                                        <td className="px-5 py-3.5 text-right">
+                                            <div className="flex items-center justify-end gap-1.5">
+                                                {canTransferMaster && (
+                                                    <button
+                                                        onClick={() => handleTransferMaster(listedUser)}
+                                                        className="rounded-lg px-2.5 py-1 text-xs font-bold text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-900/20 transition-colors"
+                                                    >
+                                                        Transferir
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={() => handleEdit(listedUser)}
+                                                    className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white transition-colors"
+                                                    title="Editar"
+                                                >
+                                                    <CustomIcon name="pencil" size="xs" tone="mist" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleToggleStatus(listedUser)}
+                                                    disabled={Boolean(listedUser.isMasterAdmin && listedUser.isActive)}
+                                                    className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-40 dark:hover:bg-gray-800 dark:hover:text-white transition-colors"
+                                                    title={listedUser.isActive ? 'Desactivar' : 'Activar'}
+                                                >
+                                                    <CustomIcon name={listedUser.isActive ? 'x-circle' : 'check-circle'} size="xs" tone={listedUser.isActive ? 'rose' : 'sage'} />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(listedUser)}
+                                                    disabled={Boolean(listedUser.isMasterAdmin)}
+                                                    className="rounded-lg p-1.5 text-rose-500 hover:bg-rose-50 disabled:opacity-40 dark:hover:bg-rose-900/20 transition-colors"
+                                                    title="Eliminar"
+                                                >
+                                                    <CustomIcon name="trash" size="xs" tone="rose" />
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -404,20 +467,74 @@ export const Users = () => {
                     </table>
                 </div>
 
+                {/* Mobile Cards View */}
+                <div className="sm:hidden divide-y divide-gray-100 dark:divide-gray-800">
+                    {users.length === 0 ? (
+                        <div className="p-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                            No se encontraron usuarios.
+                        </div>
+                    ) : users.map((listedUser) => {
+                        const canTransferMaster = Boolean(user?.isMasterAdmin && !listedUser.isMasterAdmin && listedUser.isActive);
+                        return (
+                            <div key={listedUser.id} className="p-4 space-y-3">
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#17324a] text-xs font-extrabold text-white shadow-sm">
+                                            {listedUser.fullName?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{listedUser.fullName}</p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{listedUser.email}</p>
+                                        </div>
+                                    </div>
+                                    <span className={`inline-flex items-center rounded-lg px-2 py-0.5 text-[10px] font-bold ${
+                                        listedUser.isActive
+                                            ? 'bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
+                                            : 'bg-rose-500/10 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300'
+                                    }`}>
+                                        {listedUser.isActive ? 'Activo' : 'Inactivo'}
+                                    </span>
+                                </div>
+
+                                <div className="flex items-center justify-between pt-1 border-t border-gray-50 dark:border-gray-800/60">
+                                    <span className={`inline-flex items-center rounded-lg px-2.5 py-0.5 text-xs font-semibold ${roleBadgeStyles[listedUser.role] || roleBadgeStyles.inspector}`}>
+                                        {roleLabels[listedUser.role] || listedUser.role}
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        {canTransferMaster && (
+                                            <button onClick={() => handleTransferMaster(listedUser)} className="text-xs font-bold text-amber-600 dark:text-amber-400">
+                                                Transferir
+                                            </button>
+                                        )}
+                                        <button onClick={() => handleEdit(listedUser)} className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-white">
+                                            <CustomIcon name="pencil" size="xs" tone="mist" />
+                                        </button>
+                                        <button onClick={() => handleDelete(listedUser)} disabled={Boolean(listedUser.isMasterAdmin)} className="p-1 text-rose-500">
+                                            <CustomIcon name="trash" size="xs" tone="rose" />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+
+                {/* Pagination */}
                 {totalPages > 1 && (
-                    <div className="flex items-center justify-between border-t border-gray-100 px-5 py-3 dark:border-gray-800">
-                        <p className="text-xs text-gray-500">Página {page} de {totalPages}</p>
+                    <div className="flex items-center justify-between border-t border-gray-100 p-4 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Página {page} de {totalPages}</p>
                         <div className="flex gap-2">
-                            <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="btn btn-secondary text-xs">Anterior</button>
-                            <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="btn btn-secondary text-xs">Siguiente</button>
+                            <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="btn btn-secondary py-1.5 px-3 text-xs">Anterior</button>
+                            <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="btn btn-secondary py-1.5 px-3 text-xs">Siguiente</button>
                         </div>
                     </div>
                 )}
             </div>
 
+            {/* Modal Form */}
             {isFormVisible && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={(e) => { if (e.target === e.currentTarget) resetForm(); }}>
-                    <div className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-800 dark:bg-gray-900">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={(e) => { if (e.target === e.currentTarget) resetForm(); }}>
+                    <div className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-gray-800 dark:bg-gray-900">
                         <h2 className="text-lg font-bold text-gray-900 dark:text-white">{isEditing ? 'Editar usuario' : 'Crear usuario'}</h2>
                         <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
                             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
