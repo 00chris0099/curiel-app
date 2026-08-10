@@ -51,23 +51,28 @@ export interface UserStats {
 }
 
 export type NotificationType =
+    | 'inspection_created'
     | 'inspection_assigned'
     | 'inspection_started'
     | 'inspection_ready_for_review'
     | 'inspection_returned_for_correction'
+    | 'inspection_approved'
     | 'inspection_finalized'
     | 'inspection_cancelled'
     | 'inspection_rescheduled'
     | 'inspection_overdue'
     | 'inspection_reminder_30min'
     | 'inspection_not_started'
+    | 'client_created'
+    | 'client_updated'
+    | 'client_deleted'
     | 'alert_created'
     | 'evaluation_received'
     | 'sync_failed'
     | 'offline_changes_synced';
 
 export type NotificationPriority = 'low' | 'normal' | 'high' | 'urgent';
-export type NotificationCategory = 'inspection' | 'evaluation' | 'alert' | 'system';
+export type NotificationCategory = 'inspection' | 'client' | 'evaluation' | 'alert' | 'system';
 
 export interface Notification {
     id: string;

@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { getApiErrorMessage } from '../api/axios';
 import notificationService from '../services/notification.service';
 import type { Notification } from '../types';
-import { CustomIcon } from './CustomIcon';
+import { CustomIcon, type CustomIconName } from './CustomIcon';
 import { safeArray } from '../utils/offlineDb';
 
 interface PanelPosition {
@@ -163,6 +163,17 @@ export const NotificationDropdown = () => {
             );
         }
 
+        const getIcon = (item: Notification): CustomIconName => {
+            if (item.category === 'client' || item.type?.startsWith('client_')) return 'users';
+            if (item.type === 'inspection_assigned') return 'user-gear';
+            if (item.type === 'inspection_started') return 'play';
+            if (item.type === 'inspection_rescheduled') return 'calendar';
+            if (item.type === 'inspection_cancelled') return 'x-circle';
+            if (item.type === 'inspection_approved') return 'seal-check';
+            if (item.category === 'inspection' || item.type?.startsWith('inspection_')) return 'clipboard-check';
+            return item.readAt ? 'check-circle' : 'bell';
+        };
+
         return (
             <div className="py-1">
                 {latestNotifications.map((notification) => (
@@ -170,17 +181,17 @@ export const NotificationDropdown = () => {
                         key={notification.id}
                         type="button"
                         onClick={() => handleMarkAsRead(notification)}
-                        className={`flex w-full items-start gap-2.5 px-4 py-3 text-left transition-colors hover:bg-slate-50 sm:mx-2 sm:my-0.5 sm:w-[calc(100%-16px)] sm:rounded-2xl sm:px-5 sm:py-3.5 dark:hover:bg-slate-800 ${notification.readAt ? '' : 'bg-[#f5efe1]/50 dark:bg-amber-900/15'}`}
+                        className={`flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 sm:mx-2 sm:my-0.5 sm:w-[calc(100%-16px)] sm:rounded-2xl sm:px-4 sm:py-3 dark:hover:bg-slate-800 ${notification.readAt ? '' : 'bg-[#17324a]/5 dark:bg-blue-900/15'}`}
                     >
                         <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${notification.readAt ? 'bg-slate-100 dark:bg-slate-800' : 'bg-[#17324a]'}`}>
-                            <CustomIcon name={notification.readAt ? 'clipboard-check' : 'bell'} size="xs" tone={notification.readAt ? 'mist' : 'cream'} variant="plain" />
+                            <CustomIcon name={getIcon(notification)} size="xs" tone={notification.readAt ? 'mist' : 'white'} />
                         </div>
                         <div className="min-w-0 flex-1">
-                            <p className={`text-sm leading-snug ${notification.readAt ? 'font-medium text-slate-600 dark:text-slate-400' : 'font-semibold text-slate-900 dark:text-slate-100'}`}>{notification.title}</p>
-                            <p className="mt-0.5 line-clamp-1 text-xs text-slate-500 dark:text-slate-500">{notification.message}</p>
-                            <p className="mt-0.5 text-[10px] text-slate-400 dark:text-slate-600">{new Date(notification.createdAt).toLocaleString('es-PE')}</p>
+                            <p className={`text-sm leading-snug ${notification.readAt ? 'font-medium text-slate-600 dark:text-slate-400' : 'font-bold text-slate-900 dark:text-slate-100'}`}>{notification.title}</p>
+                            <p className="mt-0.5 line-clamp-1 text-xs text-slate-500 dark:text-slate-400">{notification.message}</p>
+                            <p className="mt-0.5 text-[10px] text-slate-400 dark:text-slate-500">{new Date(notification.createdAt).toLocaleString('es-PE')}</p>
                         </div>
-                        {!notification.readAt && <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-[#17324a] dark:bg-primary-500" />}
+                        {!notification.readAt && <span className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-[#17324a] dark:bg-blue-500" />}
                     </button>
                 ))}
             </div>

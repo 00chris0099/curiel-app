@@ -1,5 +1,6 @@
 const { prisma } = require('../lib/databases');
 const { AppError } = require('../middlewares/errorHandler');
+const notificationService = require('./notificationService');
 
 class ClientService {
     async getAllClients(filters = {}) {
@@ -93,7 +94,7 @@ class ClientService {
             throw new AppError('Ya existe un cliente con ese email', 409, 'DUPLICATE_EMAIL');
         }
 
-        return prisma.admin.client.create({
+        const newClient = await prisma.admin.client.create({
             data: {
                 documentType,
                 documentNumber: normalizedDoc,
@@ -106,6 +107,17 @@ class ClientService {
                 isProtected: isProtected || false
             }
         });
+
+        const clientName = newClient.razonSocial || `${newClient.firstName || ''} ${newClient.lastName || ''}`.trim() || 'Cliente';
+        await notificationService.createAndNotifyForRoles(['admin', 'supervisor'], {
+            type: 'client_created',
+            title: 'Nuevo Cliente Creado',
+            message: `Se ha registrado el cliente "${clientName}" (${newClient.documentType.toUpperCase()}: ${newClient.documentNumber}).`,
+            category: 'client',
+            priority: 'normal'
+        });
+
+        return newClient;
     }
 
     async updateClient(clientId, data) {
