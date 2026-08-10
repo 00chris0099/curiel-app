@@ -113,6 +113,7 @@ export const Sidebar = ({ isOpen, onClose, collapsed = false, onToggleCollapse }
                                         <NavLink
                                             key={item.name}
                                             to={item.href}
+                                            end={item.href === '/supervisor' || item.href === '/dashboard'}
                                             onClick={() => onClose()}
                                             title={isCollapsed ? item.name : undefined}
                                             className={({ isActive }) =>

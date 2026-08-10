@@ -7,6 +7,7 @@ export interface AddressMapPickerProps {
     longitude?: number | null;
     onAddressChange: (address: string) => void;
     onLocationChange?: (lat: number, lng: number) => void;
+    onDistrictDetected?: (district: string) => void;
     label?: string;
     placeholder?: string;
     required?: boolean;
@@ -18,7 +19,45 @@ interface NominatimResult {
     display_name: string;
     lat: string;
     lon: string;
+    address?: Record<string, string>;
 }
+
+const extractDistrictFromAddress = (addressObj: any, displayName: string): string | null => {
+    const knownDistricts = [
+        'Miraflores', 'San Isidro', 'Santiago de Surco', 'Surco', 'San Borja', 'La Molina',
+        'Jesús María', 'Jesus Maria', 'Magdalena del Mar', 'Magdalena', 'Pueblo Libre', 'Lince',
+        'Barranco', 'Chorrillos', 'San Miguel', 'Cercado de Lima', 'Lima', 'Ate', 'Ate Vitarte',
+        'Santa Anita', 'San Juan de Lurigancho', 'San Juan de Miraflores', 'Villa El Salvador',
+        'Villa María del Triunfo', 'Comas', 'Los Olivos', 'Independencia', 'San Martín de Porres',
+        'Rímac', 'Breña', 'La Victoria', 'El Agustino', 'Callao', 'Bellavista', 'La Perla'
+    ];
+
+    const fieldsToSearch = [
+        addressObj?.suburb,
+        addressObj?.city_district,
+        addressObj?.district,
+        addressObj?.town,
+        addressObj?.quarter,
+        addressObj?.neighbourhood,
+        addressObj?.city,
+        displayName
+    ];
+
+    for (const field of fieldsToSearch) {
+        if (!field) continue;
+        const normalizedField = String(field).toLowerCase();
+        for (const dist of knownDistricts) {
+            if (normalizedField.includes(dist.toLowerCase())) {
+                if (dist === 'Surco' || dist === 'Santiago de Surco') return 'Santiago de Surco';
+                if (dist === 'Magdalena del Mar' || dist === 'Magdalena') return 'Magdalena';
+                if (dist === 'Jesus Maria' || dist === 'Jesús María') return 'Jesús María';
+                if (dist === 'Lima' || dist === 'Cercado de Lima') return 'Cercado de Lima';
+                return dist;
+            }
+        }
+    }
+    return null;
+};
 
 export const AddressMapPicker: React.FC<AddressMapPickerProps> = ({
     address,
@@ -26,6 +65,7 @@ export const AddressMapPicker: React.FC<AddressMapPickerProps> = ({
     longitude,
     onAddressChange,
     onLocationChange,
+    onDistrictDetected,
     label = 'Dirección',
     placeholder = 'Ingresa una dirección o selecciona en el mapa...',
     required = false,
@@ -98,6 +138,14 @@ export const AddressMapPicker: React.FC<AddressMapPickerProps> = ({
                     const formatted = data.display_name;
                     setInputValue(formatted);
                     onAddressChange(formatted);
+
+                    // Auto-detect district if handler passed
+                    if (onDistrictDetected) {
+                        const detected = extractDistrictFromAddress(data.address, formatted);
+                        if (detected) {
+                            onDistrictDetected(detected);
+                        }
+                    }
                 }
             }
         } catch (error) {
@@ -105,7 +153,7 @@ export const AddressMapPicker: React.FC<AddressMapPickerProps> = ({
         } finally {
             setIsReverseGeocoding(false);
         }
-    }, [onAddressChange]);
+    }, [onAddressChange, onDistrictDetected]);
 
     // Initialize or update Map
     useEffect(() => {

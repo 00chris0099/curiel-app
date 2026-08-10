@@ -437,8 +437,8 @@ export const Clients = () => {
                                     <tr key={client.id} className="transition-colors hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
-                                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#17324a]/10">
-                                                    <CustomIcon name="users" size="sm" tone="cream" />
+                                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#17324a] text-white shadow-sm">
+                                                    <CustomIcon name="users" size="xs" tone="white" />
                                                 </div>
                                                 <div>
                                                     <p className="font-semibold text-slate-900 dark:text-slate-100">

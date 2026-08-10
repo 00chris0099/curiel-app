@@ -736,6 +736,11 @@ export const CreateInspection = () => {
                                             <AddressMapPicker
                                                 address={formData.exactAddress}
                                                 onAddressChange={(newAddr) => setFormData((prev) => ({ ...prev, exactAddress: newAddr }))}
+                                                onDistrictDetected={(detectedDist) => {
+                                                    if (detectedDist) {
+                                                        setFormData((prev) => ({ ...prev, district: detectedDist as any }));
+                                                    }
+                                                }}
                                                 label="Dirección exacta"
                                                 placeholder="Buscar dirección en el mapa o ingresar manualmente..."
                                                 required
