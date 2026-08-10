@@ -66,14 +66,29 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                     ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
                 `}
             >
-                {/* Logo */}
-                <div className={`flex h-16 items-center gap-3 border-b border-gray-100 px-4 dark:border-gray-800 ${collapsed ? 'justify-center' : ''}`}>
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#17324a]">
-                        <CustomIcon name="buildings" size="xs" tone="white" />
-                    </div>
-                    {!collapsed && (
-                        <span className="text-sm font-bold text-gray-900 dark:text-white">CURIEL</span>
-                    )}
+                {/* Logo & Desktop Collapse Trigger */}
+                <div className={`flex h-16 items-center border-b border-gray-100 px-3 dark:border-gray-800 ${collapsed ? 'justify-center' : 'justify-between'}`}>
+                    <button
+                        type="button"
+                        onClick={() => setCollapsed(!collapsed)}
+                        title={collapsed ? 'Expandir menú' : 'Colapsar menú'}
+                        className={`group flex items-center gap-3 rounded-xl p-1.5 text-left transition-all hover:bg-gray-100 dark:hover:bg-gray-800 ${collapsed ? 'w-auto justify-center' : 'w-full'}`}
+                    >
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#17324a] shadow-sm transition-transform group-hover:scale-105">
+                            <CustomIcon name="buildings" size="xs" tone="white" />
+                        </div>
+                        {!collapsed && (
+                            <div className="flex flex-1 items-center justify-between min-w-0">
+                                <div>
+                                    <span className="block text-sm font-extrabold tracking-wider text-[#17324a] dark:text-white">CURIEL</span>
+                                    <span className="block text-[9px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Inspecciones</span>
+                                </div>
+                                <span className="text-gray-400 group-hover:text-gray-600 dark:text-gray-500 dark:group-hover:text-gray-300">
+                                    <CustomIcon name={collapsed ? 'arrow-right' : 'arrow-left'} size="xs" tone="mist" />
+                                </span>
+                            </div>
+                        )}
+                    </button>
                 </div>
 
                 {/* Navigation */}
@@ -113,18 +128,6 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                         );
                     })}
                 </nav>
-
-                {/* Collapse toggle (desktop only) */}
-                <div className="hidden border-t border-gray-100 p-3 dark:border-gray-800 lg:block">
-                    <button
-                        type="button"
-                        onClick={() => setCollapsed(!collapsed)}
-                        className="flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800"
-                    >
-                        <CustomIcon name={collapsed ? 'arrow-right' : 'arrow-left'} size="xs" tone="mist" />
-                        {!collapsed && <span>Colapsar</span>}
-                    </button>
-                </div>
             </aside>
         </>
     );

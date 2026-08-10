@@ -240,8 +240,21 @@
     display: block;
   }
 
+  /* Icon filtering for light & dark backgrounds */
+  .icon-tone-white .custom-icon-image,
+  .btn-primary .custom-icon-image,
+  .bg-primary-600 .custom-icon-image,
+  .bg-slate-900 .custom-icon-image,
+  .bg-slate-800 .custom-icon-image,
+  .bg-blue-600 .custom-icon-image,
+  [class*="bg-[#17324a]"] .custom-icon-image,
+  [data-dark-bg] .custom-icon-image {
+    filter: brightness(0) invert(1) !important;
+    opacity: 1 !important;
+  }
+
   .dark .custom-icon-image {
-    filter: brightness(0) invert(1) opacity(0.9);
+    filter: brightness(0) invert(1) opacity(0.95);
   }
 
   .dark .custom-icon-tone-cream .custom-icon-image,
@@ -251,7 +264,7 @@
   .dark .custom-icon-tone-rose .custom-icon-image,
   .dark .custom-icon-tone-amber .custom-icon-image,
   .dark .custom-icon-tone-white .custom-icon-image {
-    filter: brightness(0) invert(1) opacity(0.9);
+    filter: brightness(0) invert(1) opacity(0.95);
   }
 
   .icon-tone-cream,
