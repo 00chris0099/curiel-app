@@ -14,6 +14,15 @@ import { getInspectionLocationLabel, getInspectionServiceLabel, getInspectorName
 import { saveCachedInspections, getCachedInspections } from '../utils/offlineDb';
 import { inspectionStatusBadgeClasses, inspectionStatusLabels } from '../utils/inspectionStatus';
 
+const statusToneMap: Record<InspectionStatus, 'amber' | 'blue' | 'sage' | 'rose' | 'mist'> = {
+    pendiente: 'amber',
+    en_proceso: 'blue',
+    lista_revision: 'blue',
+    finalizada: 'sage',
+    cancelada: 'rose',
+    reprogramada: 'mist',
+};
+
 export const Inspections = () => {
     const navigate = useNavigate();
     const { user } = useAuthStore();
@@ -186,7 +195,7 @@ export const Inspections = () => {
                                         </p>
                                     </div>
                                     <span className={`badge shrink-0 sm:hidden ${inspectionStatusBadgeClasses[inspection.status]}`}>
-                                        <CustomIcon name={inspectionStatusIconMap[inspection.status]} size="xs" tone="white" />
+                                        <CustomIcon name={inspectionStatusIconMap[inspection.status]} size="xs" tone={statusToneMap[inspection.status] || 'mist'} />
                                         {inspectionStatusLabels[inspection.status]}
                                     </span>
 
@@ -199,7 +208,7 @@ export const Inspections = () => {
                                                 <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">{new Date(inspection.scheduledDate).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
                                             </div>
                                             <span className={`badge shrink-0 ${inspectionStatusBadgeClasses[inspection.status]}`}>
-                                                <CustomIcon name={inspectionStatusIconMap[inspection.status]} size="xs" tone="white" />
+                                                <CustomIcon name={inspectionStatusIconMap[inspection.status]} size="xs" tone={statusToneMap[inspection.status] || 'mist'} />
                                                 {inspectionStatusLabels[inspection.status]}
                                             </span>
                                         </div>

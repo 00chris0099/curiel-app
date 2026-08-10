@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { getApiErrorMessage } from '../api/axios';
@@ -27,7 +27,7 @@ import {
     mergeExecutionWithQueue,
     saveExecutionSnapshot,
 } from '../utils/offlineDb';
-import { getAreaCategoryIcon, observationSeverityIconMap, photoTypeIconMap } from '../utils/iconSystem';
+import { getAreaCategoryIcon, observationSeverityIconMap } from '../utils/iconSystem';
 import { canManageExecutionContent } from '../utils/inspectionPermissions';
 
 const areaStatusOptions: ExecutionAreaStatus[] = ['pendiente', 'en_revision', 'observado', 'aprobado'];
@@ -92,6 +92,8 @@ export const InspectionAreaDetail = () => {
     const [areaPhotoForm, setAreaPhotoForm] = useState<PhotoFormState>(emptyAreaPhotoForm);
     const [editingObservationId, setEditingObservationId] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+    const areaGalleryInputRef = useRef<HTMLInputElement>(null);
+    const areaCameraInputRef = useRef<HTMLInputElement>(null);
 
     const {
         isOnline,
@@ -330,18 +332,13 @@ export const InspectionAreaDetail = () => {
         }
     };
 
-    const handlePhotoSubmit = async (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        if (!id || !areaId) return;
-
-        if (!areaPhotoForm.file) {
-            toast.error('Debes seleccionar una imagen');
-            return;
-        }
+    const handleAreaFileSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file || !id || !areaId) return;
 
         try {
             const clientId = createLocalId('local-photo');
-            const previewUrl = await fileToDataUrl(areaPhotoForm.file);
+            const previewUrl = await fileToDataUrl(file);
 
             await addSyncQueueItem({
                 inspectionId: id,
@@ -353,15 +350,17 @@ export const InspectionAreaDetail = () => {
                     caption: areaPhotoForm.caption || undefined,
                     areaId: areaId,
                 },
-                file: areaPhotoForm.file,
-                fileName: areaPhotoForm.file.name,
-                fileType: areaPhotoForm.file.type,
+                file,
+                fileName: file.name,
+                fileType: file.type,
                 previewUrl,
             });
 
             await refreshPendingCount();
             await loadExecution();
             setAreaPhotoForm(emptyAreaPhotoForm);
+
+            if (event.target) event.target.value = '';
 
             if (isOnline) {
                 await syncNow();
@@ -654,47 +653,73 @@ export const InspectionAreaDetail = () => {
             {/* Photos */}
             <div className="card">
                 <h2 className="text-lg font-semibold mb-4">Fotos del área</h2>
-                <form onSubmit={handlePhotoSubmit} className="mb-4">
+                <div className="mb-6 space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium mb-2">Tipo</label>
+                            <label className="block text-sm font-medium mb-2">Tipo de foto</label>
                             <select
                                 value={areaPhotoForm.type}
                                 onChange={(e) => setAreaPhotoForm(prev => ({ ...prev, type: e.target.value as ExecutionPhotoType }))}
                                 className="input"
                             >
-                                                        {areaPhotoTypeOptions.map(opt => (
-                                                            <option key={opt} value={opt}>{opt}</option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-2">Foto</label>
-                            <input
-                                type="file"
-                                accept="image/*"
-                                onChange={(e) => setAreaPhotoForm(prev => ({ ...prev, file: e.target.files?.[0] || null }))}
-                                className="input"
-                            />
+                                {areaPhotoTypeOptions.map(opt => (
+                                    <option key={opt} value={opt}>{opt}</option>
+                                ))}
+                            </select>
                         </div>
-                        <div className="md:col-span-2">
-                            <label className="block text-sm font-medium mb-2">Descripción</label>
+                        <div>
+                            <label className="block text-sm font-medium mb-2">Descripción (opcional)</label>
                             <input
                                 type="text"
                                 value={areaPhotoForm.caption}
                                 onChange={(e) => setAreaPhotoForm(prev => ({ ...prev, caption: e.target.value }))}
                                 className="input"
-                                placeholder="Descripción opcional"
+                                placeholder="Referencia o nota de la foto..."
                             />
                         </div>
                     </div>
+
                     {canEditExecutionContent && (
-                        <button type="submit" className="btn btn-secondary mt-3 flex items-center gap-2">
-                            <CustomIcon name={photoTypeIconMap[areaPhotoForm.type] ?? 'camera'} size="xs" tone="cream" />
-                            Subir foto
-                        </button>
+                        <div>
+                            {/* Hidden file inputs */}
+                            <input
+                                ref={areaGalleryInputRef}
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={handleAreaFileSelected}
+                            />
+                            <input
+                                ref={areaCameraInputRef}
+                                type="file"
+                                accept="image/*"
+                                capture="environment"
+                                className="hidden"
+                                onChange={handleAreaFileSelected}
+                            />
+
+                            {/* Action buttons */}
+                            <div className="flex flex-col gap-2 sm:flex-row">
+                                <button
+                                    type="button"
+                                    onClick={() => areaGalleryInputRef.current?.click()}
+                                    className="btn btn-secondary flex-1 inline-flex items-center justify-center gap-2 py-2.5 text-xs font-semibold"
+                                >
+                                    <CustomIcon name="image" size="xs" tone="mist" />
+                                    Subir foto
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => areaCameraInputRef.current?.click()}
+                                    className="btn btn-primary flex-1 inline-flex items-center justify-center gap-2 py-2.5 text-xs font-semibold"
+                                >
+                                    <CustomIcon name="camera" size="xs" tone="white" />
+                                    Tomar foto
+                                </button>
+                            </div>
+                        </div>
                     )}
-                </form>
+                </div>
 
                 <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-3">
                     {areaPhotos.map((photo: any) => (

@@ -1,4 +1,4 @@
-import { memo, useState, type FormEvent } from 'react';
+import { memo, useRef, useState, type FormEvent, type ChangeEvent } from 'react';
 import { CustomIcon } from '../../components/CustomIcon';
 import type { InspectionExecutionData } from '../../types';
 import type { OfflineSyncItem } from '../../utils/offlineDb';
@@ -21,17 +21,21 @@ export const ModuleFotoPlano = memo(({
     onDeletePhoto,
 }: ModuleFotoPlanoProps) => {
     const [caption, setCaption] = useState('');
-    const [file, setFile] = useState<File | null>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
+    const galleryInputRef = useRef<HTMLInputElement>(null);
+    const cameraInputRef = useRef<HTMLInputElement>(null);
 
     const planoPhotos = photos.filter((p) => p.type === 'plano');
     const mainPhoto = planoPhotos[0] || null;
 
-    const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        onUploadPhoto(e, 'plano', caption, file);
+    const handleFileSelected = (e: ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const fakeEvent = { preventDefault: () => {} } as FormEvent<HTMLFormElement>;
+        onUploadPhoto(fakeEvent, 'plano', caption, file);
         setCaption('');
-        setFile(null);
+        if (e.target) e.target.value = '';
     };
 
     const handleDelete = async (photoId: string) => {
@@ -42,6 +46,8 @@ export const ModuleFotoPlano = memo(({
             setDeletingId(null);
         }
     };
+
+    const isUploading = busyAction === 'photo-plano';
 
     return (
         <div className="space-y-4">
@@ -54,7 +60,7 @@ export const ModuleFotoPlano = memo(({
                     />
                     <div className="flex items-center justify-between p-3">
                         <div>
-                            <p className="text-sm font-medium text-gray-900 dark:text-white">{mainPhoto.caption || 'Plano del departamento'}</p>
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">{mainPhoto.caption || 'Foto del plano'}</p>
                             <p className="text-xs text-gray-500 dark:text-gray-400">
                                 {getEntitySyncState('photo', mainPhoto.id) === 'pending' && 'Pendiente de sincronizar'}
                                 {getEntitySyncState('photo', mainPhoto.id) === 'failed' && 'Error al sincronizar'}
@@ -82,32 +88,55 @@ export const ModuleFotoPlano = memo(({
             )}
 
             {canEdit && (
-                <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row">
+                <div className="space-y-3">
                     <input
-                        className="input flex-1"
-                        placeholder="Descripción o referencia"
+                        type="text"
+                        className="input w-full"
+                        placeholder="Descripción o observaciones del plano..."
                         value={caption}
                         onChange={(e) => setCaption(e.target.value)}
                     />
+
+                    {/* Hidden inputs */}
                     <input
+                        ref={galleryInputRef}
                         type="file"
                         accept="image/*"
-                        className="input px-3 py-2 sm:w-auto"
-                        onChange={(e) => setFile(e.target.files?.[0] || null)}
+                        className="hidden"
+                        onChange={handleFileSelected}
                     />
-                    <button
-                        type="submit"
-                        className="btn btn-secondary flex items-center justify-center gap-2"
-                        disabled={busyAction === 'photo-plano' || !file}
-                    >
-                        {busyAction === 'photo-plano' ? (
-                            <CustomIcon name="sync" size="xs" tone="cream" spin />
-                        ) : (
-                            <CustomIcon name="ruler" size="xs" tone="cream" />
-                        )}
-                        Subir foto
-                    </button>
-                </form>
+                    <input
+                        ref={cameraInputRef}
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        className="hidden"
+                        onChange={handleFileSelected}
+                    />
+
+                    {/* Action buttons */}
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                        <button
+                            type="button"
+                            onClick={() => galleryInputRef.current?.click()}
+                            disabled={isUploading}
+                            className="btn btn-secondary flex-1 inline-flex items-center justify-center gap-2 py-2.5 text-xs font-semibold"
+                        >
+                            <CustomIcon name={isUploading ? 'sync' : 'image'} size="xs" tone="mist" spin={isUploading} />
+                            Subir foto
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => cameraInputRef.current?.click()}
+                            disabled={isUploading}
+                            className="btn btn-primary flex-1 inline-flex items-center justify-center gap-2 py-2.5 text-xs font-semibold"
+                        >
+                            <CustomIcon name={isUploading ? 'sync' : 'camera'} size="xs" tone="white" spin={isUploading} />
+                            Tomar foto
+                        </button>
+                    </div>
+                </div>
             )}
         </div>
     );

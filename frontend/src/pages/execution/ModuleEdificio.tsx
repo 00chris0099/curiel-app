@@ -1,4 +1,4 @@
-import { memo, useState, type FormEvent } from 'react';
+import { memo, useRef, useState, type FormEvent, type ChangeEvent } from 'react';
 import { CustomIcon } from '../../components/CustomIcon';
 import type { InspectionExecutionData } from '../../types';
 import type { OfflineSyncItem } from '../../utils/offlineDb';
@@ -21,17 +21,22 @@ export const ModuleEdificio = memo(({
     onDeletePhoto,
 }: ModuleEdificioProps) => {
     const [caption, setCaption] = useState('');
-    const [file, setFile] = useState<File | null>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
+    const galleryInputRef = useRef<HTMLInputElement>(null);
+    const cameraInputRef = useRef<HTMLInputElement>(null);
 
     const edificioPhotos = photos.filter((p) => p.type === 'edificio');
     const mainPhoto = edificioPhotos[0] || null;
 
-    const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        onUploadPhoto(e, 'edificio', caption, file);
+    const handleFileSelected = (e: ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Fake form event for parent compatibility
+        const fakeEvent = { preventDefault: () => {} } as FormEvent<HTMLFormElement>;
+        onUploadPhoto(fakeEvent, 'edificio', caption, file);
         setCaption('');
-        setFile(null);
+        if (e.target) e.target.value = '';
     };
 
     const handleDelete = async (photoId: string) => {
@@ -42,6 +47,8 @@ export const ModuleEdificio = memo(({
             setDeletingId(null);
         }
     };
+
+    const isUploading = busyAction === 'photo-edificio';
 
     return (
         <div className="space-y-4">
@@ -82,32 +89,55 @@ export const ModuleEdificio = memo(({
             )}
 
             {canEdit && (
-                <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row">
+                <div className="space-y-3">
                     <input
-                        className="input flex-1"
-                        placeholder="Descripción o referencia"
+                        type="text"
+                        className="input w-full"
+                        placeholder="Descripción u observaciones del edificio..."
                         value={caption}
                         onChange={(e) => setCaption(e.target.value)}
                     />
+
+                    {/* Hidden inputs */}
                     <input
+                        ref={galleryInputRef}
                         type="file"
                         accept="image/*"
-                        className="input px-3 py-2 sm:w-auto"
-                        onChange={(e) => setFile(e.target.files?.[0] || null)}
+                        className="hidden"
+                        onChange={handleFileSelected}
                     />
-                    <button
-                        type="submit"
-                        className="btn btn-secondary flex items-center justify-center gap-2"
-                        disabled={busyAction === 'photo-edificio' || !file}
-                    >
-                        {busyAction === 'photo-edificio' ? (
-                            <CustomIcon name="sync" size="xs" tone="cream" spin />
-                        ) : (
-                            <CustomIcon name="buildings" size="xs" tone="cream" />
-                        )}
-                        Subir foto
-                    </button>
-                </form>
+                    <input
+                        ref={cameraInputRef}
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        className="hidden"
+                        onChange={handleFileSelected}
+                    />
+
+                    {/* Action buttons */}
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                        <button
+                            type="button"
+                            onClick={() => galleryInputRef.current?.click()}
+                            disabled={isUploading}
+                            className="btn btn-secondary flex-1 inline-flex items-center justify-center gap-2 py-2.5 text-xs font-semibold"
+                        >
+                            <CustomIcon name={isUploading ? 'sync' : 'image'} size="xs" tone="mist" spin={isUploading} />
+                            Subir foto
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => cameraInputRef.current?.click()}
+                            disabled={isUploading}
+                            className="btn btn-primary flex-1 inline-flex items-center justify-center gap-2 py-2.5 text-xs font-semibold"
+                        >
+                            <CustomIcon name={isUploading ? 'sync' : 'camera'} size="xs" tone="white" spin={isUploading} />
+                            Tomar foto
+                        </button>
+                    </div>
+                </div>
             )}
         </div>
     );
