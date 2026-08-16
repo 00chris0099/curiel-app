@@ -67,8 +67,7 @@ async function getSharedBrowser(executablePath) {
             '--disable-setuid-sandbox',
             '--disable-dev-shm-usage',
             '--disable-gpu',
-            '--no-zygote',
-            '--single-process',
+            '--disable-web-security',
             '--font-render-hinting=medium'
         ]
     })
@@ -241,12 +240,19 @@ class InspectionReportService {
             page.setDefaultNavigationTimeout(60000);
             page.setDefaultTimeout(60000);
             await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 60000 });
-            await page.evaluate(() => Promise.all(
-                // eslint-disable-next-line no-undef
-                Array.from(document.images).map(img =>
-                    img.complete ? Promise.resolve() : new Promise((res) => { img.onload = res; img.onerror = res; })
-                )
-            ));
+            await Promise.race([
+                page.evaluate(() => Promise.all(
+                    // eslint-disable-next-line no-undef
+                    Array.from(document.images).map(img =>
+                        img.complete ? Promise.resolve() : new Promise((res) => {
+                            img.onload = res;
+                            img.onerror = res;
+                            setTimeout(res, 2000);
+                        })
+                    )
+                )),
+                new Promise((res) => setTimeout(res, 4000))
+            ]);
 
             const pdfBinary = await page.pdf({
                 format: 'A4',

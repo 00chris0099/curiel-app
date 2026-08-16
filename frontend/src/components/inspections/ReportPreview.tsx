@@ -42,6 +42,7 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
     const scrollRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const pdfDocRef = useRef<pdfjsLib.PDFDocumentProxy | null>(null);
+    const pdfBlobRef = useRef<Blob | null>(null);
     const renderingRef = useRef<Set<number>>(new Set());
     const canvasRefs = useRef<Map<number, HTMLCanvasElement>>(new Map());
 
@@ -51,9 +52,11 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
         setIsLoading(true);
         setError(null);
         setPageCount(0);
+        pdfBlobRef.current = null;
 
         try {
             const blob = await inspectionService.downloadReport(inspectionId);
+            pdfBlobRef.current = blob;
             const arrayBuffer = await blob.arrayBuffer();
             const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
             pdfDocRef.current = pdf;
@@ -71,6 +74,7 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
         return () => {
             pdfDocRef.current?.destroy();
             pdfDocRef.current = null;
+            pdfBlobRef.current = null;
             renderingRef.current.clear();
         };
     }, [loadPdf]);
@@ -173,7 +177,11 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
     const handleOpenInAdobe = async () => {
         setIsOpeningDocs(true);
         try {
-            const blob = await inspectionService.downloadReport(inspectionId);
+            let blob = pdfBlobRef.current;
+            if (!blob) {
+                blob = await inspectionService.downloadReport(inspectionId);
+                pdfBlobRef.current = blob;
+            }
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -193,7 +201,11 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
     const handleDownloadAndDrive = async () => {
         setIsDownloadingDrive(true);
         try {
-            const blob = await inspectionService.downloadReport(inspectionId);
+            let blob = pdfBlobRef.current;
+            if (!blob) {
+                blob = await inspectionService.downloadReport(inspectionId);
+                pdfBlobRef.current = blob;
+            }
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
