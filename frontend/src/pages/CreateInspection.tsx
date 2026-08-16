@@ -247,11 +247,6 @@ export const CreateInspection = () => {
                 apartmentNumber: formData.apartmentNumber.trim(),
                 floor: formData.floor.trim() || undefined,
                 areaSquareMeters: formData.areaSquareMeters.trim() || undefined,
-                bedrooms: formData.bedrooms.trim() || undefined,
-                bathrooms: formData.bathrooms.trim() || undefined,
-                hasParking: formData.hasParking,
-                hasStorage: formData.hasStorage,
-                hasCommonAreas: formData.hasCommonAreas,
                 propertyCondition: formData.propertyCondition,
                 reviewPoints: formData.reviewPoints,
                 reviewPointOther: formData.reviewPoints.includes('Otro')
@@ -854,58 +849,6 @@ export const CreateInspection = () => {
                                             />
                                         </div>
 
-                                        <div>
-                                            <label htmlFor="bedrooms" className="mb-2 block text-sm font-medium">
-                                                Cantidad de habitaciones
-                                            </label>
-                                            <input
-                                                id="bedrooms"
-                                                name="bedrooms"
-                                                type="number"
-                                                min="0"
-                                                value={formData.bedrooms}
-                                                onChange={handleChange}
-                                                className="input"
-                                                placeholder="Ej: 3"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label htmlFor="bathrooms" className="mb-2 block text-sm font-medium">
-                                                Cantidad de baños
-                                            </label>
-                                            <input
-                                                id="bathrooms"
-                                                name="bathrooms"
-                                                type="number"
-                                                min="0"
-                                                value={formData.bathrooms}
-                                                onChange={handleChange}
-                                                className="input"
-                                                placeholder="Ej: 2"
-                                            />
-                                        </div>
-
-                                        <BinarySelect
-                                            id="hasParking"
-                                            label="¿Tiene estacionamiento?"
-                                            value={formData.hasParking}
-                                            onChange={handleChange}
-                                        />
-
-                                        <BinarySelect
-                                            id="hasStorage"
-                                            label="¿Tiene depósito?"
-                                            value={formData.hasStorage}
-                                            onChange={handleChange}
-                                        />
-
-                                        <BinarySelect
-                                            id="hasCommonAreas"
-                                            label="¿Tiene áreas comunes?"
-                                            value={formData.hasCommonAreas}
-                                            onChange={handleChange}
-                                        />
                                     </div>
                                 </section>
 

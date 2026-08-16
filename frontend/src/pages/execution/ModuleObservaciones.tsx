@@ -13,16 +13,19 @@ type ModuleObservacionesProps = {
     onDeleteObservation: (observationId: string) => void;
     onUploadPhoto: (event: FormEvent<HTMLFormElement>, type: string, caption: string, file: File | null, areaId?: string) => void;
     onDeletePhoto: (photoId: string) => void;
+    onSetMainPhoto: (photoId: string, isMain: boolean) => void;
 };
 
 export const ModuleObservaciones = memo(({
     areas,
     observations,
     photos,
+    busyAction,
     canEdit,
     onDeleteObservation,
     onUploadPhoto,
     onDeletePhoto,
+    onSetMainPhoto,
 }: ModuleObservacionesProps) => {
     const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
     const [description, setDescription] = useState('');
@@ -145,19 +148,19 @@ export const ModuleObservaciones = memo(({
 
             {file && (
                 <form onSubmit={handleSubmitPhoto} className="space-y-3 rounded-2xl border border-dashed border-primary-300 bg-primary-50/50 p-3 dark:border-primary-700 dark:bg-primary-900/10">
-                    <img src={URL.createObjectURL(file)} alt="Preview" className="h-32 w-full rounded-xl object-cover" />
-                    <input
-                        className="input text-sm"
+                    <img src={URL.createObjectURL(file)} alt="Preview" className="h-32 w-full rounded-xl object-cover sm:h-40" />
+                    <textarea
+                        className="input !min-h-[160px] w-full text-base leading-relaxed sm:!min-h-[200px]"
                         placeholder="Descripción de la observación (requerido)"
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         required
                     />
                     <div className="flex gap-2">
-                        <button type="submit" className="btn btn-primary text-sm flex-1" disabled={!description.trim()}>
-                            Guardar
+                        <button type="submit" className="btn btn-primary text-sm flex-1" disabled={!description.trim() || busyAction === 'photo-area'}>
+                            {busyAction === 'photo-area' ? 'Guardando...' : 'Guardar'}
                         </button>
-                        <button type="button" onClick={() => { setFile(null); setDescription(''); }} className="btn btn-secondary text-sm">
+                        <button type="button" onClick={() => { setFile(null); setDescription(''); }} className="btn btn-secondary text-sm" disabled={busyAction === 'photo-area'}>
                             Cancelar
                         </button>
                     </div>
@@ -169,12 +172,31 @@ export const ModuleObservaciones = memo(({
                     {areaPhotos.map((photo) => (
                         <div key={photo.id} className="relative overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700">
                             <img src={photo.url} alt={photo.caption || ''} className="h-24 w-full object-cover" />
-                            <div className="flex items-center justify-between px-2 py-1">
+                            {photo.isMain && (
+                                <span className="absolute left-1.5 top-1.5 rounded-full bg-amber-400 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-950 shadow">
+                                    Principal
+                                </span>
+                            )}
+                            <div className="flex items-center justify-between gap-1 px-2 py-1">
                                 <p className="truncate text-[10px] text-gray-500 dark:text-gray-400">{photo.caption || 'Foto'}</p>
                                 {canEdit && (
-                                    <button type="button" onClick={() => onDeletePhoto(photo.id)} className="text-red-400 hover:text-red-600">
-                                        <CustomIcon name="trash" size="xs" tone="rose" />
-                                    </button>
+                                    <div className="flex shrink-0 items-center gap-1">
+                                        {!photo.isMain && (
+                                            <button
+                                                type="button"
+                                                onClick={() => onSetMainPhoto(photo.id, true)}
+                                                className="text-amber-400 hover:text-amber-600"
+                                                title="Marcar como foto principal"
+                                            >
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                                </svg>
+                                            </button>
+                                        )}
+                                        <button type="button" onClick={() => onDeletePhoto(photo.id)} className="text-red-400 hover:text-red-600">
+                                            <CustomIcon name="trash" size="xs" tone="rose" />
+                                        </button>
+                                    </div>
                                 )}
                             </div>
                         </div>

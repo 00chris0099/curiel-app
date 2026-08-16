@@ -18,6 +18,7 @@ router.post('/observations', inspectionExecutionController.createObservation);
 router.put('/observations/:observationId', inspectionExecutionController.updateObservation);
 router.delete('/observations/:observationId', inspectionExecutionController.deleteObservation);
 router.post('/photos', uploadSingle, inspectionExecutionController.createPhoto);
+router.put('/photos/:photoId', inspectionExecutionController.updatePhoto);
 router.put('/summary', inspectionExecutionController.updateSummary);
 router.post('/complete', inspectionExecutionController.completeInspection);
 

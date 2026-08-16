@@ -193,7 +193,7 @@ export const InspectionAreaDetail = () => {
         setIsSaving(true);
         try {
             const payload = {
-                name: areaForm.name.trim(),
+                name: areaForm.name.trim().toUpperCase(),
                 category: areaForm.category.trim(),
                 lengthM: areaForm.lengthM ? Number(areaForm.lengthM) : null,
                 widthM: areaForm.widthM ? Number(areaForm.widthM) : null,
@@ -216,8 +216,6 @@ export const InspectionAreaDetail = () => {
 
             if (isOnline) {
                 await syncNow();
-            } else {
-                toast.success('Área guardada offline');
             }
         } catch (error) {
             toast.error(getApiErrorMessage(error, 'Error al guardar el área'));
@@ -274,8 +272,6 @@ export const InspectionAreaDetail = () => {
 
             if (isOnline) {
                 await syncNow();
-            } else {
-                toast.success(editingObservationId ? 'Observación actualizada offline' : 'Observación registrada offline');
             }
         } catch (error) {
             toast.error(getApiErrorMessage(error, 'Error al guardar observación'));
@@ -312,8 +308,6 @@ export const InspectionAreaDetail = () => {
 
             if (isOnline) {
                 await syncNow();
-            } else {
-                toast.success('Observación eliminada offline');
             }
         } catch (error) {
             toast.error(getApiErrorMessage(error, 'Error al eliminar observación'));
@@ -326,9 +320,20 @@ export const InspectionAreaDetail = () => {
         try {
             await inspectionService.deletePhoto(photoId);
             await loadExecution();
-            toast.success('Foto eliminada');
         } catch (error) {
             toast.error(getApiErrorMessage(error, 'Error al eliminar foto'));
+        }
+    };
+
+    const handleSetMainPhoto = async (photoId: string, isMain: boolean) => {
+        if (!id) return;
+
+        try {
+            if (photoId.startsWith('local-')) return;
+            await inspectionService.updateExecutionPhoto(id, photoId, { isMain });
+            await loadExecution();
+        } catch (error) {
+            toast.error(getApiErrorMessage(error, 'Error al marcar foto principal'));
         }
     };
 
@@ -364,8 +369,6 @@ export const InspectionAreaDetail = () => {
 
             if (isOnline) {
                 await syncNow();
-            } else {
-                toast.success('Foto guardada offline');
             }
         } catch (error) {
             toast.error(getApiErrorMessage(error, 'Error al guardar foto'));
@@ -446,8 +449,8 @@ export const InspectionAreaDetail = () => {
                         <input
                             type="text"
                             value={areaForm.name}
-                            onChange={(e) => handleAreaFormChange('name', e.target.value)}
-                            className="input"
+                            onChange={(e) => handleAreaFormChange('name', e.target.value.toUpperCase())}
+                            className="input uppercase"
                             required
                         />
                     </div>
@@ -585,12 +588,12 @@ export const InspectionAreaDetail = () => {
                             </div>
                             <div className="md:col-span-2">
                                 <label className="block text-sm font-medium mb-2">Descripción</label>
-                                <textarea
-                                    value={observationForm.description}
-                                    onChange={(e) => setObservationForm(prev => ({ ...prev, description: e.target.value }))}
-                                    className="input min-h-[100px]"
-                                    required
-                                />
+                    <textarea
+                        value={observationForm.description}
+                        onChange={(e) => setObservationForm(prev => ({ ...prev, description: e.target.value }))}
+                        className="input !min-h-[140px] w-full text-base leading-relaxed"
+                        required
+                    />
                             </div>
                         </div>
                         {canEditExecutionContent && (
@@ -730,15 +733,34 @@ export const InspectionAreaDetail = () => {
                                 loading="lazy"
                                 className="h-36 w-full rounded-lg object-cover sm:h-32"
                             />
+                            {photo.isMain && (
+                                <span className="absolute left-1.5 top-1.5 z-10 rounded-full bg-amber-400 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-950 shadow">
+                                    Principal
+                                </span>
+                            )}
                             {canEditExecutionContent && (
-                                <button
-                                    type="button"
-                                    onClick={() => handleDeletePhoto(photo.id)}
-                                    className="absolute right-1.5 top-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-red-500/90 text-white opacity-0 group-hover:opacity-100 shadow-md transition-opacity"
-                                    title="Eliminar foto"
-                                >
-                                    <CustomIcon name="trash" size="xs" tone="white" />
-                                </button>
+                                <div className="absolute right-1.5 top-1.5 z-10 flex gap-1.5">
+                                    {!photo.isMain && (
+                                        <button
+                                            type="button"
+                                            onClick={() => handleSetMainPhoto(photo.id, true)}
+                                            className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-400/90 text-white opacity-0 group-hover:opacity-100 shadow-md transition-opacity"
+                                            title="Marcar como foto principal"
+                                        >
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                            </svg>
+                                        </button>
+                                    )}
+                                    <button
+                                        type="button"
+                                        onClick={() => handleDeletePhoto(photo.id)}
+                                        className="flex h-6 w-6 items-center justify-center rounded-full bg-red-500/90 text-white opacity-0 group-hover:opacity-100 shadow-md transition-opacity"
+                                        title="Eliminar foto"
+                                    >
+                                        <CustomIcon name="trash" size="xs" tone="white" />
+                                    </button>
+                                </div>
                             )}
                             {photo.caption && (
                                 <p className="text-xs mt-1 text-gray-600 dark:text-gray-400">{photo.caption}</p>

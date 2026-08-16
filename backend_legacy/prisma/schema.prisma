@@ -393,6 +393,8 @@ model Photo {
   url             String    @db.VarChar(255)
   publicId        String?   @map("public_id") @db.VarChar(255)
   caption         String?   @db.Text
+  clientId        String?   @map("client_id") @db.VarChar(64)
+  isMain          Boolean   @default(false) @map("is_main")
   latitude        Decimal?  @db.Decimal(10, 8)
   longitude       Decimal?  @db.Decimal(11, 8)
   takenAt         DateTime  @default(now()) @map("taken_at") @db.Timestamptz(6)
@@ -413,6 +415,7 @@ model Photo {
   @@index([uploadedById])
   @@index([type])
   @@index([takenAt])
+  @@index([clientId])
   @@map("photos")
 }
 
@@ -512,6 +515,14 @@ model ApiKey {
   @@index([key])
   @@index([createdById])
   @@map("api_keys")
+}
+
+model AdminSetting {
+  key       String    @id @db.VarChar(100)
+  value     String?   @db.Text
+  updatedAt DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@map("admin_settings")
 }
 
 // ============================================

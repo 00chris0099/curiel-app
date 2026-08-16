@@ -7,6 +7,8 @@ module.exports = defineConfig({
         path: 'prisma/migrations',
     },
     datasource: {
-        url: process.env.DATABASE_URL_AUTH,
+        // Base única (recomendado) o legacy (primer microservicio).
+        // Solo se usa para comandos de CLI que necesitan la URL.
+        url: process.env.DATABASE_URL || process.env.DATABASE_URL_AUTH,
     },
 });

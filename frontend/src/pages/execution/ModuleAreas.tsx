@@ -110,8 +110,9 @@ export const ModuleAreas = memo(({
             {canEdit && showForm && (
                 <form onSubmit={handleSubmit} className="space-y-3 rounded-2xl border border-dashed border-gray-300 p-3 dark:border-gray-600">
                     <div className="grid grid-cols-1 gap-2">
-                        <input className="input" placeholder="Nombre del área" value={form.name} onChange={(e) => setForm((c) => ({ ...c, name: e.target.value }))} required />
-                        <input className="input" type="number" min="0" step="0.01" placeholder="Metros cuadrados (m²)" value={form.lengthM} onChange={(e) => setForm((c) => ({ ...c, lengthM: e.target.value, widthM: '1' }))} required />
+                        <input className="input uppercase" placeholder="Nombre del área" value={form.name} onChange={(e) => setForm((c) => ({ ...c, name: e.target.value.toUpperCase() }))} required />
+                        <input className="input" type="number" min="0" step="0.01" placeholder="Metros cuadrados (m²) — opcional" value={form.lengthM} onChange={(e) => setForm((c) => ({ ...c, lengthM: e.target.value, widthM: '1' }))} />
+                        <p className="text-[11px] text-gray-400">Si el área no tiene medida (ej. depósito), déjalo vacío.</p>
                     </div>
                     <div className="flex gap-2">
                         <button type="submit" className="btn btn-primary text-sm" disabled={busyAction === 'create-area'}>Guardar</button>
@@ -131,8 +132,8 @@ export const ModuleAreas = memo(({
                         <div key={area.id}>
                             {editingId === area.id ? (
                                 <form onSubmit={handleSaveEdit} className="space-y-2 rounded-2xl border border-primary-300 bg-primary-50/50 p-3 dark:border-primary-700 dark:bg-primary-900/10">
-                                    <input className="input text-sm" placeholder="Nombre" value={editForm.name} onChange={(e) => setEditForm((c) => ({ ...c, name: e.target.value }))} required />
-                                    <input className="input text-sm" type="number" min="0" step="0.01" placeholder="Metros cuadrados (m²)" value={editForm.lengthM} onChange={(e) => setEditForm((c) => ({ ...c, lengthM: e.target.value, widthM: '1' }))} required />
+                                    <input className="input text-sm uppercase" placeholder="Nombre" value={editForm.name} onChange={(e) => setEditForm((c) => ({ ...c, name: e.target.value.toUpperCase() }))} required />
+                                    <input className="input text-sm" type="number" min="0" step="0.01" placeholder="Metros cuadrados (m²) — opcional" value={editForm.lengthM} onChange={(e) => setEditForm((c) => ({ ...c, lengthM: e.target.value, widthM: '1' }))} />
                                     <div className="flex gap-2">
                                         <button type="submit" className="btn btn-primary text-sm flex-1">Guardar</button>
                                         <button type="button" className="btn btn-secondary text-sm" onClick={() => setEditingId(null)}>Cancelar</button>
@@ -153,7 +154,9 @@ export const ModuleAreas = memo(({
                                             {(getEntitySyncState('area', area.id) === 'synced' || getEntitySyncState('area', area.id) === undefined) && 'Guardado'}
                                         </p>
                                     </div>
-                                    <span className="shrink-0 text-sm font-bold text-gray-700 dark:text-gray-200">{(area.calculatedAreaM2 || 0).toFixed(1)} m²</span>
+                                    <span className="shrink-0 text-sm font-bold text-gray-700 dark:text-gray-200">
+                                        {area.calculatedAreaM2 != null ? `${Number(area.calculatedAreaM2).toFixed(1)} m²` : '—'}
+                                    </span>
                                     {canEdit && (
                                         <button
                                             type="button"

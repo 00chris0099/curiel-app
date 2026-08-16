@@ -90,6 +90,7 @@ const syncQueueItem = async (item: OfflineSyncItem) => {
           ...item.data,
           areaId,
           observationId,
+          clientId: item.clientId,
         }, file)
         await setLocalIdMapping(item.clientId, response.photo.id)
       }
@@ -111,6 +112,10 @@ const syncQueueItem = async (item: OfflineSyncItem) => {
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
+// Mutex simple: evita que dos corridas de sync procesen la misma cola en paralelo
+// (causa de duplicados de fotos cuando la sincronización se dispara dos veces).
+let syncInFlight = false
+
 const syncPendingInspectionChanges = async (
     inspectionId?: string,
     forceSync = true
@@ -119,6 +124,19 @@ const syncPendingInspectionChanges = async (
         return []
     }
 
+    if (syncInFlight) {
+        return []
+    }
+    syncInFlight = true
+
+    try {
+        return await runSync(inspectionId)
+    } finally {
+        syncInFlight = false
+    }
+}
+
+const runSync = async (inspectionId?: string) => {
     const queue = await getPendingQueueItems(inspectionId)
     const order = ['area', 'observation', 'photo', 'summary', 'status']
     const sortedQueue = [...queue].sort((left, right) => {

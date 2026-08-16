@@ -27,7 +27,8 @@ class PdfCacheService {
                 url: p.url,
                 type: p.type,
                 observationId: p.observationId,
-                areaId: p.areaId
+                areaId: p.areaId,
+                isMain: p.isMain
             })),
             summary: data.summary ? {
                 generalConclusion: data.summary.generalConclusion,

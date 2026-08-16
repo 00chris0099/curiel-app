@@ -13,11 +13,23 @@ if (!NEW_PASSWORD) {
 const changePassword = async () => {
     try {
         const { PrismaClient } = require('@prisma/client');
-        const prisma = new PrismaClient({
-            datasources: {
-                db: { url: process.env.DATABASE_URL_AUTH || process.env.DATABASE_URL }
-            }
-        });
+        const { PrismaPg } = require('@prisma/adapter-pg');
+        const { Pool } = require('pg');
+
+        const DATABASE_URL = process.env.DATABASE_URL || process.env.DATABASE_URL_AUTH;
+        if (!DATABASE_URL) {
+            console.error('DATABASE_URL (o DATABASE_URL_AUTH) no definida en .env');
+            process.exit(1);
+        }
+
+        const sslFlag = String(process.env.DATABASE_SSL || '').toLowerCase();
+        const ssl = ['true', '1', 'yes', 'on'].includes(sslFlag) || /sslmode=(require|no-verify|prefer)/i.test(DATABASE_URL)
+            ? { rejectUnauthorized: false }
+            : undefined;
+
+        const pool = new Pool({ connectionString: DATABASE_URL, ssl });
+        const adapter = new PrismaPg(pool);
+        const prisma = new PrismaClient({ adapter });
 
         await prisma.$connect();
         console.log('Conectado a la base de datos');

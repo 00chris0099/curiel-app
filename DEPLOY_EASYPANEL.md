@@ -18,8 +18,12 @@ Notas:
 ### Servicio en EasyPanel
 
 - Tipo: App desde Git
-- Root directory: `backend_legacy`
-- Build command: `npm install`
+- **Build: Dockerfile** (no nixpacks)
+- **Ruta del Dockerfile / Build context: `backend_legacy`** — la carpeta es
+  `backend_legacy`, **NO** `backend` y **NO** `/` (la raiz del repo no tiene
+  package.json del backend). Si EasyPanel falla con
+  `path ".../code/backend" not found`, es porque la ruta está puesta como
+  `backend` en vez de `backend_legacy`.
 - Start command: `npm start`
 - Puerto interno: `4000`
 

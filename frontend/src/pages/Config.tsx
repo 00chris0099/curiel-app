@@ -7,6 +7,12 @@ import { useConfirmDialog } from '../components/common/useConfirmDialog';
 
 type TabType = 'api_keys' | 'secret_tokens';
 
+const DEFAULT_CONSIDERACION = `Se verificó voltaje en todos los puntos, encontrándose dentro del rango permitido.
+Se verificaron conexiones de agua con detector scanner, no encontrándose fugas.
+Se verificaron las pendientes de las duchas, es aceptable.
+En cuanto al tablero las llaves Termomagnéticos y diferenciales operativos, leyenda correcto tablero presenta diagrama unifilar conforme.
+Los puntos de gas están conforme al cuadro de acabados. Se recomienda pedir a su contratista hacer una prueba de fuga de gas en su instalación.`;
+
 export const Config = () => {
     const { confirm, ConfirmDialog } = useConfirmDialog();
     const [activeTab, setActiveTab] = useState<TabType>('api_keys');
@@ -19,6 +25,8 @@ export const Config = () => {
     const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
     const [isUploadingSignature, setIsUploadingSignature] = useState(false);
     const signatureInputRef = useRef<HTMLInputElement>(null);
+    const [consideracionText, setConsideracionText] = useState('');
+    const [isSavingConsideracion, setIsSavingConsideracion] = useState(false);
 
     const loadKeys = useCallback(async () => {
         setIsLoading(true);
@@ -48,6 +56,31 @@ export const Config = () => {
         };
         loadSignature();
     }, []);
+
+    useEffect(() => {
+        const loadConsideracion = async () => {
+            try {
+                const response = await apiClient.get('/admin/settings/consideracion');
+                const saved = response.data?.data?.text;
+                setConsideracionText(saved || DEFAULT_CONSIDERACION);
+            } catch {
+                setConsideracionText(DEFAULT_CONSIDERACION);
+            }
+        };
+        loadConsideracion();
+    }, []);
+
+    const handleSaveConsideracion = async () => {
+        setIsSavingConsideracion(true);
+        try {
+            await apiClient.put('/admin/settings/consideracion', { text: consideracionText });
+            toast.success('Consideración por defecto actualizada');
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, 'Error al guardar consideración'));
+        } finally {
+            setIsSavingConsideracion(false);
+        }
+    };
 
     const handleUploadSignature = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -188,6 +221,37 @@ export const Config = () => {
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Configuracion</h1>
                     <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">API Keys, tokens y configuracion del administrador.</p>
+                </div>
+            </div>
+
+            {/* Consideración por defecto para inspecciones */}
+            <div className="rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+                <div className="flex items-center gap-3 mb-4">
+                    <CustomIcon name="note-pencil" size="sm" tone="cream" />
+                    <div>
+                        <h2 className="text-sm font-bold text-gray-900 dark:text-white">Consideración por defecto en inspecciones</h2>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                            Texto que se colocará automáticamente en el módulo Consideraciones de cada inspección asignada, tanto para el administrador como para los inspectores.
+                        </p>
+                    </div>
+                </div>
+
+                <textarea
+                    value={consideracionText}
+                    onChange={(e) => setConsideracionText(e.target.value)}
+                    className="input min-h-[220px] w-full text-base leading-relaxed sm:min-h-[260px]"
+                    placeholder="Escribe el texto que se usará por defecto en las consideraciones de cada inspección..."
+                />
+
+                <div className="mt-3 flex items-center gap-3">
+                    <button
+                        onClick={handleSaveConsideracion}
+                        disabled={isSavingConsideracion}
+                        className="btn btn-primary flex items-center gap-2"
+                    >
+                        {isSavingConsideracion ? 'Guardando...' : 'Guardar consideración'}
+                    </button>
+                    <span className="text-xs text-gray-400">Aplica a inspecciones nuevas y existentes que aún no tengan consideraciones.</span>
                 </div>
             </div>
 

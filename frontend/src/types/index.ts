@@ -233,11 +233,6 @@ export interface DepartmentInspectionMetadata {
     apartmentNumber: string;
     floor?: string;
     areaSquareMeters?: string;
-    bedrooms?: string;
-    bathrooms?: string;
-    hasParking: YesNoOption;
-    hasStorage: YesNoOption;
-    hasCommonAreas: YesNoOption;
     propertyCondition: PropertyCondition;
     reviewPoints: ReviewPoint[];
     reviewPointOther?: string;
@@ -380,6 +375,8 @@ export interface InspectionPhoto {
     url: string;
     publicId?: string | null;
     caption?: string | null;
+    clientId?: string | null;
+    isMain?: boolean;
     latitude?: number | null;
     longitude?: number | null;
     uploadedById: string;
@@ -458,6 +455,13 @@ export interface CreateInspectionPhotoDto {
     type: ExecutionPhotoType;
     caption?: string;
     url?: string;
+    clientId?: string;
+    isMain?: boolean;
+}
+
+export interface UpdateInspectionPhotoDto {
+    caption?: string;
+    isMain?: boolean;
 }
 
 export interface UpdateInspectionExecutionSummaryDto {

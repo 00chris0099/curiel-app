@@ -145,37 +145,50 @@ export const SupervisorActions = () => {
             </div>
 
             {showForm && selectedInspection && (
-                <form onSubmit={handleSubmit} className="rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 p-6 space-y-4">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">{actionTitle()}</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Inspeccion: {selectedInspection.projectName} ({selectedInspection.status})</p>
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Motivo *</label>
-                            <select value={form.reasonCode} onChange={(e) => setForm({ ...form, reasonCode: e.target.value })} className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" required>
-                                <option value="">Seleccionar motivo</option>
-                                {getReasons().map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-                            </select>
-                        </div>
-                        {actionType === 'reject' && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <form onSubmit={handleSubmit} className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900 p-6 space-y-4">
+                        <div className="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nivel de Gravedad</label>
-                                <select value={form.gravityLevel} onChange={(e) => setForm({ ...form, gravityLevel: Number(e.target.value) as GravityLevel })} className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
-                                    <option value={1}>Nivel 1 - Bajo</option>
-                                    <option value={2}>Nivel 2 - Medio</option>
-                                    <option value={3}>Nivel 3 - Alto</option>
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-white">{actionTitle()}</h3>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">Inspección: {selectedInspection.projectName} ({selectedInspection.status})</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowForm(false)}
+                                className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Motivo *</label>
+                                <select value={form.reasonCode} onChange={(e) => setForm({ ...form, reasonCode: e.target.value })} className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" required>
+                                    <option value="">Seleccionar motivo</option>
+                                    {getReasons().map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
                                 </select>
                             </div>
-                        )}
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Descripcion * (min 20 caracteres)</label>
-                        <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" rows={3} required minLength={20} placeholder="Describe el motivo..." />
-                    </div>
-                    <div className="flex justify-end gap-3">
-                        <button type="button" onClick={() => setShowForm(false)} className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50">Cancelar</button>
-                        <button type="submit" disabled={isSubmitting} className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50">{isSubmitting ? 'Procesando...' : 'Confirmar'}</button>
-                    </div>
-                </form>
+                            {actionType === 'reject' && (
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nivel de Gravedad</label>
+                                    <select value={form.gravityLevel} onChange={(e) => setForm({ ...form, gravityLevel: Number(e.target.value) as GravityLevel })} className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                        <option value={1}>Nivel 1 - Bajo</option>
+                                        <option value={2}>Nivel 2 - Medio</option>
+                                        <option value={3}>Nivel 3 - Alto</option>
+                                    </select>
+                                </div>
+                            )}
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Descripción * (mín 20 caracteres)</label>
+                            <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" rows={3} required minLength={20} placeholder="Describe el motivo..." />
+                        </div>
+                        <div className="flex justify-end gap-3 pt-2">
+                            <button type="button" onClick={() => setShowForm(false)} className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50">Cancelar</button>
+                            <button type="submit" disabled={isSubmitting} className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50">{isSubmitting ? 'Procesando...' : 'Confirmar'}</button>
+                        </div>
+                    </form>
+                </div>
             )}
 
             <div className="rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 overflow-hidden">

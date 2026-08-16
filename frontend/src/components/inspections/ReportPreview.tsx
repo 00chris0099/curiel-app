@@ -144,7 +144,6 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
             window.URL.revokeObjectURL(url);
             a.remove();
             window.open('https://www.adobe.com/pe/acrobat/online/pdf-editor.html', '_blank');
-            toast.success('PDF descargado. Subelo en Adobe Acrobat para editarlo.');
         } catch (err: unknown) {
             toast.error(getApiErrorMessage(err, 'No se pudo descargar el informe'));
         } finally {
@@ -174,7 +173,6 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
                 a.click();
                 window.URL.revokeObjectURL(url);
                 a.remove();
-                toast.success('PDF descargado y guardado en Google Drive');
             }
         } catch (err: unknown) {
             toast.error(getApiErrorMessage(err, 'No se pudo descargar el informe'));

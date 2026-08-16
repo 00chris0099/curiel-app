@@ -224,168 +224,180 @@ export const Clients = () => {
                 </button>
             </div>
 
+            {/* Form Modal */}
             {isFormVisible && (
-                <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-                    <h2 className="text-lg font-bold text-gray-900 dark:text-white">{isEditing ? 'Editar Cliente' : 'Nuevo Cliente'}</h2>
-                    <form onSubmit={handleSubmit} className="mt-5 space-y-5">
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            {/* Document Type */}
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                    Tipo de documento
-                                </label>
-                                <select
-                                    value={form.documentType}
-                                    onChange={(e) => {
-                                        const newType = e.target.value as ClientDocumentType;
-                                        setForm({
-                                            ...form,
-                                            documentType: newType,
-                                            documentNumber: filterDocumentInput(newType, form.documentNumber)
-                                        });
-                                    }}
-                                    className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
-                                >
-                                    <option value="dni">DNI (8 dígitos)</option>
-                                    <option value="ruc">RUC (11 dígitos)</option>
-                                    <option value="ce">CE (Carnet Extranjería)</option>
-                                </select>
-                            </div>
-
-                            {/* Document Number */}
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                    Número de documento *
-                                </label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={form.documentNumber}
-                                    onChange={(e) => setForm({ ...form, documentNumber: filterDocumentInput(form.documentType, e.target.value) })}
-                                    className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
-                                    placeholder={form.documentType === 'dni' ? 'Ej. 73043172 (8 dígitos)' : form.documentType === 'ruc' ? 'Ej. 20123456789 (11 dígitos)' : 'Número de documento'}
-                                />
-                            </div>
-
-                            {/* First Name */}
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                    Nombre
-                                </label>
-                                <input
-                                    type="text"
-                                    value={form.firstName}
-                                    onChange={(e) => setForm({ ...form, firstName: e.target.value })}
-                                    className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
-                                    placeholder="Nombre"
-                                />
-                            </div>
-
-                            {/* Last Name */}
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                    Apellido
-                                </label>
-                                <input
-                                    type="text"
-                                    value={form.lastName}
-                                    onChange={(e) => setForm({ ...form, lastName: e.target.value })}
-                                    className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
-                                    placeholder="Apellido"
-                                />
-                            </div>
-
-                            {/* Razon Social */}
-                            <div className="sm:col-span-2">
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                    Razón Social
-                                </label>
-                                <input
-                                    type="text"
-                                    value={form.razonSocial}
-                                    onChange={(e) => setForm({ ...form, razonSocial: e.target.value })}
-                                    className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
-                                    placeholder="Razón social (empresa o negocio)"
-                                />
-                            </div>
-
-                            {/* Email */}
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                    Email *
-                                </label>
-                                <input
-                                    type="email"
-                                    required
-                                    value={form.email}
-                                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                                    className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
-                                    placeholder="correo@ejemplo.com"
-                                />
-                            </div>
-
-                            {/* Phone / Celular */}
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                    Teléfono / Celular
-                                </label>
-                                <input
-                                    type="text"
-                                    value={form.phone}
-                                    onChange={(e) => setForm({ ...form, phone: filterPhoneInput(e.target.value) })}
-                                    className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
-                                    placeholder="Ej. 955250185 (9 dígitos)"
-                                />
-                            </div>
-
-                            {/* Address with Map Picker & Autocomplete */}
-                            <div className="sm:col-span-2">
-                                <AddressMapPicker
-                                    address={form.address}
-                                    onAddressChange={(newAddr) => setForm((prev) => ({ ...prev, address: newAddr }))}
-                                    label="Dirección"
-                                    placeholder="Buscar dirección en el mapa..."
-                                />
-                            </div>
-
-                            {/* isProtected - solo masterAdmin */}
-                            {isMasterAdmin && (
-                                <div className="sm:col-span-2">
-                                    <label className="flex items-center gap-3 cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={form.isProtected || false}
-                                            onChange={(e) => setForm({ ...form, isProtected: e.target.checked })}
-                                            className="h-4 w-4 rounded border-slate-300 text-[#17324a] focus:ring-[#17324a]"
-                                        />
-                                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                                            Proteger de auto-eliminación
-                                        </span>
-                                    </label>
-                                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                                        Los clientes protegidos no se eliminan automáticamente a los 15 días.
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="flex justify-end gap-3 pt-2">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200 overflow-y-auto">
+                    <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-gray-800 dark:bg-gray-900">
+                        <div className="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
+                            <h2 className="text-lg font-bold text-gray-900 dark:text-white">{isEditing ? 'Editar Cliente' : 'Nuevo Cliente'}</h2>
                             <button
                                 type="button"
                                 onClick={resetForm}
-                                className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-5 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700"
+                                className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
                             >
-                                Cancelar
-                            </button>
-                            <button
-                                type="submit"
-                                disabled={isSubmitting}
-                                className="inline-flex items-center gap-2 rounded-xl bg-[#17324a] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#1e3d56] disabled:opacity-50"
-                            >
-                                {isSubmitting ? 'Guardando...' : isEditing ? 'Actualizar' : 'Crear Cliente'}
+                                ✕
                             </button>
                         </div>
-                    </form>
+                        <form onSubmit={handleSubmit} className="mt-4 space-y-5">
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                {/* Document Type */}
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                        Tipo de documento
+                                    </label>
+                                    <select
+                                        value={form.documentType}
+                                        onChange={(e) => {
+                                            const newType = e.target.value as ClientDocumentType;
+                                            setForm({
+                                                ...form,
+                                                documentType: newType,
+                                                documentNumber: filterDocumentInput(newType, form.documentNumber)
+                                            });
+                                        }}
+                                        className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                                    >
+                                        <option value="dni">DNI (8 dígitos)</option>
+                                        <option value="ruc">RUC (11 dígitos)</option>
+                                        <option value="ce">CE (Carnet Extranjería)</option>
+                                    </select>
+                                </div>
+
+                                {/* Document Number */}
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                        Número de documento *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={form.documentNumber}
+                                        onChange={(e) => setForm({ ...form, documentNumber: filterDocumentInput(form.documentType, e.target.value) })}
+                                        className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                                        placeholder={form.documentType === 'dni' ? 'Ej. 73043172 (8 dígitos)' : form.documentType === 'ruc' ? 'Ej. 20123456789 (11 dígitos)' : 'Número de documento'}
+                                    />
+                                </div>
+
+                                {/* First Name */}
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                        Nombre
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={form.firstName}
+                                        onChange={(e) => setForm({ ...form, firstName: e.target.value })}
+                                        className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                                        placeholder="Nombre"
+                                    />
+                                </div>
+
+                                {/* Last Name */}
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                        Apellido
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={form.lastName}
+                                        onChange={(e) => setForm({ ...form, lastName: e.target.value })}
+                                        className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                                        placeholder="Apellido"
+                                    />
+                                </div>
+
+                                {/* Razon Social */}
+                                <div className="sm:col-span-2">
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                        Razón Social
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={form.razonSocial}
+                                        onChange={(e) => setForm({ ...form, razonSocial: e.target.value })}
+                                        className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                                        placeholder="Razón social (empresa o negocio)"
+                                    />
+                                </div>
+
+                                {/* Email */}
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                        Email *
+                                    </label>
+                                    <input
+                                        type="email"
+                                        required
+                                        value={form.email}
+                                        onChange={(e) => setForm({ ...form, email: e.target.value })}
+                                        className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                                        placeholder="correo@ejemplo.com"
+                                    />
+                                </div>
+
+                                {/* Phone / Celular */}
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                        Teléfono / Celular
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={form.phone}
+                                        onChange={(e) => setForm({ ...form, phone: filterPhoneInput(e.target.value) })}
+                                        className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                                        placeholder="Ej. 955250185 (9 dígitos)"
+                                    />
+                                </div>
+
+                                {/* Address with Map Picker & Autocomplete */}
+                                <div className="sm:col-span-2">
+                                    <AddressMapPicker
+                                        address={form.address}
+                                        onAddressChange={(newAddr) => setForm((prev) => ({ ...prev, address: newAddr }))}
+                                        label="Dirección"
+                                        placeholder="Buscar dirección en el mapa..."
+                                    />
+                                </div>
+
+                                {/* isProtected - solo masterAdmin */}
+                                {isMasterAdmin && (
+                                    <div className="sm:col-span-2">
+                                        <label className="flex items-center gap-3 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={form.isProtected || false}
+                                                onChange={(e) => setForm({ ...form, isProtected: e.target.checked })}
+                                                className="h-4 w-4 rounded border-slate-300 text-[#17324a] focus:ring-[#17324a]"
+                                            />
+                                            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                                                Proteger de auto-eliminación
+                                            </span>
+                                        </label>
+                                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                            Los clientes protegidos no se eliminan automáticamente a los 15 días.
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="flex justify-end gap-3 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={resetForm}
+                                    className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-5 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    className="inline-flex items-center gap-2 rounded-xl bg-[#17324a] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#1e3d56] disabled:opacity-50"
+                                >
+                                    {isSubmitting ? 'Guardando...' : isEditing ? 'Actualizar' : 'Crear Cliente'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             )}
 

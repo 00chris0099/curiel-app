@@ -1,9 +1,14 @@
 /**
- * Migra cada módulo generando SQL puro y ejecutándolo directamente.
+ * Migra generando SQL puro y ejecutándolo directamente.
  * Sin shadow database, sin conflictos entre módulos.
  *
+ * MODO NUEVO (recomendado): si DATABASE_URL está definida (una sola base,
+ *   ej. Supabase), genera el SQL desde el schema UNIFICADO
+ *   (prisma/schema.prisma) y lo aplica a esa única base.
+ * MODO LEGACY: si no hay DATABASE_URL, migra cada módulo contra las 7
+ *   variables DATABASE_URL_*.
+ *
  * Idempotente: puede ejecutarse múltiples veces sin fallar.
- * CREATE TABLE IF NOT EXISTS + skip de tipos/enums ya existentes.
  *
  * Uso: node scripts/migrate-all.js [modulo]
  */
@@ -13,6 +18,10 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { Client } = require('pg');
+
+// Modo único (DATABASE_URL) o legacy (7 módulos)
+const UNIFIED_SCHEMA = 'prisma/schema.prisma';
+const SINGLE_URL = process.env.DATABASE_URL || null;
 
 const MODULES = [
     {
@@ -58,6 +67,14 @@ const TEMP_SQL = path.join(ROOT, 'prisma', 'temp_migration.sql');
 const ALREADY_EXISTS_CODES = new Set(['42710', '42P07', '42P16', '23505']);
 const ALREADY_EXISTS_MESSAGES = ['already exists', 'duplicate_object', 'duplicate relation'];
 
+// pg no parsea sslmode desde la URL; lo traducimos manualmente.
+function resolveSsl(url) {
+    const flag = String(process.env.DATABASE_SSL || '').toLowerCase();
+    if (['true', '1', 'yes', 'on'].includes(flag)) return { rejectUnauthorized: false };
+    if (/sslmode=(require|no-verify|prefer)/i.test(url || '')) return { rejectUnauthorized: false };
+    return false;
+}
+
 function isAlreadyExistsError(err) {
     if (ALREADY_EXISTS_CODES.has(err.code)) return true;
     if (err.message && ALREADY_EXISTS_MESSAGES.some(m => err.message.includes(m))) return true;
@@ -65,7 +82,7 @@ function isAlreadyExistsError(err) {
 }
 
 async function applySql(url, sql, migrationName) {
-    const client = new Client({ connectionString: url, ssl: false });
+    const client = new Client({ connectionString: url, ssl: resolveSsl(url) });
     await client.connect();
 
     try {
@@ -138,6 +155,38 @@ async function applySql(url, sql, migrationName) {
 async function run() {
     const args = process.argv.slice(2);
     const targetModule = args[0];
+
+    // ---------------- MODO ÚNICO (una sola base de datos) ----------------
+    if (SINGLE_URL && !targetModule) {
+        console.log('\nModo UNIFICADO: DATABASE_URL detectada (una sola base de datos).');
+        const schemaPath = path.join(ROOT, UNIFIED_SCHEMA);
+        try {
+            console.log(`  Generando SQL desde ${UNIFIED_SCHEMA}...`);
+            execSync(
+                `npx prisma migrate diff --from-empty --to-schema "${schemaPath}" --script > "${TEMP_SQL}"`,
+                { cwd: ROOT, stdio: 'pipe', env: { ...process.env } }
+            );
+            const sql = fs.readFileSync(TEMP_SQL, 'utf-8').trim();
+            if (!sql) throw new Error('Generated SQL is empty');
+            console.log(`  SQL generado (${sql.length} caracteres)`);
+            await applySql(SINGLE_URL, sql, 'init_unified');
+            if (fs.existsSync(TEMP_SQL)) fs.unlinkSync(TEMP_SQL);
+            console.log(`✅ Base única: migración exitosa (${SINGLE_URL.replace(/:[^:@/]+@/, ':***@')})`);
+            return;
+        } catch (err) {
+            if (fs.existsSync(TEMP_SQL)) fs.unlinkSync(TEMP_SQL);
+            console.error(`❌ Migración unificada falló`);
+            console.error(err.message?.split('\n').slice(0, 6).join('\n'));
+            process.exit(1);
+        }
+    }
+
+    // ---------------- MODO LEGACY (7 microservicios) ----------------
+    if (!SINGLE_URL && process.env.NODE_ENV === 'production') {
+        console.error('\n⚠️⚠️⚠️  DATABASE_URL NO está definida en el entorno del contenedor.');
+        console.error('   Ejecutando MODO LEGACY (7 bases). Si esperabas conectar a Supabase,');
+        console.error('   define la variable DATABASE_URL en EasyPanel y haz un deploy completo.');
+    }
 
     const modulesToMigrate = targetModule
         ? MODULES.filter(m => m.name === targetModule)

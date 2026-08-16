@@ -16,18 +16,15 @@ export const generalPhotoTypeOptions: ExecutionPhotoType[] = ['edificio', 'plano
 export const areaPhotoTypeOptions: ExecutionPhotoType[] = ['area', 'observacion'];
 
 export const defaultAreaDefinitions = [
-    { name: 'Entrada', category: 'interior' },
-    { name: 'Sala', category: 'social' },
-    { name: 'Comedor', category: 'social' },
-    { name: 'Kitchenette', category: 'cocina' },
-    { name: 'Centro de lavado', category: 'servicio' },
-    { name: 'Balcón', category: 'exterior' },
-    { name: 'Estudio', category: 'privado' },
-    { name: 'Dormitorio principal', category: 'privado' },
-    { name: 'Dormitorio secundario', category: 'privado' },
-    { name: 'Baño principal', category: 'baño' },
-    { name: 'Baño 2', category: 'baño' },
-    { name: 'Muros y vanos', category: 'estructura/acabados' },
+    { name: 'BALCÓN', category: 'exterior' },
+    { name: 'SALA Y COMEDOR', category: 'social' },
+    { name: 'KITCHENETTE', category: 'cocina' },
+    { name: 'CENTRO DE LAVADO', category: 'servicio' },
+    { name: 'DORMITORIO PRINCIPAL', category: 'privado' },
+    { name: 'BAÑO PRINCIPAL', category: 'baño' },
+    { name: 'PASADIZO', category: 'interior' },
+    { name: 'MUROS Y VANOS', category: 'estructura/acabados' },
+    { name: 'DEPÓSITO Y ALMACÉN', category: 'servicio' },
 ];
 
 export const areaStatusLabels: Record<ExecutionAreaStatus, string> = {

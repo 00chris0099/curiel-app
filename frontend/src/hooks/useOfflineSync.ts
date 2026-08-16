@@ -42,8 +42,6 @@ export const useOfflineSync = (
                 const message = `No se pudieron sincronizar ${failed.length} cambios`
                 toast.error(message)
                 setLastSyncError(message)
-            } else if (results.length > 0) {
-                toast.success('Cambios sincronizados')
             }
 
             await refreshPendingCount()

@@ -36,14 +36,14 @@ export const ModuleSheet = memo(({
         <>
             {/* Backdrop */}
             <div
-                className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm transition-opacity sm:hidden"
+                className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity"
                 onClick={onClose}
             />
 
             {/* Sheet — mobile: full-screen slide-up. Desktop: modal centered */}
-            <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-8">
+            <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-6 pointer-events-none">
                 {/* Mobile: full screen panel */}
-                <div className="flex h-full w-full flex-col bg-white dark:bg-slate-900 sm:hidden animate-in slide-in-from-bottom duration-300">
+                <div className="pointer-events-auto flex h-full w-full flex-col bg-white dark:bg-slate-900 sm:hidden animate-in slide-in-from-bottom duration-300">
                     {/* Sheet header */}
                     <div className="flex items-center gap-3 border-b border-gray-200 px-4 py-3 dark:border-gray-700">
                         <button
@@ -64,7 +64,7 @@ export const ModuleSheet = memo(({
                 </div>
 
                 {/* Desktop: centered modal */}
-                <div className="hidden max-h-[85vh] w-full max-w-2xl flex-col rounded-3xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-slate-900 sm:flex animate-in fade-in zoom-in-95 duration-200">
+                <div className="pointer-events-auto hidden max-h-[85vh] w-full max-w-2xl flex-col rounded-3xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-slate-900 sm:flex animate-in fade-in zoom-in-95 duration-200">
                     <div className="flex items-center gap-3 border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                         <CustomIcon name={icon} size="sm" tone="cream" />
                         <h2 className="flex-1 text-lg font-bold text-gray-900 dark:text-white">{title}</h2>

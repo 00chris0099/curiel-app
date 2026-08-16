@@ -79,3 +79,15 @@ coverage/
 temp/
 tmp/
 .cache/
+
+# ============ LOCAL E2E SCAFFOLDING ============
+backend_legacy/start-local.cmd
+backend_legacy/scripts/start-local.js
+frontend/start-local.cmd
+frontend/.env.local
+vite-local.log
+backend-local.log
+
+# ============ AGENT TOOLING ============
+.freebuff/
+.mimocode/

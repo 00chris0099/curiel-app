@@ -64,11 +64,6 @@ export type DepartmentInspectionFormState = {
     apartmentNumber: string;
     floor: string;
     areaSquareMeters: string;
-    bedrooms: string;
-    bathrooms: string;
-    hasParking: YesNoOption;
-    hasStorage: YesNoOption;
-    hasCommonAreas: YesNoOption;
     propertyCondition: PropertyCondition;
     reviewPoints: ReviewPoint[];
     reviewPointOther: string;
@@ -94,11 +89,6 @@ export const initialFormState: DepartmentInspectionFormState = {
     apartmentNumber: '',
     floor: '',
     areaSquareMeters: '',
-    bedrooms: '',
-    bathrooms: '',
-    hasParking: 'No',
-    hasStorage: 'No',
-    hasCommonAreas: 'No',
     propertyCondition: 'Nuevo / entrega de constructora',
     reviewPoints: [],
     reviewPointOther: '',

@@ -112,66 +112,77 @@ export const Alerts = () => {
                 </button>
             </div>
 
-            {/* Form */}
+            {/* Form Modal */}
             {showForm && (
-                <form onSubmit={handleSubmit} className="rounded-2xl border border-gray-200 bg-white p-5 sm:p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900 space-y-4">
-                    <h2 className="text-base font-bold text-gray-900 dark:text-white">Registrar nueva alerta</h2>
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        <div>
-                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Nivel de Gravedad *</label>
-                            <select
-                                value={form.gravityLevel}
-                                onChange={(e) => setForm({ ...form, gravityLevel: Number(e.target.value) as GravityLevel })}
-                                className="input text-xs sm:text-sm"
-                                required
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <form onSubmit={handleSubmit} className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-5 sm:p-6 shadow-2xl dark:border-gray-800 dark:bg-gray-900 space-y-4">
+                        <div className="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
+                            <h2 className="text-base font-bold text-gray-900 dark:text-white">Registrar nueva alerta</h2>
+                            <button
+                                type="button"
+                                onClick={() => setShowForm(false)}
+                                className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
                             >
-                                <option value={1}>Nivel 1 - Bajo</option>
-                                <option value={2}>Nivel 2 - Medio</option>
-                                <option value={3}>Nivel 3 - Alto</option>
-                            </select>
+                                ✕
+                            </button>
+                        </div>
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div>
+                                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Nivel de Gravedad *</label>
+                                <select
+                                    value={form.gravityLevel}
+                                    onChange={(e) => setForm({ ...form, gravityLevel: Number(e.target.value) as GravityLevel })}
+                                    className="input text-xs sm:text-sm"
+                                    required
+                                >
+                                    <option value={1}>Nivel 1 - Bajo</option>
+                                    <option value={2}>Nivel 2 - Medio</option>
+                                    <option value={3}>Nivel 3 - Alto</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Título *</label>
+                                <input
+                                    type="text"
+                                    value={form.title}
+                                    onChange={(e) => setForm({ ...form, title: e.target.value })}
+                                    className="input text-xs sm:text-sm"
+                                    placeholder="Título de la alerta..."
+                                    required
+                                    minLength={5}
+                                />
+                            </div>
                         </div>
                         <div>
-                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Título *</label>
-                            <input
-                                type="text"
-                                value={form.title}
-                                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Descripción *</label>
+                            <textarea
+                                value={form.description}
+                                onChange={(e) => setForm({ ...form, description: e.target.value })}
                                 className="input text-xs sm:text-sm"
-                                placeholder="Título de la alerta..."
+                                rows={3}
+                                placeholder="Descripción detallada de la alerta..."
                                 required
-                                minLength={5}
+                                minLength={10}
                             />
                         </div>
-                    </div>
-                    <div>
-                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Descripción *</label>
-                        <textarea
-                            value={form.description}
-                            onChange={(e) => setForm({ ...form, description: e.target.value })}
-                            className="input text-xs sm:text-sm"
-                            rows={3}
-                            placeholder="Descripción detallada de la alerta..."
-                            required
-                            minLength={10}
-                        />
-                    </div>
-                    <div className="flex justify-end gap-3 pt-2">
-                        <button
-                            type="button"
-                            onClick={() => setShowForm(false)}
-                            className="btn btn-secondary text-xs py-2 px-4"
-                        >
-                            Cancelar
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={isSubmitting}
-                            className="btn btn-primary text-xs py-2 px-4"
-                        >
-                            {isSubmitting ? 'Creando...' : 'Crear Alerta'}
-                        </button>
-                    </div>
-                </form>
+                        <div className="flex justify-end gap-3 pt-2">
+                            <button
+                                type="button"
+                                onClick={() => setShowForm(false)}
+                                className="btn btn-secondary text-xs py-2 px-4"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={isSubmitting}
+                                className="btn btn-primary text-xs py-2 px-4"
+                            >
+                                {isSubmitting ? 'Guardando...' : 'Crear Alerta'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
             )}
 
             {/* Filters */}

@@ -50,8 +50,17 @@ const EMAIL_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16
 const buildSectionModels = (areas, observations, photos) => {
     let observationCounter = 1;
 
+    // Red de seguridad: descartar fotos duplicadas (misma URL) para que nunca
+    // aparezcan dos veces la misma imagen en el informe.
+    const seenUrls = new Set();
+    const uniquePhotos = (photos || []).filter((p) => {
+        if (!p?.url || seenUrls.has(p.url)) return false;
+        seenUrls.add(p.url);
+        return true;
+    });
+
     return areas.map((area) => {
-        const areaPhotos = photos
+        const areaPhotos = uniquePhotos
             .filter((p) => p.areaId === area.id && !p.observationId)
             .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 
@@ -61,13 +70,22 @@ const buildSectionModels = (areas, observations, photos) => {
             .map((obs) => ({
                 ...obs,
                 sequence: observationCounter++,
-                photos: photos.filter((p) => p.observationId === obs.id)
+                photos: uniquePhotos.filter((p) => p.observationId === obs.id)
             }));
+
+        // Solo la foto marcada explícitamente como principal genera la hoja completa.
+        // Se excluye de la grilla de evidencias de la sección para que NO se duplique
+        // la misma imagen en el informe (aparece una sola vez, en la hoja completa).
+        const mainPhoto = areaPhotos.find((p) => p.isMain) || null;
+        const sectionPhotos = mainPhoto
+            ? areaPhotos.filter((p) => p.id !== mainPhoto.id)
+            : areaPhotos;
 
         return {
             title: area.name.toUpperCase(),
             areas: [area],
-            areaPhotos,
+            areaPhotos: sectionPhotos,
+            mainPhoto,
             observations: areaObservations
         };
     });
@@ -357,7 +375,25 @@ const buildInspectionReportHtml = (reportData) => {
             `).join('')
             : '<p style="color:#9ca3af; font-style:italic; font-size:10pt; padding:12px 0;">No se registraron observaciones tecnicas en esta seccion.</p>';
 
+        const mainPhotoBlock = section.mainPhoto ? `
+            <div class="page-break">
+                ${buildHeader()}
+                <div style="padding-top:20mm;"></div>
+                <h2 style="font-size:16pt; font-weight:700; text-transform:uppercase; color:#111827; letter-spacing:0.02em; margin-bottom:12px; padding-bottom:6px; border-bottom:2px solid #2563eb;">
+                    ${escapeHtml(section.title)}
+                </h2>
+                <div style="border:1px solid #d1d5db; border-radius:4px; overflow:hidden; background:#f9fafb; display:flex; flex-direction:column; align-items:center; padding:12px;">
+                    <img src="${section.mainPhoto.url}" alt="${escapeHtml(section.mainPhoto.caption || 'Foto principal del area')}" style="width:100%; max-height:620px; object-fit:contain; display:block;" />
+                    ${section.mainPhoto.caption ? `<p style="font-size:11pt; color:#374151; margin-top:12px; text-align:center; font-weight:600;">${escapeHtml(section.mainPhoto.caption)}</p>` : ''}
+                </div>
+                <p style="font-size:9.5pt; color:#6b7280; font-style:italic; margin-top:8px;">
+                    Imagen principal del ambiente.
+                </p>
+            </div>
+        ` : '';
+
         return `
+            ${mainPhotoBlock}
             <div class="page-break">
                 ${buildHeader()}
                 <div style="padding-top:20mm;"></div>

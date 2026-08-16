@@ -5,20 +5,22 @@ const notificationService = require('./notificationService');
 const pdfCacheService = require('./pdfCacheService');
 
 const defaultAreas = [
-    { name: 'Entrada', category: 'interior' },
-    { name: 'Sala', category: 'social' },
-    { name: 'Comedor', category: 'social' },
-    { name: 'Kitchenette', category: 'cocina' },
-    { name: 'Centro de lavado', category: 'servicio' },
-    { name: 'Balcón', category: 'exterior' },
-    { name: 'Estudio', category: 'privado' },
-    { name: 'Dormitorio principal', category: 'privado' },
-    { name: 'Dormitorio secundario', category: 'privado' },
-    { name: 'Baño principal', category: 'baño' },
-    { name: 'Baño 2', category: 'baño' }
+    { name: 'BALCÓN', category: 'exterior' },
+    { name: 'SALA Y COMEDOR', category: 'social' },
+    { name: 'KITCHENETTE', category: 'cocina' },
+    { name: 'CENTRO DE LAVADO', category: 'servicio' },
+    { name: 'DORMITORIO PRINCIPAL', category: 'privado' },
+    { name: 'BAÑO PRINCIPAL', category: 'baño' },
+    { name: 'PASADIZO', category: 'interior' },
+    { name: 'MUROS Y VANOS', category: 'estructura/acabados' },
+    { name: 'DEPÓSITO Y ALMACÉN', category: 'servicio' }
 ];
 
 class InspectionExecutionService {
+    constructor() {
+        this._defaultConsideracionCache = null;
+    }
+
     async getExecutionData(inspectionId, userId, userRole, isMasterAdmin = false) {
         await this._getInspectionWithAccess(inspectionId, userId, userRole, isMasterAdmin);
         const summary = await this._recalculateSummary(inspectionId);
@@ -61,10 +63,10 @@ class InspectionExecutionService {
             select: { name: true, sortOrder: true }
         });
 
-        const existingNames = new Set(existingAreas.map(a => a.name));
+        const existingNames = new Set(existingAreas.map(a => String(a.name || '').trim().toUpperCase()));
         const maxSortOrder = existingAreas.reduce((max, a) => Math.max(max, a.sortOrder || 0), 0);
         const areasToCreate = defaultAreas
-            .filter(a => !existingNames.has(a.name))
+            .filter(a => !existingNames.has(String(a.name || '').trim().toUpperCase()))
             .map((a, index) => ({
                 inspectionId,
                 name: a.name,
@@ -99,7 +101,7 @@ class InspectionExecutionService {
         const area = await prisma.inspecciones.inspectionArea.create({
             data: {
                 inspectionId,
-                name: areaData.name,
+                name: this._normalizeAreaName(areaData.name),
                 category: areaData.category,
                 lengthM: this._toNullableDecimal(areaData.lengthM),
                 widthM: this._toNullableDecimal(areaData.widthM),
@@ -127,7 +129,7 @@ class InspectionExecutionService {
         await this._getAreaOrThrow(areaId, inspectionId);
 
         const data = {};
-        if (areaData.name !== undefined) data.name = areaData.name;
+        if (areaData.name !== undefined) data.name = this._normalizeAreaName(areaData.name);
         if (areaData.category !== undefined) data.category = areaData.category;
         if (areaData.lengthM !== undefined) data.lengthM = this._toNullableDecimal(areaData.lengthM);
         if (areaData.widthM !== undefined) data.widthM = this._toNullableDecimal(areaData.widthM);
@@ -319,6 +321,19 @@ class InspectionExecutionService {
             throw new AppError('Debes adjuntar una foto o indicar una URL válida', 400, 'PHOTO_SOURCE_REQUIRED');
         }
 
+        // Idempotencia: si la foto ya fue creada (mismo clientId del dispositivo), no duplicar.
+        if (payload.clientId) {
+            const existingById = await prisma.media.photo.findFirst({
+                where: { inspectionId, clientId: payload.clientId }
+            });
+            if (existingById) {
+                return {
+                    photo: this._serializePhoto(existingById),
+                    summary: this._serializeSummary(await this._recalculateSummary(inspectionId))
+                };
+            }
+        }
+
         const existingPhoto = await prisma.media.photo.findFirst({
             where: { inspectionId, url }
         });
@@ -341,9 +356,15 @@ class InspectionExecutionService {
                 caption: this._toNullableText(payload.caption),
                 latitude: this._toNullableDecimal(payload.latitude),
                 longitude: this._toNullableDecimal(payload.longitude),
+                clientId: this._toNullableText(payload.clientId),
+                isMain: payload.isMain ? true : false,
                 uploadedById: userId
             }
         });
+
+        if (payload.isMain && areaId) {
+            await this._unsetMainPhotosExcept(inspectionId, areaId, photo.id);
+        }
 
         const summary = await this._recalculateSummary(inspectionId);
 
@@ -351,6 +372,47 @@ class InspectionExecutionService {
             photo: this._serializePhoto(photo),
             summary: this._serializeSummary(summary)
         };
+    }
+
+    async updatePhoto(inspectionId, photoId, photoData, userId, userRole, isMasterAdmin = false) {
+        const inspection = await this._getInspectionWithAccess(inspectionId, userId, userRole, isMasterAdmin);
+        this._assertInspectionEditable(inspection, userRole, isMasterAdmin);
+        await pdfCacheService.invalidateCache(inspectionId);
+
+        const photo = await prisma.media.photo.findFirst({
+            where: { id: photoId, inspectionId }
+        });
+
+        if (!photo) {
+            throw new AppError('Foto no encontrada en esta inspección', 404, 'PHOTO_NOT_FOUND');
+        }
+
+        const data = {};
+        if (photoData.caption !== undefined) data.caption = this._toNullableText(photoData.caption);
+        if (photoData.isMain !== undefined) data.isMain = photoData.isMain ? true : false;
+
+        if (photoData.isMain && photo.areaId) {
+            await this._unsetMainPhotosExcept(inspectionId, photo.areaId, photo.id);
+        }
+
+        const updated = await prisma.media.photo.update({
+            where: { id: photoId },
+            data
+        });
+
+        return { photo: this._serializePhoto(updated) };
+    }
+
+    async _unsetMainPhotosExcept(inspectionId, areaId, keepPhotoId) {
+        await prisma.media.photo.updateMany({
+            where: {
+                inspectionId,
+                areaId,
+                isMain: true,
+                NOT: { id: keepPhotoId }
+            },
+            data: { isMain: false }
+        });
     }
 
     async updateSummary(inspectionId, summaryData, userId, userRole, isMasterAdmin = false) {
@@ -520,6 +582,8 @@ class InspectionExecutionService {
         const mediumObservations = observations.filter(i => i.severity === 'media').length;
         const lightObservations = observations.filter(i => i.severity === 'leve').length;
 
+        const defaultConsideracion = await this._getDefaultConsideracion();
+
         const summary = await prisma.inspecciones.inspectionSummary.upsert({
             where: { inspectionId },
             create: {
@@ -529,7 +593,8 @@ class InspectionExecutionService {
                 criticalObservations,
                 highObservations,
                 mediumObservations,
-                lightObservations
+                lightObservations,
+                ...(defaultConsideracion ? { generalConclusion: defaultConsideracion } : {})
             },
             update: {
                 totalAreaM2: this._roundToTwo(totalAreaM2),
@@ -544,6 +609,23 @@ class InspectionExecutionService {
         await pdfCacheService.invalidateCache(inspectionId);
 
         return summary;
+    }
+
+    async _getDefaultConsideracion() {
+        const now = Date.now();
+        if (this._defaultConsideracionCache && now - this._defaultConsideracionCache.ts < 60 * 1000) {
+            return this._defaultConsideracionCache.value;
+        }
+        try {
+            const rows = await prisma.admin.$queryRawUnsafe(
+                `SELECT value FROM admin_settings WHERE key = 'default_consideracion'`
+            );
+            const value = rows && rows.length > 0 ? String(rows[0].value || '') : '';
+            this._defaultConsideracionCache = { value: value.trim() || null, ts: now };
+            return this._defaultConsideracionCache.value;
+        } catch (error) {
+            return null;
+        }
     }
 
     _assertInspectionEditable(inspection, userRole, isMasterAdmin) {
@@ -671,6 +753,11 @@ class InspectionExecutionService {
         if (value === undefined || value === null) return null;
         const trimmed = String(value).trim();
         return trimmed ? trimmed : null;
+    }
+
+    _normalizeAreaName(value) {
+        if (value === undefined || value === null) return '';
+        return String(value).trim().toUpperCase();
     }
 
     _toNumber(value, fallback = 0) {

@@ -4,6 +4,7 @@ const multer = require('multer');
 const { authenticate, authorize } = require('../middlewares/auth');
 const { asyncHandler, AppError } = require('../middlewares/errorHandler');
 const adminSignatureService = require('../services/adminSignatureService');
+const adminSettingsService = require('../services/adminSettingsService');
 
 const upload = multer({
     storage: multer.memoryStorage(),
@@ -36,6 +37,17 @@ router.put('/signature', upload.single('signature'), asyncHandler(async (req, re
 router.delete('/signature', asyncHandler(async (req, res) => {
     await adminSignatureService.deleteSignature();
     res.json({ success: true, message: 'Firma eliminada correctamente' });
+}));
+
+router.get('/consideracion', asyncHandler(async (req, res) => {
+    const result = await adminSettingsService.getDefaultConsideracion();
+    res.json({ success: true, data: result });
+}));
+
+router.put('/consideracion', asyncHandler(async (req, res) => {
+    const text = String(req.body?.text ?? '');
+    const result = await adminSettingsService.setDefaultConsideracion(text);
+    res.json({ success: true, data: result, message: 'Consideración por defecto actualizada correctamente' });
 }));
 
 module.exports = router;

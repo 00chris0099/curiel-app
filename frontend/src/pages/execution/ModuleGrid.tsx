@@ -66,52 +66,17 @@ export const ModuleGrid = memo(({ modules, children }: ModuleGridProps) => {
                 })}
             </div>
 
-            {/* Mobile: full-screen sheet */}
-            <div className="lg:hidden">
-                {activeDef && (
-                    <ModuleSheet
-                        isOpen={true}
-                        title={activeDef.title}
-                        icon={activeDef.icon}
-                        onClose={() => setActiveModule(null)}
-                    >
-                        {children[activeIndex]}
-                    </ModuleSheet>
-                )}
-            </div>
-
-            {/* Desktop: accordion inline */}
-            <div className="hidden lg:block">
-                {activeDef && (
-                    <div className="rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900 animate-in fade-in duration-200">
-                        <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3 dark:border-gray-800">
-                            <div className="flex items-center gap-2">
-                                <CustomIcon name={activeDef.icon} size="sm" tone="cream" />
-                                <h3 className="font-bold text-gray-900 dark:text-white">{activeDef.title}</h3>
-                                {activeDef.count > 0 && (
-                                    <span className="rounded-full bg-primary-100 px-2 py-0.5 text-[10px] font-bold text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">
-                                        {activeDef.count}
-                                    </span>
-                                )}
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setActiveModule(null)}
-                                className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800"
-                                aria-label="Cerrar modulo"
-                            >
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <line x1="18" y1="6" x2="6" y2="18" />
-                                    <line x1="6" y1="6" x2="18" y2="18" />
-                                </svg>
-                            </button>
-                        </div>
-                        <div className="max-h-[70vh] overflow-y-auto p-5">
-                            {children[activeIndex]}
-                        </div>
-                    </div>
-                )}
-            </div>
+            {/* Universal Module Sheet Modal (both Mobile and Desktop Web) */}
+            {activeDef && (
+                <ModuleSheet
+                    isOpen={true}
+                    title={activeDef.title}
+                    icon={activeDef.icon}
+                    onClose={() => setActiveModule(null)}
+                >
+                    {children[activeIndex]}
+                </ModuleSheet>
+            )}
         </>
     );
 });

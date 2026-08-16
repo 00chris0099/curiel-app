@@ -1,0 +1,30 @@
+# Dependencias (se instalan dentro del contenedor con npm ci)
+node_modules
+
+# Secretos y config local (NUNCA deben entrar al build)
+.env
+.env.*
+!.env.example
+
+# Datos de runtime / temporales
+storage
+uploads
+coverage
+*.log
+
+# Control de versiones y SO
+.git
+.gitignore
+Dockerfile
+.dockerignore
+.DS_Store
+
+# Docs y archivos de proyecto (no van a la imagen)
+*.md
+AGENTS.md
+CHANGELOG.md
+CHECKLIST.md
+EXECUTIVE_SUMMARY.md
+PROJECT_STRUCTURE.md
+QUICKSTART.md
+README.md

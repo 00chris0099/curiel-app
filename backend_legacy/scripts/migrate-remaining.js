@@ -1,5 +1,7 @@
 /**
- * Migra cada modulo usando SQL puro (sin shadow DB).
+ * Migra usando SQL puro (sin shadow DB).
+ * Si DATABASE_URL está definida (base única), migra desde el schema
+ * UNIFICADO; si no, migra los módulos restantes legacy.
  * Ejecuta: node scripts/migrate-remaining.js
  */
 require('dotenv').config();
@@ -10,6 +12,16 @@ const { Client } = require('pg');
 const crypto = require('crypto');
 
 const ROOT = path.resolve(__dirname, '..');
+
+const UNIFIED_SCHEMA = 'prisma/schema.prisma';
+const SINGLE_URL = process.env.DATABASE_URL || null;
+
+function resolveSsl(url) {
+    const flag = String(process.env.DATABASE_SSL || '').toLowerCase();
+    if (['true', '1', 'yes', 'on'].includes(flag)) return { rejectUnauthorized: false };
+    if (/sslmode=(require|no-verify|prefer)/i.test(url || '')) return { rejectUnauthorized: false };
+    return false;
+}
 
 const MODULES = [
     {
@@ -30,7 +42,7 @@ const MODULES = [
 ];
 
 async function applySql(url, sql, migrationName) {
-    const client = new Client({ connectionString: url, ssl: false });
+    const client = new Client({ connectionString: url, ssl: resolveSsl(url) });
     await client.connect();
     try {
         await client.query('BEGIN');
@@ -79,6 +91,28 @@ async function applySql(url, sql, migrationName) {
 }
 
 async function run() {
+    // Modo único: migrar el schema UNIFICADO y terminar
+    if (SINGLE_URL) {
+        console.log('\nModo UNIFICADO: DATABASE_URL detectada (una sola base de datos).');
+        const schemaPath = path.join(ROOT, UNIFIED_SCHEMA);
+        const sqlFile = path.join(ROOT, 'prisma', 'temp_unified.sql');
+        try {
+            execSync(
+                `npx prisma migrate diff --from-empty --to-schema "${schemaPath}" --script > "${sqlFile}"`,
+                { cwd: ROOT, stdio: 'pipe', env: { ...process.env } }
+            );
+            const sql = fs.readFileSync(sqlFile, 'utf-8').trim();
+            console.log(`  SQL: ${sql.length} chars`);
+            await applySql(SINGLE_URL, sql, 'init_unified');
+            fs.unlinkSync(sqlFile);
+            console.log('✅ Base única: migración exitosa');
+            return;
+        } catch (err) {
+            if (fs.existsSync(sqlFile)) fs.unlinkSync(sqlFile);
+            throw err;
+        }
+    }
+
     for (const mod of MODULES) {
         console.log(`\nMigrando: ${mod.name}`);
         const schemaPath = path.join(ROOT, mod.schema);

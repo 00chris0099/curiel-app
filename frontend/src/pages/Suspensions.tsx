@@ -117,80 +117,91 @@ export const Suspensions = () => {
                 </button>
             </div>
 
-            {/* Form */}
+            {/* Form Modal */}
             {showForm && (
-                <form onSubmit={handleSubmit} className="rounded-2xl border border-gray-200 bg-white p-5 sm:p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900 space-y-4">
-                    <h2 className="text-base font-bold text-gray-900 dark:text-white">Registrar nueva suspensión</h2>
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                        <div>
-                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Inspector *</label>
-                            <select
-                                value={form.inspectorId}
-                                onChange={(e) => setForm({ ...form, inspectorId: e.target.value })}
-                                className="input text-xs sm:text-sm"
-                                required
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <form onSubmit={handleSubmit} className="w-full max-w-xl rounded-2xl border border-gray-200 bg-white p-5 sm:p-6 shadow-2xl dark:border-gray-800 dark:bg-gray-900 space-y-4">
+                        <div className="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
+                            <h2 className="text-base font-bold text-gray-900 dark:text-white">Registrar nueva suspensión</h2>
+                            <button
+                                type="button"
+                                onClick={() => setShowForm(false)}
+                                className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
                             >
-                                <option value="">Seleccionar inspector</option>
-                                {inspectors.map((i) => <option key={i.id} value={i.id}>{i.fullName}</option>)}
-                            </select>
+                                ✕
+                            </button>
+                        </div>
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                            <div>
+                                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Inspector *</label>
+                                <select
+                                    value={form.inspectorId}
+                                    onChange={(e) => setForm({ ...form, inspectorId: e.target.value })}
+                                    className="input text-xs sm:text-sm"
+                                    required
+                                >
+                                    <option value="">Seleccionar inspector</option>
+                                    {inspectors.map((i) => <option key={i.id} value={i.id}>{i.fullName}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Motivo *</label>
+                                <select
+                                    value={form.reason}
+                                    onChange={(e) => setForm({ ...form, reason: e.target.value as SuspensionReason })}
+                                    className="input text-xs sm:text-sm"
+                                    required
+                                >
+                                    <option value="abandono">Abandono</option>
+                                    <option value="rendimiento">Rendimiento</option>
+                                    <option value="conducta">Conducta</option>
+                                    <option value="otro">Otro</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Gravedad *</label>
+                                <select
+                                    value={form.gravityLevel}
+                                    onChange={(e) => setForm({ ...form, gravityLevel: Number(e.target.value) as GravityLevel })}
+                                    className="input text-xs sm:text-sm"
+                                    required
+                                >
+                                    <option value={1}>Nivel 1 - Bajo</option>
+                                    <option value={2}>Nivel 2 - Medio</option>
+                                    <option value={3}>Nivel 3 - Alto</option>
+                                </select>
+                            </div>
                         </div>
                         <div>
-                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Motivo *</label>
-                            <select
-                                value={form.reason}
-                                onChange={(e) => setForm({ ...form, reason: e.target.value as SuspensionReason })}
+                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Descripción * (mínimo 50 caracteres)</label>
+                            <textarea
+                                value={form.description}
+                                onChange={(e) => setForm({ ...form, description: e.target.value })}
                                 className="input text-xs sm:text-sm"
+                                rows={3}
                                 required
-                            >
-                                <option value="abandono">Abandono</option>
-                                <option value="rendimiento">Rendimiento</option>
-                                <option value="conducta">Conducta</option>
-                                <option value="otro">Otro</option>
-                            </select>
+                                minLength={50}
+                                placeholder="Descripción detallada del motivo de suspensión..."
+                            />
                         </div>
-                        <div>
-                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Gravedad *</label>
-                            <select
-                                value={form.gravityLevel}
-                                onChange={(e) => setForm({ ...form, gravityLevel: Number(e.target.value) as GravityLevel })}
-                                className="input text-xs sm:text-sm"
-                                required
+                        <div className="flex justify-end gap-3 pt-2">
+                            <button
+                                type="button"
+                                onClick={() => setShowForm(false)}
+                                className="btn btn-secondary text-xs py-2 px-4"
                             >
-                                <option value={1}>Nivel 1 - Bajo</option>
-                                <option value={2}>Nivel 2 - Medio</option>
-                                <option value={3}>Nivel 3 - Alto</option>
-                            </select>
+                                Cancelar
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={isSubmitting}
+                                className="btn btn-primary text-xs py-2 px-4"
+                            >
+                                {isSubmitting ? 'Creando...' : 'Crear Suspensión'}
+                            </button>
                         </div>
-                    </div>
-                    <div>
-                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Descripción * (mínimo 50 caracteres)</label>
-                        <textarea
-                            value={form.description}
-                            onChange={(e) => setForm({ ...form, description: e.target.value })}
-                            className="input text-xs sm:text-sm"
-                            rows={3}
-                            required
-                            minLength={50}
-                            placeholder="Descripción detallada del motivo de suspensión..."
-                        />
-                    </div>
-                    <div className="flex justify-end gap-3 pt-2">
-                        <button
-                            type="button"
-                            onClick={() => setShowForm(false)}
-                            className="btn btn-secondary text-xs py-2 px-4"
-                        >
-                            Cancelar
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={isSubmitting}
-                            className="btn btn-primary text-xs py-2 px-4"
-                        >
-                            {isSubmitting ? 'Creando...' : 'Crear Suspensión'}
-                        </button>
-                    </div>
-                </form>
+                    </form>
+                </div>
             )}
 
             {/* Filter */}

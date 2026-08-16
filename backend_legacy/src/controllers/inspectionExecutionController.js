@@ -7,6 +7,7 @@ const {
     observationCreateSchema,
     observationUpdateSchema,
     photoCreateSchema,
+    photoUpdateSchema,
     summaryUpdateSchema,
     completeInspectionSchema,
     validateExecutionPayload
@@ -187,6 +188,26 @@ const createPhoto = asyncHandler(async (req, res) => {
     });
 });
 
+const updatePhoto = asyncHandler(async (req, res) => {
+    const payload = validateExecutionPayload(photoUpdateSchema, req.body);
+    const result = await inspectionExecutionService.updatePhoto(
+        req.params.id,
+        req.params.photoId,
+        payload,
+        req.userId,
+        req.userRole,
+        req.isMasterAdmin
+    );
+
+    await createAuditLog(req.userId, 'update_execution_photo', 'Photo', req.params.photoId, payload);
+
+    res.json({
+        success: true,
+        message: 'Foto actualizada exitosamente',
+        data: result
+    });
+});
+
 const updateSummary = asyncHandler(async (req, res) => {
     const payload = validateExecutionPayload(summaryUpdateSchema, req.body);
     const summary = await inspectionExecutionService.updateSummary(
@@ -235,6 +256,7 @@ module.exports = {
     updateObservation,
     deleteObservation,
     createPhoto,
+    updatePhoto,
     updateSummary,
     completeInspection
 };

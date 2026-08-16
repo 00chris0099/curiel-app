@@ -184,8 +184,8 @@ export const InspectionExecution = () => {
 
         await withBusyAction('default-areas', async () => {
             if (!isOnline) {
-                const existingNames = new Set(areas.map((area) => area.name));
-                const missingAreas = defaultAreaDefinitions.filter((definition) => !existingNames.has(definition.name));
+                const existingNames = new Set(areas.map((area) => String(area.name || '').trim().toUpperCase()));
+                const missingAreas = defaultAreaDefinitions.filter((definition) => !existingNames.has(String(definition.name || '').trim().toUpperCase()));
 
                 for (const definition of missingAreas) {
                     await addSyncQueueItem({
@@ -217,7 +217,7 @@ export const InspectionExecution = () => {
         await withBusyAction('create-area', async () => {
             const clientId = createLocalId('local-area');
             const payload: CreateInspectionAreaDto = {
-                name: form.name.trim(),
+                name: form.name.trim().toUpperCase(),
                 category: form.category.trim() || 'interior',
                 lengthM: form.lengthM ? Number(form.lengthM) : null,
                 widthM: form.widthM ? Number(form.widthM) : null,
@@ -233,10 +233,6 @@ export const InspectionExecution = () => {
                 clientId,
                 data: payload,
             }, clientId, 'Área guardada offline');
-
-            if (isOnline) {
-                toast.success('Área creada correctamente');
-            }
         });
     };
 
@@ -245,7 +241,7 @@ export const InspectionExecution = () => {
 
         await withBusyAction(`update-area-${areaId}`, async () => {
             const payload: UpdateInspectionAreaDto = {
-                name: form.name.trim(),
+                name: form.name.trim().toUpperCase(),
                 category: form.category.trim() || 'interior',
                 lengthM: form.lengthM ? Number(form.lengthM) : null,
                 widthM: form.widthM ? Number(form.widthM) : null,
@@ -261,10 +257,6 @@ export const InspectionExecution = () => {
                 targetId: areaId,
                 data: payload,
             }, areaId, 'Área actualizada offline');
-
-            if (isOnline) {
-                toast.success('Área actualizada');
-            }
         });
     };
 
@@ -278,10 +270,6 @@ export const InspectionExecution = () => {
                 action: 'delete',
                 targetId: area.id,
             }, null, 'Área eliminada offline');
-
-            if (isOnline) {
-                toast.success('Área eliminada');
-            }
         });
     };
 
@@ -307,9 +295,6 @@ export const InspectionExecution = () => {
                     targetId: editingId,
                     data: payload,
                 }, null, 'Observación guardada offline');
-                if (isOnline) {
-                    toast.success('Observación actualizada');
-                }
             } else {
                 await queueMutation({
                     inspectionId: id,
@@ -318,9 +303,6 @@ export const InspectionExecution = () => {
                     clientId,
                     data: payload,
                 }, null, 'Observación guardada offline');
-                if (isOnline) {
-                    toast.success('Observación registrada');
-                }
             }
         });
     };
@@ -335,10 +317,6 @@ export const InspectionExecution = () => {
                 action: 'delete',
                 targetId: observationId,
             }, null, 'Observación eliminada offline');
-
-            if (isOnline) {
-                toast.success('Observación eliminada');
-            }
         });
     };
 
@@ -393,10 +371,6 @@ export const InspectionExecution = () => {
                     reportStatus: summaryForm.reportStatus,
                 },
             }, null, 'Resumen guardado offline');
-
-            if (isOnline) {
-                toast.success('Resumen técnico actualizado');
-            }
         });
     };
 
@@ -415,27 +389,30 @@ export const InspectionExecution = () => {
             return;
         }
 
+        // Evitar doble envío: si ya se está subiendo una foto, ignorar el segundo disparo.
+        if (busyAction?.startsWith('photo-')) {
+            return;
+        }
+
         await withBusyAction(`photo-${type}`, async () => {
             const previewUrl = await fileToDataUrl(file as Blob);
+            const clientId = createLocalId('local-photo');
             await queueMutation({
                 inspectionId: id,
                 entityType: 'photo',
                 action: 'create',
-                clientId: createLocalId('local-photo'),
+                clientId,
                 data: {
                     type: type === 'observacion' ? 'area' : type as 'edificio' | 'plano' | 'area' | 'general',
                     caption: caption.trim() || undefined,
                     areaId,
+                    clientId,
                 },
                 file,
                 fileName: file?.name,
                 fileType: file?.type,
                 previewUrl,
             }, null, 'Foto guardada offline');
-
-            if (isOnline) {
-                toast.success('Foto registrada');
-            }
         });
     };
 
@@ -487,7 +464,6 @@ export const InspectionExecution = () => {
             }, null, 'Cambio de estado guardado offline');
 
             if (isOnline) {
-                toast.success('Inspección enviada a revisión');
                 await loadExecution();
             }
         });
@@ -498,14 +474,26 @@ export const InspectionExecution = () => {
             if (photoId.startsWith('local-')) {
                 await removeSyncQueueItemByClientId(photoId);
                 await loadExecution();
-                toast.success('Foto eliminada');
                 return;
             }
             await inspectionService.deletePhoto(photoId);
             await loadExecution();
-            toast.success('Foto eliminada');
         } catch (error: unknown) {
             toast.error(getApiErrorMessage(error, 'No se pudo eliminar la foto'));
+        }
+    };
+
+    const handleSetMainPhoto = async (photoId: string, isMain: boolean) => {
+        if (!id) return;
+
+        try {
+            if (photoId.startsWith('local-')) {
+                return;
+            }
+            await inspectionService.updateExecutionPhoto(id, photoId, { isMain });
+            await loadExecution();
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, 'No se pudo marcar la foto principal'));
         }
     };
 
@@ -615,6 +603,7 @@ export const InspectionExecution = () => {
                         onDeleteObservation={handleDeleteObservation}
                         onUploadPhoto={handleUploadPhoto}
                         onDeletePhoto={handleDeletePhoto}
+                        onSetMainPhoto={handleSetMainPhoto}
                     />
                     <ModuleConsideraciones
                         summaryForm={summaryForm}

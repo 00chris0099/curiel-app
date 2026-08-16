@@ -55,9 +55,16 @@ const photoCreateSchema = Joi.object({
     type: Joi.string().valid('edificio', 'plano', 'area', 'observacion', 'general').required(),
     url: Joi.string().uri().optional().allow('', null),
     caption: Joi.string().trim().optional().allow('', null),
+    clientId: Joi.string().trim().max(64).optional().allow('', null),
+    isMain: Joi.boolean().optional(),
     latitude: decimalField.optional().allow(null),
     longitude: decimalField.optional().allow(null)
 });
+
+const photoUpdateSchema = Joi.object({
+    caption: Joi.string().trim().optional().allow('', null),
+    isMain: Joi.boolean().optional()
+}).min(1);
 
 const summaryUpdateSchema = Joi.object({
     generalConclusion: Joi.string().trim().optional().allow('', null),
@@ -92,6 +99,7 @@ module.exports = {
     observationCreateSchema,
     observationUpdateSchema,
     photoCreateSchema,
+    photoUpdateSchema,
     summaryUpdateSchema,
     completeInspectionSchema,
     validateExecutionPayload

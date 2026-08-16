@@ -61,7 +61,7 @@ const api = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
-    timeout: 15000,
+    timeout: 120000,
 });
 
 // Track if we're currently refreshing to avoid infinite loops

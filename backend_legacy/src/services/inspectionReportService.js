@@ -17,17 +17,24 @@ const severityOrder = {
 };
 
 const areaPriority = [
+    'BALCÓN',
+    'SALA Y COMEDOR',
+    'KITCHENETTE',
+    'CENTRO DE LAVADO',
+    'DORMITORIO PRINCIPAL',
+    'BAÑO PRINCIPAL',
+    'PASADIZO',
+    'MUROS Y VANOS',
+    'DEPÓSITO Y ALMACÉN',
+    // Compatibilidad con nombres anteriores en minúscula
     'Entrada',
     'Sala',
     'Comedor',
-    'Kitchenette',
-    'Dormitorio principal',
-    'Dormitorio secundario',
-    'Baño principal',
-    'Baño 2',
     'Balcón',
-    'Centro de lavado',
     'Estudio',
+    'Dormitorio secundario',
+    'Baño 2',
+    'Centro de lavado',
     'Muros y vanos'
 ];
 
@@ -40,6 +47,57 @@ const REPORT_TEMPLATE_VERSION = '2.1.0';
 
 const pdfBufferCache = new Map();
 const PDF_BUFFER_TTL = 2 * 60 * 60 * 1000;
+
+// Reutilizar el navegador entre generaciones evita el costo de lanzar Chromium por cada informe.
+let sharedBrowser = null;
+let sharedBrowserPromise = null;
+
+async function getSharedBrowser(executablePath) {
+    if (sharedBrowser && sharedBrowser.connected) {
+        return sharedBrowser;
+    }
+    if (sharedBrowserPromise) {
+        return sharedBrowserPromise;
+    }
+    sharedBrowserPromise = puppeteer.launch({
+        executablePath,
+        headless: 'new',
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--no-zygote',
+            '--single-process',
+            '--font-render-hinting=medium'
+        ]
+    })
+        .then((browser) => {
+            sharedBrowser = browser;
+            sharedBrowserPromise = null;
+            browser.on('disconnected', () => {
+                sharedBrowser = null;
+            });
+            return browser;
+        })
+        .catch((error) => {
+            sharedBrowserPromise = null;
+            throw error;
+        });
+    return sharedBrowserPromise;
+}
+
+async function closeSharedBrowser() {
+    if (sharedBrowser && sharedBrowser.connected) {
+        try {
+            await sharedBrowser.close();
+        } catch (error) {
+            logger.warn('Error cerrando navegador compartido', { error: error.message });
+        }
+    }
+    sharedBrowser = null;
+    sharedBrowserPromise = null;
+}
 
 class InspectionReportService {
     async generateInspectionReport(inspectionId, userId, userRole, isMasterAdmin = false) {
@@ -170,27 +228,15 @@ class InspectionReportService {
             generatedAt: new Date().toISOString()
         });
 
-        let browser;
         const executablePath = this._resolveExecutablePath();
+        let page = null;
 
         try {
             logger.info('Using Chromium executable', { path: executablePath });
 
-            browser = await puppeteer.launch({
-                executablePath,
-                headless: 'new',
-                args: [
-                    '--no-sandbox',
-                    '--disable-setuid-sandbox',
-                    '--disable-dev-shm-usage',
-                    '--disable-gpu',
-                    '--no-zygote',
-                    '--single-process',
-                    '--font-render-hinting=medium'
-                ]
-            });
+            const browser = await getSharedBrowser(executablePath);
 
-            const page = await browser.newPage();
+            page = await browser.newPage();
             await page.setViewport({ width: 1240, height: 1754, deviceScaleFactor: 1.5 });
             page.setDefaultNavigationTimeout(60000);
             page.setDefaultTimeout(60000);
@@ -257,14 +303,19 @@ class InspectionReportService {
                 stack: error?.stack
             });
 
+            // Si el navegador compartido falló, forzar su recreación en el próximo intento.
+            if (sharedBrowser && !sharedBrowser.connected) {
+                sharedBrowser = null;
+            }
+
             throw new AppError(
                 error?.message || 'No se pudo generar el PDF de la inspección',
                 500,
                 'PUPPETEER_REPORT_ERROR'
             );
         } finally {
-            if (browser) {
-                await browser.close();
+            if (page) {
+                await page.close().catch(() => {});
             }
         }
     }
@@ -297,9 +348,11 @@ class InspectionReportService {
     }
 
     _sortAreas(areas) {
+        const normalizedPriority = (name) => areaPriority.findIndex((p) => p.toUpperCase() === String(name || '').trim().toUpperCase());
+
         return [...areas].sort((left, right) => {
-            const leftPriority = areaPriority.indexOf(left.name);
-            const rightPriority = areaPriority.indexOf(right.name);
+            const leftPriority = normalizedPriority(left.name);
+            const rightPriority = normalizedPriority(right.name);
 
             if (leftPriority !== -1 || rightPriority !== -1) {
                 return (leftPriority === -1 ? 999 : leftPriority) - (rightPriority === -1 ? 999 : rightPriority);

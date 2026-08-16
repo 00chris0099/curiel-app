@@ -446,6 +446,15 @@ export const mergeExecutionWithQueue = (base: InspectionExecutionData, queueItem
     }
   }
 
+  // Red de seguridad: nunca mostrar dos veces la misma foto (misma URL) en la UI.
+  const seenPhotoUrls = new Set<string>()
+  result.photos = result.photos.filter((photo) => {
+    if (!photo.url) return true
+    if (seenPhotoUrls.has(photo.url)) return false
+    seenPhotoUrls.add(photo.url)
+    return true
+  })
+
   const totalAreaM2 = result.areas.reduce((sum, area) => sum + Number(area.calculatedAreaM2 || 0), 0)
   const totalObservations = result.observations.length
   const criticalObservations = result.observations.filter((item) => item.severity === 'critica').length

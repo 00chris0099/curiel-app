@@ -2,15 +2,25 @@ require('dotenv').config();
 const bcrypt = require('bcryptjs');
 const { PrismaClient } = require('@prisma/client');
 const { PrismaPg } = require('@prisma/adapter-pg');
+const { Pool } = require('pg');
 
-const DATABASE_URL = process.env.DATABASE_URL_AUTH;
+// Base única (DATABASE_URL) o legacy (DATABASE_URL_AUTH)
+const DATABASE_URL = process.env.DATABASE_URL || process.env.DATABASE_URL_AUTH;
 
 if (!DATABASE_URL) {
-    console.error('DATABASE_URL_AUTH no definida en .env');
+    console.error('DATABASE_URL (o DATABASE_URL_AUTH) no definida en .env');
     process.exit(1);
 }
 
-const adapter = new PrismaPg({ connectionString: DATABASE_URL });
+function resolveSsl(url) {
+    const flag = String(process.env.DATABASE_SSL || '').toLowerCase();
+    if (['true', '1', 'yes', 'on'].includes(flag)) return { rejectUnauthorized: false };
+    if (/sslmode=(require|no-verify|prefer)/i.test(url || '')) return { rejectUnauthorized: false };
+    return undefined;
+}
+
+const pool = new Pool({ connectionString: DATABASE_URL, ssl: resolveSsl(DATABASE_URL) });
+const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 const ROLES = [
@@ -28,7 +38,7 @@ const ADMIN_USER = {
 };
 
 async function main() {
-    console.log('Iniciando seed de curiel_auth...\n');
+    console.log('Iniciando seed (roles + usuario admin)...\n');
 
     // 1. Crear roles
     const roles = {};
@@ -92,7 +102,7 @@ async function main() {
         console.log('  Usuario admin ya tiene rol "admin"');
     }
 
-    console.log('\nSeed de curiel_auth completado exitosamente.');
+    console.log('\nSeed completado exitosamente.');
 }
 
 main()

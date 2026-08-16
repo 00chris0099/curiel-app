@@ -18,7 +18,7 @@ export const ModuleConsideraciones = memo(({
 }: ModuleConsideracionesProps) => (
     <div className="space-y-3">
         <textarea
-            className="input min-h-[200px]"
+            className="input !min-h-[280px] w-full text-base leading-relaxed sm:!min-h-[380px]"
             value={summaryForm.generalConclusion}
             onChange={(e) => onSummaryChange((current) => ({ ...current, generalConclusion: e.target.value }))}
             placeholder="Escribe las consideraciones finales y recomendaciones..."

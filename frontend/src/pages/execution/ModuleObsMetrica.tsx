@@ -83,7 +83,7 @@ export const ModuleObsMetrica = memo(({
                 )}
             </div>
             <textarea
-                className="input min-h-[200px]"
+                className="input !min-h-[280px] w-full text-base leading-relaxed sm:!min-h-[380px]"
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 placeholder="Escribe las observaciones métricas aquí..."

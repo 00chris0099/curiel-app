@@ -1,5 +1,7 @@
 /**
- * Run SQL fix scripts against all databases.
+ * Run SQL fix scripts against the database(s).
+ * MODO NUEVO: si DATABASE_URL está definida (base única), los aplica una vez
+ *   contra esa base. MODO LEGACY: contra las 7 DATABASE_URL_*.
  * Idempotent: all scripts use IF NOT EXISTS / DO $$ blocks.
  */
 require('dotenv').config();
@@ -9,15 +11,24 @@ const { Client } = require('pg');
 
 const FIXES_DIR = path.join(__dirname, 'sql-fixes');
 
-const DATABASES = [
-    { name: 'auth', url: process.env.DATABASE_URL_AUTH },
-    { name: 'inspecciones', url: process.env.DATABASE_URL_INSPECCIONES },
-    { name: 'media', url: process.env.DATABASE_URL_MEDIA },
-    { name: 'admin', url: process.env.DATABASE_URL_ADMIN },
-    { name: 'notificaciones', url: process.env.DATABASE_URL_NOTIFICACIONES },
-    { name: 'alertas', url: process.env.DATABASE_URL_ALERTAS },
-    { name: 'auditoria', url: process.env.DATABASE_URL_AUDITORIA },
-];
+function resolveSsl(url) {
+    const flag = String(process.env.DATABASE_SSL || '').toLowerCase();
+    if (['true', '1', 'yes', 'on'].includes(flag)) return { rejectUnauthorized: false };
+    if (/sslmode=(require|no-verify|prefer)/i.test(url || '')) return { rejectUnauthorized: false };
+    return false;
+}
+
+const DATABASES = process.env.DATABASE_URL
+    ? [{ name: 'unificada', url: process.env.DATABASE_URL }]
+    : [
+        { name: 'auth', url: process.env.DATABASE_URL_AUTH },
+        { name: 'inspecciones', url: process.env.DATABASE_URL_INSPECCIONES },
+        { name: 'media', url: process.env.DATABASE_URL_MEDIA },
+        { name: 'admin', url: process.env.DATABASE_URL_ADMIN },
+        { name: 'notificaciones', url: process.env.DATABASE_URL_NOTIFICACIONES },
+        { name: 'alertas', url: process.env.DATABASE_URL_ALERTAS },
+        { name: 'auditoria', url: process.env.DATABASE_URL_AUDITORIA },
+    ];
 
 async function runFixes() {
     if (!fs.existsSync(FIXES_DIR)) {
@@ -34,7 +45,7 @@ async function runFixes() {
     for (const db of DATABASES) {
         if (!db.url) continue;
 
-        const client = new Client({ connectionString: db.url, ssl: false });
+        const client = new Client({ connectionString: db.url, ssl: resolveSsl(db.url) });
         try {
             await client.connect();
 

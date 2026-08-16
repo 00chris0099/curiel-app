@@ -18,6 +18,7 @@ import type {
     UpdateInspectionAreaDto,
     UpdateInspectionExecutionSummaryDto,
     UpdateInspectionObservationDto,
+    UpdateInspectionPhotoDto,
     ApiResponse,
     PaginatedResponse,
 } from '../types';
@@ -93,6 +94,22 @@ const parseBlobErrorMessage = async (blob: Blob, fallback: string) => {
     } catch {
         return fallback;
     }
+};
+
+const parseRequiresAuthResponse = async (blob: Blob): Promise<{ requiresAuth: true; authUrl: string } | null> => {
+    try {
+        const text = await blob.text();
+        const parsed = JSON.parse(text) as {
+            requiresAuth?: boolean;
+            data?: { authUrl?: string };
+        };
+        if (parsed.requiresAuth && parsed.data?.authUrl) {
+            return { requiresAuth: true, authUrl: parsed.data.authUrl };
+        }
+    } catch {
+        // not JSON
+    }
+    return null;
 };
 
 const inspectionService = {
@@ -232,6 +249,8 @@ const inspectionService = {
         if (data.observationId) payload.append('observationId', data.observationId);
         if (data.caption) payload.append('caption', data.caption);
         if (data.url) payload.append('url', data.url);
+        if (data.clientId) payload.append('clientId', data.clientId);
+        if (data.isMain !== undefined) payload.append('isMain', String(data.isMain));
         if (file) payload.append('photo', file);
 
         const response = await apiClient.post<ApiResponse<ExecutionPhotoMutationResponse>>(`/inspections/${id}/execution/photos`, payload, {
@@ -269,6 +288,7 @@ const inspectionService = {
         try {
             const response = await apiClient.get<Blob>(`/inspections/${id}/report`, {
                 responseType: 'blob',
+                timeout: 180000,
             });
 
             const contentType = String(response.headers['content-type'] || response.data.type || '').toLowerCase();
@@ -290,7 +310,9 @@ const inspectionService = {
     },
 
     async previewReport(id: string): Promise<string> {
-        const response = await apiClient.get<string>(`/inspections/${id}/report/preview`);
+        const response = await apiClient.get<string>(`/inspections/${id}/report/preview`, {
+            timeout: 180000,
+        });
         return response.data;
     },
 
@@ -314,6 +336,13 @@ const inspectionService = {
             const contentType = String(response.headers['content-type'] || response.data.type || '').toLowerCase();
 
             if (!contentType.includes('application/pdf')) {
+                // El backend responde con JSON `{ requiresAuth: true }` (status 200)
+                // cuando falta autorizar Google Drive. Detectarlo antes de tirar error.
+                const requiresAuthResult = await parseRequiresAuthResponse(response.data);
+                if (requiresAuthResult) {
+                    return requiresAuthResult;
+                }
+
                 const message = await parseBlobErrorMessage(response.data, 'El servidor no devolvió un PDF válido');
                 throw new Error(message);
             }
@@ -321,14 +350,9 @@ const inspectionService = {
             return { blob: new Blob([response.data], { type: 'application/pdf' }) };
         } catch (error: unknown) {
             if (axios.isAxiosError(error) && error.response?.data instanceof Blob) {
-                try {
-                    const text = await error.response.data.text();
-                    const parsed = JSON.parse(text);
-                    if (parsed.requiresAuth) {
-                        return { requiresAuth: true, authUrl: parsed.data.authUrl };
-                    }
-                } catch {
-                    // not JSON
+                const requiresAuthResult = await parseRequiresAuthResponse(error.response.data);
+                if (requiresAuthResult) {
+                    return requiresAuthResult;
                 }
                 const message = await parseBlobErrorMessage(error.response.data, 'No se pudo descargar el informe');
                 throw new Error(message);
@@ -339,6 +363,14 @@ const inspectionService = {
 
     async deletePhoto(photoId: string): Promise<void> {
         await apiClient.delete(`/photos/${photoId}`);
+    },
+
+    async updateExecutionPhoto(id: string, photoId: string, data: UpdateInspectionPhotoDto): Promise<InspectionPhoto> {
+        const response = await apiClient.put<ApiResponse<{ photo: InspectionPhoto }>>(`/inspections/${id}/execution/photos/${photoId}`, data);
+        if (!response.data.data?.photo) {
+            throw new Error('No se pudo actualizar la foto');
+        }
+        return response.data.data.photo;
     },
 };
 
