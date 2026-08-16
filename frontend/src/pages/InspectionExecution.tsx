@@ -21,6 +21,7 @@ import {
     canManageExecutionContent,
     canSendExecutionToReview,
 } from '../utils/inspectionPermissions';
+import { parseDepartmentInspectionNotes } from '../utils/inspectionMetadata';
 import {
     addSyncQueueItem,
     createLocalId,
@@ -579,6 +580,11 @@ export const InspectionExecution = () => {
                     />
                     <ModuleAreas
                         areas={areas}
+                        totalSquareMeters={(() => {
+                            if (!inspection?.notes) return null;
+                            const { metadata } = parseDepartmentInspectionNotes(inspection.notes);
+                            return metadata?.squareMeters ? Number(metadata.squareMeters) : null;
+                        })()}
                         busyAction={busyAction}
                         canEdit={canEditExecutionContent}
                         getEntitySyncState={getEntitySyncState}

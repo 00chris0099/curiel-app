@@ -6,6 +6,7 @@ import type { OfflineSyncItem } from '../../utils/offlineDb';
 
 type ModuleAreasProps = {
     areas: InspectionArea[];
+    totalSquareMeters?: number | null;
     busyAction: string | null;
     canEdit: boolean;
     getEntitySyncState: (entityType: OfflineSyncItem['entityType'], entityId: string) => 'pending' | 'failed' | 'synced';
@@ -17,6 +18,7 @@ type ModuleAreasProps = {
 
 export const ModuleAreas = memo(({
     areas,
+    totalSquareMeters,
     busyAction,
     canEdit,
     getEntitySyncState,
@@ -30,6 +32,17 @@ export const ModuleAreas = memo(({
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<AreaFormState>(emptyAreaForm);
 
+    const otherAreasSum = useMemo(() => {
+        return areas
+            .filter((a) => String(a.name || '').trim().toUpperCase() !== 'MUROS Y VANOS')
+            .reduce((sum, area) => sum + Number(area?.calculatedAreaM2 || 0), 0);
+    }, [areas]);
+
+    const autoMurosM2 = useMemo(() => {
+        if (!totalSquareMeters || totalSquareMeters <= 0) return null;
+        return Math.max(0, Number((totalSquareMeters - otherAreasSum).toFixed(2)));
+    }, [totalSquareMeters, otherAreasSum]);
+
     const totalM2 = useMemo(
         () => areas.reduce((sum, area) => sum + Number(area?.calculatedAreaM2 || 0), 0),
         [areas],
@@ -38,7 +51,13 @@ export const ModuleAreas = memo(({
     const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!form.name.trim()) return;
-        onCreateArea(form);
+        const isMuros = form.name.trim().toUpperCase() === 'MUROS Y VANOS';
+        const finalForm = {
+            ...form,
+            lengthM: isMuros && !form.lengthM && autoMurosM2 !== null ? autoMurosM2.toString() : form.lengthM,
+            widthM: isMuros ? '1' : form.widthM,
+        };
+        onCreateArea(finalForm);
         setForm(emptyAreaForm);
         setShowForm(false);
     };
@@ -111,8 +130,14 @@ export const ModuleAreas = memo(({
                 <form onSubmit={handleSubmit} className="space-y-3 rounded-2xl border border-dashed border-gray-300 p-3 dark:border-gray-600">
                     <div className="grid grid-cols-1 gap-2">
                         <input className="input uppercase" placeholder="Nombre del área" value={form.name} onChange={(e) => setForm((c) => ({ ...c, name: e.target.value.toUpperCase() }))} required />
-                        <input className="input" type="number" min="0" step="0.01" placeholder="Metros cuadrados (m²) — opcional" value={form.lengthM} onChange={(e) => setForm((c) => ({ ...c, lengthM: e.target.value, widthM: '1' }))} />
-                        <p className="text-[11px] text-gray-400">Si el área no tiene medida (ej. depósito), déjalo vacío.</p>
+                        <input className="input" type="number" min="0" step="0.01" placeholder={form.name.trim().toUpperCase() === 'MUROS Y VANOS' && autoMurosM2 !== null ? `Auto (${autoMurosM2} m²)` : "Metros cuadrados (m²) — opcional"} value={form.lengthM} onChange={(e) => setForm((c) => ({ ...c, lengthM: e.target.value, widthM: '1' }))} />
+                        {form.name.trim().toUpperCase() === 'MUROS Y VANOS' && autoMurosM2 !== null ? (
+                            <p className="text-[11px] font-semibold text-blue-600 dark:text-blue-400">
+                                ✨ Autocalculado: {autoMurosM2} m² (Diferencia de {totalSquareMeters} m² total - {otherAreasSum.toFixed(2)} m² en ambientes)
+                            </p>
+                        ) : (
+                            <p className="text-[11px] text-gray-400">Si el área no tiene medida (ej. depósito), déjalo vacío.</p>
+                        )}
                     </div>
                     <div className="flex gap-2">
                         <button type="submit" className="btn btn-primary text-sm" disabled={busyAction === 'create-area'}>Guardar</button>

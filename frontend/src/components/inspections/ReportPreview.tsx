@@ -193,26 +193,16 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
     const handleDownloadAndDrive = async () => {
         setIsDownloadingDrive(true);
         try {
-            const result = await inspectionService.downloadReportAndSaveToDrive(inspectionId);
-            if ('requiresAuth' in result && result.requiresAuth) {
-                const token = localStorage.getItem('accessToken') || '';
-                const authUrl = `${result.authUrl}&token=${encodeURIComponent(token)}`;
-                window.open(authUrl, 'google-auth', 'width=600,height=700');
-                toast.success('Autoriza con tu cuenta de Google en la ventana emergente');
-                setIsDownloadingDrive(false);
-                return;
-            }
-            if ('blob' in result) {
-                const blob = result.blob;
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `informe-inspeccion-${projectName}.pdf`;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                a.remove();
-            }
+            const blob = await inspectionService.downloadReport(inspectionId);
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `informe-inspeccion-${projectName}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+            toast.success('Informe descargado exitosamente');
         } catch (err: unknown) {
             toast.error(getApiErrorMessage(err, 'No se pudo descargar el informe'));
         } finally {
@@ -326,7 +316,7 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
                                     <line x1="12" y1="15" x2="12" y2="3" />
                                 </svg>
                             )}
-                            <span className="hidden sm:inline">{isDownloadingDrive ? 'Guardando...' : 'Descargar'}</span>
+                            <span className="hidden sm:inline">{isDownloadingDrive ? 'Descargando...' : 'Descargar'}</span>
                         </button>
 
                         {/* Cerrar */}

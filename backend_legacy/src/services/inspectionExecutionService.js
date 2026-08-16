@@ -564,7 +564,57 @@ class InspectionExecutionService {
         return observation;
     }
 
+    async _recalculateMurosYVanosArea(inspectionId) {
+        try {
+            const inspection = await prisma.inspecciones.inspection.findUnique({
+                where: { id: inspectionId },
+                select: { notes: true }
+            });
+            if (!inspection || !inspection.notes) return;
+
+            let squareMeters = null;
+            const match = inspection.notes.match(/\[department-inspection-meta\]([\s\S]*?)\[\/department-inspection-meta\]/);
+            if (match && match[1]) {
+                try {
+                    const meta = JSON.parse(match[1]);
+                    if (meta.squareMeters && !isNaN(Number(meta.squareMeters))) {
+                        squareMeters = Number(meta.squareMeters);
+                    }
+                } catch {}
+            }
+
+            if (squareMeters === null || squareMeters <= 0) return;
+
+            const allAreas = await prisma.inspecciones.inspectionArea.findMany({
+                where: { inspectionId },
+                select: { id: true, name: true, calculatedAreaM2: true }
+            });
+
+            const murosArea = allAreas.find(a => String(a.name || '').toLowerCase() === 'muros y vanos');
+            if (!murosArea) return;
+
+            const otherAreasSum = allAreas
+                .filter(a => a.id !== murosArea.id)
+                .reduce((sum, a) => sum + (this._toNumber(a.calculatedAreaM2) || 0), 0);
+
+            const diffM2 = Math.max(0, this._roundToTwo(squareMeters - otherAreasSum));
+
+            await prisma.inspecciones.inspectionArea.update({
+                where: { id: murosArea.id },
+                data: {
+                    calculatedAreaM2: diffM2,
+                    lengthM: diffM2,
+                    widthM: 1
+                }
+            });
+        } catch (err) {
+            // Silencioso para evitar romper flujos sin metadata
+        }
+    }
+
     async _recalculateSummary(inspectionId) {
+        await this._recalculateMurosYVanosArea(inspectionId);
+
         const [areas, observations] = await Promise.all([
             prisma.inspecciones.inspectionArea.findMany({
                 where: { inspectionId },
