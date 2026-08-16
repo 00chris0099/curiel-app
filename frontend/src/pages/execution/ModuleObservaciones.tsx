@@ -151,7 +151,7 @@ export const ModuleObservaciones = memo(({
                 <form onSubmit={handleSubmitPhoto} className="space-y-3 rounded-2xl border border-dashed border-primary-300 bg-primary-50/50 p-3 dark:border-primary-700 dark:bg-primary-900/10">
                     <img src={URL.createObjectURL(file)} alt="Preview" className="h-32 w-full rounded-xl object-cover sm:h-40" />
                     <AutoResizeTextarea
-                        minHeightClass="min-h-[140px]"
+                        minHeightClass="!min-h-[220px] sm:!min-h-[260px]"
                         placeholder="Descripción de la observación (requerido)"
                         value={description}
                         onChange={setDescription}

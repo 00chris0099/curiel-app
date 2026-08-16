@@ -592,7 +592,7 @@ export const InspectionAreaDetail = () => {
                     <AutoResizeTextarea
                         value={observationForm.description}
                         onChange={(value) => setObservationForm(prev => ({ ...prev, description: value }))}
-                        minHeightClass="min-h-[140px]"
+                        minHeightClass="!min-h-[220px] sm:!min-h-[260px]"
                     />
                             </div>
                         </div>

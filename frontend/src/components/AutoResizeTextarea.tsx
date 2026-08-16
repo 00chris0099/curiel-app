@@ -14,8 +14,13 @@ type AutoResizeTextareaProps = {
 
 /**
  * Textarea que crece automáticamente con el contenido.
- * A diferencia de un textarea fijo, ajusta su altura al texto escrito
- * (hasta un máximo) para que siempre se vea todo lo que se escribe.
+ *
+ * IMPORTANTE: las clases de altura llevan `!` porque la regla global
+ * `textarea.input { min-height: 6rem }` (96px) ganaría por especificidad
+ * sin el modificador !important de Tailwind.
+ *
+ * Base alta en móvil (320px) y mayor en pantallas grandes (420px);
+ * crece con el texto hasta un máximo de 60% de la altura de la pantalla.
  */
 export const AutoResizeTextarea = ({
     value,
@@ -23,8 +28,8 @@ export const AutoResizeTextarea = ({
     placeholder,
     disabled,
     className = '',
-    minHeightClass = 'min-h-[200px]',
-    maxHeightClass = 'max-h-[60vh]',
+    minHeightClass = '!min-h-[340px] sm:!min-h-[440px]',
+    maxHeightClass = '!max-h-[80vh]',
     id,
     name,
 }: AutoResizeTextareaProps) => {
@@ -33,8 +38,9 @@ export const AutoResizeTextarea = ({
     const resize = () => {
         const el = ref.current;
         if (!el) return;
+        // Reinicia a auto para medir el contenido real, luego aplica la altura
         el.style.height = 'auto';
-        el.style.height = `${el.scrollHeight}px`;
+        el.style.height = `${Math.max(el.scrollHeight, el.clientHeight)}px`;
     };
 
     useEffect(resize, [value]);
