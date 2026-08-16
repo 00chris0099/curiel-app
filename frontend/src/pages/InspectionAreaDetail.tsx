@@ -229,8 +229,8 @@ export const InspectionAreaDetail = () => {
         event.preventDefault();
         if (!id || !areaId) return;
 
-        if (!observationForm.title.trim() || !observationForm.description.trim()) {
-            toast.error('Debes completar el título y la descripción técnica');
+        if (!observationForm.title.trim()) {
+            toast.error('Debes ingresar al menos el título de la observación');
             return;
         }
 

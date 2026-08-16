@@ -9,6 +9,16 @@ const escapeHtml = (value) => String(value || '')
     .replace(/"/g, '&quot;')
     .replace(/'/, '&#39;');
 
+const optimizeImageUrl = (url, width = 1000) => {
+    if (!url || typeof url !== 'string') return url || '';
+    if (url.includes('res.cloudinary.com') && url.includes('/upload/')) {
+        if (!url.includes('/upload/f_auto') && !url.includes('/upload/w_')) {
+            return url.replace('/upload/', `/upload/f_auto,q_auto,w_${width}/`);
+        }
+    }
+    return url;
+};
+
 const formatDate = (value) => value ? new Date(value).toLocaleDateString('es-PE', {
     year: 'numeric',
     month: 'long',
@@ -97,7 +107,7 @@ const buildObservationPhotos = (photos) => {
     }
     return photos.map((photo) => `
         <div style="margin-bottom:12px; break-inside:avoid;">
-            <img src="${photo.url}" alt="${escapeHtml(photo.caption || 'Evidencia fotografica')}" style="max-width:100%; max-height:200px; object-fit:contain; display:block; border:1px solid #e5e7eb; background:#f9fafb;" />
+            <img src="${optimizeImageUrl(photo.url, 800)}" alt="${escapeHtml(photo.caption || 'Evidencia fotografica')}" style="max-width:100%; max-height:200px; object-fit:contain; display:block; border:1px solid #e5e7eb; background:#f9fafb;" />
             ${photo.caption ? `<p style="font-size:9pt; color:#6b7280; margin-top:3px;">${escapeHtml(photo.caption)}</p>` : ''}
         </div>
     `).join('');
@@ -111,7 +121,7 @@ const buildAreaPhotos = (photos) => {
             <div style="display:flex; flex-wrap:wrap; gap:12px;">
                 ${photos.map((photo) => `
                     <div style="flex:1; min-width:200px; max-width:48%; break-inside:avoid;">
-                        <img src="${photo.url}" alt="${escapeHtml(photo.caption || 'Foto del area')}" style="width:100%; max-height:220px; object-fit:contain; display:block; border:1px solid #e5e7eb; background:#f9fafb;" />
+                        <img src="${optimizeImageUrl(photo.url, 800)}" alt="${escapeHtml(photo.caption || 'Foto del area')}" style="width:100%; max-height:220px; object-fit:contain; display:block; border:1px solid #e5e7eb; background:#f9fafb;" />
                         ${photo.caption ? `<p style="font-size:9pt; color:#6b7280; margin-top:4px; font-style:italic;">${escapeHtml(photo.caption)}</p>` : '<p style="font-size:9pt; color:#dc2626; margin-top:4px; font-style:italic;">Nota obligatoria pendiente</p>'}
                     </div>
                 `).join('')}
@@ -288,7 +298,7 @@ const buildInspectionReportHtml = (reportData) => {
 
         ${buildingPhoto ? `
         <div style="border:1px solid #d1d5db; overflow:hidden; margin-top:6mm; display:flex; justify-content:center; background:#f9fafb;">
-            <img src="${buildingPhoto.url}" alt="Foto del edificio" style="max-width:100%; max-height:280px; object-fit:contain; display:block;" />
+            <img src="${optimizeImageUrl(buildingPhoto.url, 1000)}" alt="Foto del edificio" style="max-width:100%; max-height:280px; object-fit:contain; display:block;" />
         </div>
         ` : `
         <div style="width:100%; height:180px; display:flex; align-items:center; justify-content:center; color:#9ca3af; font-style:italic; background:#f9fafb; border:1px solid #e5e7eb;">
@@ -338,7 +348,7 @@ const buildInspectionReportHtml = (reportData) => {
             <div style="width:50%; ${BOX} display:flex; flex-direction:column; align-items:center; justify-content:flex-start;">
                 <p style="font-size:12pt; font-weight:700; color:#111827; margin-bottom:10px; text-align:center;">PLANO DEL INMUEBLE</p>
                 ${planPhoto ? `
-                    <img src="${planPhoto.url}" alt="Plano del inmueble" style="width:100%; max-height:320px; object-fit:contain; display:block; border:1px solid #e5e7eb;" />
+                    <img src="${optimizeImageUrl(planPhoto.url, 1000)}" alt="Plano del inmueble" style="width:100%; max-height:320px; object-fit:contain; display:block; border:1px solid #e5e7eb;" />
                     ${planPhoto.caption ? `<p style="font-size:9pt; color:#6b7280; margin-top:6px; text-align:center;">${escapeHtml(planPhoto.caption)}</p>` : ''}
                 ` : `
                     <div style="width:100%; height:240px; display:flex; align-items:center; justify-content:center; color:#9ca3af; font-style:italic; background:#f9fafb; border:1px solid #e5e7eb;">
@@ -383,7 +393,7 @@ const buildInspectionReportHtml = (reportData) => {
                     ${escapeHtml(section.title)}
                 </h2>
                 <div style="border:1px solid #d1d5db; border-radius:4px; overflow:hidden; background:#f9fafb; display:flex; flex-direction:column; align-items:center; padding:12px;">
-                    <img src="${section.mainPhoto.url}" alt="${escapeHtml(section.mainPhoto.caption || 'Foto principal del area')}" style="width:100%; max-height:620px; object-fit:contain; display:block;" />
+                    <img src="${optimizeImageUrl(section.mainPhoto.url, 1200)}" alt="${escapeHtml(section.mainPhoto.caption || 'Foto principal del area')}" style="width:100%; max-height:620px; object-fit:contain; display:block;" />
                     ${section.mainPhoto.caption ? `<p style="font-size:11pt; color:#374151; margin-top:12px; text-align:center; font-weight:600;">${escapeHtml(section.mainPhoto.caption)}</p>` : ''}
                 </div>
                 <p style="font-size:9.5pt; color:#6b7280; font-style:italic; margin-top:8px;">

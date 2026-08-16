@@ -40,8 +40,8 @@ export const ModuleObservaciones = memo(({
 
     const handleSubmitPhoto = (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        if (!selectedAreaId || !file || !description.trim()) return;
-        onUploadPhoto(e, 'area', description.trim(), file, selectedAreaId);
+        if (!selectedAreaId || !file) return;
+        onUploadPhoto(e, 'area', description.trim() || 'Evidencia fotográfica', file, selectedAreaId);
         setFile(null);
         setDescription('');
     };
@@ -152,12 +152,12 @@ export const ModuleObservaciones = memo(({
                     <img src={URL.createObjectURL(file)} alt="Preview" className="h-32 w-full rounded-xl object-cover sm:h-40" />
                     <AutoResizeTextarea
                         minHeightClass="!min-h-[220px] sm:!min-h-[260px]"
-                        placeholder="Descripción de la observación (requerido)"
+                        placeholder="Descripción de la observación (opcional)"
                         value={description}
                         onChange={setDescription}
                     />
                     <div className="flex gap-2">
-                        <button type="submit" className="btn btn-primary text-sm flex-1" disabled={!description.trim() || busyAction === 'photo-area'}>
+                        <button type="submit" className="btn btn-primary text-sm flex-1" disabled={!file || busyAction === 'photo-area'}>
                             {busyAction === 'photo-area' ? 'Guardando...' : 'Guardar'}
                         </button>
                         <button type="button" onClick={() => { setFile(null); setDescription(''); }} className="btn btn-secondary text-sm" disabled={busyAction === 'photo-area'}>

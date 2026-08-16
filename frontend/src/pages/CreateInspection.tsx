@@ -253,6 +253,7 @@ export const CreateInspection = () => {
                 priority: formData.priority,
                 technicalReport: formData.technicalReport,
                 observations: formData.observations.trim() || undefined,
+                squareMeters: formData.squareMeters.trim() ? Number(formData.squareMeters) : undefined,
             };
 
             const payload: CreateInspectionDto & { state?: string } = {
@@ -816,6 +817,22 @@ export const CreateInspection = () => {
                                             />
                                         </div>
 
+                                        <div>
+                                            <label htmlFor="squareMeters" className="mb-2 block text-sm font-medium">
+                                                Área (m²)
+                                            </label>
+                                            <input
+                                                id="squareMeters"
+                                                name="squareMeters"
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                value={formData.squareMeters}
+                                                onChange={handleChange}
+                                                className="input"
+                                                placeholder="Ej: 75.50"
+                                            />
+                                        </div>
                                     </div>
                                 </section>
 

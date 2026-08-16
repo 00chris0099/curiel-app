@@ -28,7 +28,7 @@ const areaUpdateSchema = Joi.object({
 const observationCreateSchema = Joi.object({
     areaId: Joi.string().uuid().required(),
     title: Joi.string().trim().min(2).required(),
-    description: Joi.string().trim().min(3).required(),
+    description: Joi.string().trim().optional().allow('', null).default(''),
     severity: Joi.string().valid('leve', 'media', 'alta', 'critica').required(),
     type: Joi.string().valid('humedad', 'electrico', 'sanitario', 'acabados', 'carpinteria', 'estructura', 'seguridad', 'otro').required(),
     recommendation: Joi.string().trim().optional().allow('', null),
@@ -40,7 +40,7 @@ const observationCreateSchema = Joi.object({
 const observationUpdateSchema = Joi.object({
     areaId: Joi.string().uuid().optional(),
     title: Joi.string().trim().min(2).optional(),
-    description: Joi.string().trim().min(3).optional(),
+    description: Joi.string().trim().optional().allow('', null),
     severity: Joi.string().valid('leve', 'media', 'alta', 'critica').optional(),
     type: Joi.string().valid('humedad', 'electrico', 'sanitario', 'acabados', 'carpinteria', 'estructura', 'seguridad', 'otro').optional(),
     recommendation: Joi.string().trim().optional().allow('', null),

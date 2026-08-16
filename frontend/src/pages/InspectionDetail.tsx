@@ -11,7 +11,7 @@ import { useAuthStore } from '../store/authStore';
 import type { Inspection, InspectionStatus, UpdateInspectionStatusDto } from '../types';
 import { inspectionStatusIconMap } from '../utils/iconSystem';
 import { canGenerateInspectionReport } from '../utils/inspectionPermissions';
-import { getInspectionLocationLabel, getInspectorName } from '../utils/inspectionMetadata';
+import { getInspectionLocationLabel, getInspectorName, parseDepartmentInspectionNotes, buildDepartmentInspectionNotes } from '../utils/inspectionMetadata';
 import { saveCachedInspectionDetail, getCachedInspectionDetail } from '../utils/offlineDb';
 import {
     buildStatusUpdatePayload,
@@ -64,6 +64,48 @@ export const InspectionDetail = () => {
     const [showPreview, setShowPreview] = useState(false);
     const [statusAction, setStatusAction] = useState<StatusActionConfig | null>(null);
     const [statusModal, setStatusModal] = useState<StatusModalState>(emptyStatusModalState);
+    const [isEditingSquareMeters, setIsEditingSquareMeters] = useState(false);
+    const [squareMetersInput, setSquareMetersInput] = useState('');
+
+    const userRole = user?.role || '';
+    const isMasterAdmin = Boolean(user?.isMasterAdmin);
+    const canEditSquareMeters = isMasterAdmin || userRole === 'admin' || userRole === 'arquitecto';
+
+    const handleSaveSquareMeters = async () => {
+        if (!inspection || !id) return;
+        try {
+            setIsUpdating(true);
+            const { metadata, plainNotes } = parseDepartmentInspectionNotes(inspection.notes);
+            const updatedMetadata = {
+                ...(metadata || {
+                    schema: 'department-inspection-v1',
+                    serviceType: inspection.inspectionType || 'General',
+                    scheduledTime: '09:00',
+                    contactChannel: 'WhatsApp',
+                    district: inspection.state || 'Lima',
+                    exactAddress: inspection.address,
+                    propertyType: 'Departamento',
+                    apartmentNumber: '---',
+                    propertyCondition: 'Usado',
+                    reviewPoints: [],
+                    priority: 'Normal',
+                    technicalReport: 'Sí',
+                }),
+                squareMeters: squareMetersInput.trim() ? Number(squareMetersInput) : undefined,
+            };
+            const newNotes = buildDepartmentInspectionNotes(updatedMetadata as any);
+            const fullNotes = plainNotes ? `${newNotes}\n\n${plainNotes}` : newNotes;
+
+            await inspectionService.updateInspection(id, { notes: fullNotes });
+            toast.success('Área (m²) actualizada exitosamente');
+            setIsEditingSquareMeters(false);
+            await loadInspection();
+        } catch (err: unknown) {
+            toast.error(getApiErrorMessage(err, 'Error al actualizar área'));
+        } finally {
+            setIsUpdating(false);
+        }
+    };
 
     const loadInspection = useCallback(async () => {
         if (!id) {
@@ -352,6 +394,60 @@ export const InspectionDetail = () => {
                                 <p className="mt-0.5 text-sm font-medium text-gray-800 dark:text-gray-200">
                                     {new Date(inspection.scheduledDate).toLocaleString('es-PE', { dateStyle: 'full', timeStyle: 'short' })}
                                 </p>
+                            </div>
+
+                            <div>
+                                <div className="flex items-center justify-between">
+                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500">Área del Inmueble (m²)</p>
+                                    {canEditSquareMeters && !isEditingSquareMeters && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const { metadata } = parseDepartmentInspectionNotes(inspection.notes);
+                                                setSquareMetersInput(metadata?.squareMeters?.toString() || '');
+                                                setIsEditingSquareMeters(true);
+                                            }}
+                                            className="text-xs font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400"
+                                        >
+                                            Editar m²
+                                        </button>
+                                    )}
+                                </div>
+                                {isEditingSquareMeters ? (
+                                    <div className="mt-1 flex items-center gap-2">
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            value={squareMetersInput}
+                                            onChange={(e) => setSquareMetersInput(e.target.value)}
+                                            className="input py-1 px-2 text-xs w-28"
+                                            placeholder="Ej: 75.50"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={handleSaveSquareMeters}
+                                            disabled={isUpdating}
+                                            className="rounded bg-blue-600 px-2 py-1 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50"
+                                        >
+                                            Guardar
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsEditingSquareMeters(false)}
+                                            className="rounded bg-gray-200 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300"
+                                        >
+                                            Cancelar
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <p className="mt-0.5 text-sm font-semibold text-gray-900 dark:text-white">
+                                        {(() => {
+                                            const { metadata } = parseDepartmentInspectionNotes(inspection.notes);
+                                            return metadata?.squareMeters ? `${metadata.squareMeters} m²` : 'No registrado';
+                                        })()}
+                                    </p>
+                                )}
                             </div>
                         </div>
                     </div>

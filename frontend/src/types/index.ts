@@ -237,6 +237,7 @@ export interface DepartmentInspectionMetadata {
     priority: InspectionPriority;
     technicalReport: YesNoOption;
     observations?: string;
+    squareMeters?: number | string;
 }
 
 export interface Inspection {

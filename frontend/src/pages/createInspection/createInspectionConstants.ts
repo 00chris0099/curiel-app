@@ -69,6 +69,7 @@ export type DepartmentInspectionFormState = {
     priority: InspectionPriority;
     observations: string;
     technicalReport: YesNoOption;
+    squareMeters: string;
 };
 
 export const initialFormState: DepartmentInspectionFormState = {
@@ -92,4 +93,5 @@ export const initialFormState: DepartmentInspectionFormState = {
     priority: 'Normal',
     observations: '',
     technicalReport: 'Sí',
+    squareMeters: '',
 };

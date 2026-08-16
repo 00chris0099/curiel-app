@@ -275,27 +275,23 @@ class InspectionReportService {
             }
 
             const filename = this._buildFileName(inspection);
-            let cloudUrl = null;
-            let cloudExpiresAt = null;
-
-            try {
-                const cloudResult = await uploadPdf(pdfBuffer, filename.replace('.pdf', ''));
-                cloudUrl = cloudResult.url;
-                cloudExpiresAt = cloudResult.expiresAt;
-                logger.info('PDF subido a Cloudinary', { url: cloudUrl });
-
-                await pdfCacheService.saveCache(inspectionId, cloudUrl, contentHash);
-            } catch (cloudError) {
-                logger.warn('Fallo subida a Cloudinary, PDF disponible solo localmente', { error: cloudError.message });
-            }
-
             pdfBufferCache.set(inspectionId, { buffer: pdfBuffer, ts: Date.now() });
+
+            // Subir a Cloudinary en segundo plano de forma no bloqueante
+            uploadPdf(pdfBuffer, filename.replace('.pdf', ''))
+                .then(async (cloudResult) => {
+                    logger.info('PDF subido a Cloudinary en segundo plano', { url: cloudResult.url });
+                    await pdfCacheService.saveCache(inspectionId, cloudResult.url, contentHash);
+                })
+                .catch((cloudError) => {
+                    logger.warn('Fallo subida a Cloudinary en segundo plano', { error: cloudError.message });
+                });
 
             return {
                 buffer: pdfBuffer,
                 filename,
-                cloudUrl,
-                cloudExpiresAt,
+                cloudUrl: null,
+                cloudExpiresAt: null,
             };
         } catch (error) {
             logger.error('PUPPETEER_REPORT_ERROR', {
