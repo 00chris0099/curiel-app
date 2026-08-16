@@ -1,5 +1,6 @@
 import { memo, useState, useRef, type FormEvent } from 'react';
 import { CustomIcon } from '../../components/CustomIcon';
+import { AutoResizeTextarea } from '../../components/AutoResizeTextarea';
 import type { InspectionArea, InspectionObservation } from '../../types';
 import type { InspectionExecutionData } from '../../types';
 
@@ -149,12 +150,11 @@ export const ModuleObservaciones = memo(({
             {file && (
                 <form onSubmit={handleSubmitPhoto} className="space-y-3 rounded-2xl border border-dashed border-primary-300 bg-primary-50/50 p-3 dark:border-primary-700 dark:bg-primary-900/10">
                     <img src={URL.createObjectURL(file)} alt="Preview" className="h-32 w-full rounded-xl object-cover sm:h-40" />
-                    <textarea
-                        className="input !min-h-[160px] w-full text-base leading-relaxed sm:!min-h-[200px]"
+                    <AutoResizeTextarea
+                        minHeightClass="min-h-[140px]"
                         placeholder="Descripción de la observación (requerido)"
                         value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        required
+                        onChange={setDescription}
                     />
                     <div className="flex gap-2">
                         <button type="submit" className="btn btn-primary text-sm flex-1" disabled={!description.trim() || busyAction === 'photo-area'}>

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { getApiErrorMessage } from '../api/axios';
 import { CustomIcon } from '../components/CustomIcon';
+import { AutoResizeTextarea } from '../components/AutoResizeTextarea';
 import { Loader } from '../components/Loader';
 import ConnectionStatus from '../components/ConnectionStatus';
 import { useOfflineSync } from '../hooks/useOfflineSync';
@@ -588,11 +589,10 @@ export const InspectionAreaDetail = () => {
                             </div>
                             <div className="md:col-span-2">
                                 <label className="block text-sm font-medium mb-2">Descripción</label>
-                    <textarea
+                    <AutoResizeTextarea
                         value={observationForm.description}
-                        onChange={(e) => setObservationForm(prev => ({ ...prev, description: e.target.value }))}
-                        className="input !min-h-[140px] w-full text-base leading-relaxed"
-                        required
+                        onChange={(value) => setObservationForm(prev => ({ ...prev, description: value }))}
+                        minHeightClass="min-h-[140px]"
                     />
                             </div>
                         </div>

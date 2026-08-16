@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import { AutoResizeTextarea } from '../../components/AutoResizeTextarea';
 import type { SummaryFormState } from './executionTypes';
 
 type ModuleConsideracionesProps = {
@@ -17,10 +18,9 @@ export const ModuleConsideraciones = memo(({
     onSaveSummary,
 }: ModuleConsideracionesProps) => (
     <div className="space-y-3">
-        <textarea
-            className="input !min-h-[280px] w-full text-base leading-relaxed sm:!min-h-[380px]"
+        <AutoResizeTextarea
             value={summaryForm.generalConclusion}
-            onChange={(e) => onSummaryChange((current) => ({ ...current, generalConclusion: e.target.value }))}
+            onChange={(value) => onSummaryChange((current) => ({ ...current, generalConclusion: value }))}
             placeholder="Escribe las consideraciones finales y recomendaciones..."
             disabled={!canEdit}
         />

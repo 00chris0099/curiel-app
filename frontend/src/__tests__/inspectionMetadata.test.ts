@@ -22,7 +22,6 @@ const sampleMetadata: DepartmentInspectionMetadata = {
     arrivalReference: 'Frente al parque',
     propertyType: 'Departamento',
     apartmentNumber: '501',
-    floor: '5',
     propertyCondition: 'Nuevo / entrega de constructora',
     reviewPoints: ['Humedad / filtraciones'],
     priority: 'Normal',

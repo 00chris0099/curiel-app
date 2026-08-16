@@ -62,8 +62,6 @@ export type DepartmentInspectionFormState = {
     arrivalReference: string;
     propertyType: PropertyType;
     apartmentNumber: string;
-    floor: string;
-    areaSquareMeters: string;
     propertyCondition: PropertyCondition;
     reviewPoints: ReviewPoint[];
     reviewPointOther: string;
@@ -87,8 +85,6 @@ export const initialFormState: DepartmentInspectionFormState = {
     arrivalReference: '',
     propertyType: 'Departamento',
     apartmentNumber: '',
-    floor: '',
-    areaSquareMeters: '',
     propertyCondition: 'Nuevo / entrega de constructora',
     reviewPoints: [],
     reviewPointOther: '',

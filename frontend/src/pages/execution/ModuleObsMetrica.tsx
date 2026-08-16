@@ -1,5 +1,6 @@
 import { memo, useState, useEffect, useMemo } from 'react';
 import { CustomIcon } from '../../components/CustomIcon';
+import { AutoResizeTextarea } from '../../components/AutoResizeTextarea';
 import type { InspectionArea, InspectionObservation } from '../../types';
 
 type ModuleObsMetricaProps = {
@@ -82,10 +83,9 @@ export const ModuleObsMetrica = memo(({
                     </span>
                 )}
             </div>
-            <textarea
-                className="input !min-h-[280px] w-full text-base leading-relaxed sm:!min-h-[380px]"
+            <AutoResizeTextarea
                 value={text}
-                onChange={(e) => setText(e.target.value)}
+                onChange={setText}
                 placeholder="Escribe las observaciones métricas aquí..."
                 disabled={!canEdit}
             />

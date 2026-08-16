@@ -245,8 +245,6 @@ export const CreateInspection = () => {
                 arrivalReference: formData.arrivalReference.trim() || undefined,
                 propertyType: formData.propertyType,
                 apartmentNumber: formData.apartmentNumber.trim(),
-                floor: formData.floor.trim() || undefined,
-                areaSquareMeters: formData.areaSquareMeters.trim() || undefined,
                 propertyCondition: formData.propertyCondition,
                 reviewPoints: formData.reviewPoints,
                 reviewPointOther: formData.reviewPoints.includes('Otro')
@@ -815,37 +813,6 @@ export const CreateInspection = () => {
                                                 onChange={handleChange}
                                                 className="input"
                                                 placeholder="Ej: 702"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label htmlFor="floor" className="mb-2 block text-sm font-medium">
-                                                Piso
-                                            </label>
-                                            <input
-                                                id="floor"
-                                                name="floor"
-                                                type="text"
-                                                value={formData.floor}
-                                                onChange={handleChange}
-                                                className="input"
-                                                placeholder="Ej: 7"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label htmlFor="areaSquareMeters" className="mb-2 block text-sm font-medium">
-                                                Área aproximada en m²
-                                            </label>
-                                            <input
-                                                id="areaSquareMeters"
-                                                name="areaSquareMeters"
-                                                type="number"
-                                                min="0"
-                                                value={formData.areaSquareMeters}
-                                                onChange={handleChange}
-                                                className="input"
-                                                placeholder="Ej: 86"
                                             />
                                         </div>
 

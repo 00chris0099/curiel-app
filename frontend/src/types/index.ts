@@ -231,8 +231,6 @@ export interface DepartmentInspectionMetadata {
     arrivalReference?: string;
     propertyType: PropertyType;
     apartmentNumber: string;
-    floor?: string;
-    areaSquareMeters?: string;
     propertyCondition: PropertyCondition;
     reviewPoints: ReviewPoint[];
     reviewPointOther?: string;
