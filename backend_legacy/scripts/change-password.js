@@ -14,7 +14,7 @@ const changePassword = async () => {
     try {
         const { PrismaClient } = require('@prisma/client');
         const { PrismaPg } = require('@prisma/adapter-pg');
-        const { Pool } = require('pg');
+        const { createPool } = require('../src/lib/dbConnection');
 
         const DATABASE_URL = process.env.DATABASE_URL || process.env.DATABASE_URL_AUTH;
         if (!DATABASE_URL) {
@@ -22,12 +22,8 @@ const changePassword = async () => {
             process.exit(1);
         }
 
-        const sslFlag = String(process.env.DATABASE_SSL || '').toLowerCase();
-        const ssl = ['true', '1', 'yes', 'on'].includes(sslFlag) || /sslmode=(require|no-verify|prefer)/i.test(DATABASE_URL)
-            ? { rejectUnauthorized: false }
-            : undefined;
-
-        const pool = new Pool({ connectionString: DATABASE_URL, ssl });
+        // createPool sanea la URL (quita sslmode para pg >= 8.13) y resuelve SSL
+        const pool = createPool(DATABASE_URL);
         const adapter = new PrismaPg(pool);
         const prisma = new PrismaClient({ adapter });
 

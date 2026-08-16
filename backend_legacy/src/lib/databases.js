@@ -1,6 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const { PrismaPg } = require('@prisma/adapter-pg');
-const { Pool } = require('pg');
+const { createPool } = require('./dbConnection');
 
 /**
  * Resuelve la URL de la base de datos.
@@ -21,28 +21,9 @@ function resolveDatabaseUrl() {
     );
 }
 
-/**
- * Detección de SSL para PostgreSQL/Supabase.
- * pg (node-postgres) NO parsea sslmode desde la URL, así que lo traducimos
- * manualmente. Se activa con DATABASE_SSL=true o sslmode=require/no-verify
- * en la URL.
- */
-function resolveSsl(databaseUrl) {
-    const sslFlag = String(process.env.DATABASE_SSL || '').toLowerCase();
-    if (['true', '1', 'yes', 'on'].includes(sslFlag)) {
-        return { rejectUnauthorized: false };
-    }
-    if (/sslmode=(require|no-verify|prefer)/i.test(databaseUrl || '')) {
-        return { rejectUnauthorized: false };
-    }
-    return undefined;
-}
-
 function createClient(databaseUrl) {
-    const pool = new Pool({
-        connectionString: databaseUrl,
-        ssl: resolveSsl(databaseUrl),
-    });
+    // createPool sanea la URL (quita sslmode para pg >= 8.13) y resuelve SSL
+    const pool = createPool(databaseUrl);
     const adapter = new PrismaPg(pool);
     return new PrismaClient({
         adapter,

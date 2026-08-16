@@ -11,12 +11,8 @@ const { Client } = require('pg');
 
 const FIXES_DIR = path.join(__dirname, 'sql-fixes');
 
-function resolveSsl(url) {
-    const flag = String(process.env.DATABASE_SSL || '').toLowerCase();
-    if (['true', '1', 'yes', 'on'].includes(flag)) return { rejectUnauthorized: false };
-    if (/sslmode=(require|no-verify|prefer)/i.test(url || '')) return { rejectUnauthorized: false };
-    return false;
-}
+// pg >= 8.13 trata sslmode=require como verify-full; sanea la URL y fuerza ssl.
+const { sanitizeDatabaseUrl, resolveSsl } = require('../src/lib/dbConnection');
 
 const DATABASES = process.env.DATABASE_URL
     ? [{ name: 'unificada', url: process.env.DATABASE_URL }]
@@ -45,7 +41,7 @@ async function runFixes() {
     for (const db of DATABASES) {
         if (!db.url) continue;
 
-        const client = new Client({ connectionString: db.url, ssl: resolveSsl(db.url) });
+        const client = new Client({ connectionString: sanitizeDatabaseUrl(db.url), ssl: resolveSsl(db.url) });
         try {
             await client.connect();
 

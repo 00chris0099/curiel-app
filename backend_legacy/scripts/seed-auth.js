@@ -2,7 +2,7 @@ require('dotenv').config();
 const bcrypt = require('bcryptjs');
 const { PrismaClient } = require('@prisma/client');
 const { PrismaPg } = require('@prisma/adapter-pg');
-const { Pool } = require('pg');
+const { createPool } = require('../src/lib/dbConnection');
 
 // Base única (DATABASE_URL) o legacy (DATABASE_URL_AUTH)
 const DATABASE_URL = process.env.DATABASE_URL || process.env.DATABASE_URL_AUTH;
@@ -12,14 +12,8 @@ if (!DATABASE_URL) {
     process.exit(1);
 }
 
-function resolveSsl(url) {
-    const flag = String(process.env.DATABASE_SSL || '').toLowerCase();
-    if (['true', '1', 'yes', 'on'].includes(flag)) return { rejectUnauthorized: false };
-    if (/sslmode=(require|no-verify|prefer)/i.test(url || '')) return { rejectUnauthorized: false };
-    return undefined;
-}
-
-const pool = new Pool({ connectionString: DATABASE_URL, ssl: resolveSsl(DATABASE_URL) });
+// createPool sanea la URL (quita sslmode para pg >= 8.13) y resuelve SSL
+const pool = createPool(DATABASE_URL);
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 

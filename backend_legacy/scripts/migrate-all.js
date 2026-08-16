@@ -67,13 +67,9 @@ const TEMP_SQL = path.join(ROOT, 'prisma', 'temp_migration.sql');
 const ALREADY_EXISTS_CODES = new Set(['42710', '42P07', '42P16', '23505']);
 const ALREADY_EXISTS_MESSAGES = ['already exists', 'duplicate_object', 'duplicate relation'];
 
-// pg no parsea sslmode desde la URL; lo traducimos manualmente.
-function resolveSsl(url) {
-    const flag = String(process.env.DATABASE_SSL || '').toLowerCase();
-    if (['true', '1', 'yes', 'on'].includes(flag)) return { rejectUnauthorized: false };
-    if (/sslmode=(require|no-verify|prefer)/i.test(url || '')) return { rejectUnauthorized: false };
-    return false;
-}
+// pg >= 8.13 trata sslmode=require como verify-full y pisa nuestra opción ssl.
+// Sanear la URL (quitar sslmode) y pasar ssl explícito es la solución robusta.
+const { sanitizeDatabaseUrl, resolveSsl } = require('../src/lib/dbConnection');
 
 function isAlreadyExistsError(err) {
     if (ALREADY_EXISTS_CODES.has(err.code)) return true;
@@ -82,7 +78,7 @@ function isAlreadyExistsError(err) {
 }
 
 async function applySql(url, sql, migrationName) {
-    const client = new Client({ connectionString: url, ssl: resolveSsl(url) });
+    const client = new Client({ connectionString: sanitizeDatabaseUrl(url), ssl: resolveSsl(url) });
     await client.connect();
 
     try {

@@ -16,12 +16,8 @@ const ROOT = path.resolve(__dirname, '..');
 const UNIFIED_SCHEMA = 'prisma/schema.prisma';
 const SINGLE_URL = process.env.DATABASE_URL || null;
 
-function resolveSsl(url) {
-    const flag = String(process.env.DATABASE_SSL || '').toLowerCase();
-    if (['true', '1', 'yes', 'on'].includes(flag)) return { rejectUnauthorized: false };
-    if (/sslmode=(require|no-verify|prefer)/i.test(url || '')) return { rejectUnauthorized: false };
-    return false;
-}
+// pg >= 8.13 trata sslmode=require como verify-full; sanea la URL y fuerza ssl.
+const { sanitizeDatabaseUrl, resolveSsl } = require('../src/lib/dbConnection');
 
 const MODULES = [
     {
@@ -42,7 +38,7 @@ const MODULES = [
 ];
 
 async function applySql(url, sql, migrationName) {
-    const client = new Client({ connectionString: url, ssl: resolveSsl(url) });
+    const client = new Client({ connectionString: sanitizeDatabaseUrl(url), ssl: resolveSsl(url) });
     await client.connect();
     try {
         await client.query('BEGIN');
