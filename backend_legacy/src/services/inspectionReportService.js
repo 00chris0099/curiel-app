@@ -9,6 +9,62 @@ const { uploadPdf } = require('../utils/cloudinaryStorage');
 const pdfCacheService = require('./pdfCacheService');
 const adminSignatureService = require('./adminSignatureService');
 
+/**
+ * Fetches a Cloudinary (or any HTTP) image URL and returns a base64 data URI.
+ * Falls back to the original URL if the fetch fails or times out.
+ * @param {string} url
+ * @param {number} [width=800]
+ * @returns {Promise<string>}
+ */
+async function fetchImageAsBase64(url, width = 800) {
+    if (!url || typeof url !== 'string') return url || '';
+
+    // Build an optimized Cloudinary URL before fetching
+    let fetchUrl = url;
+    if (url.includes('res.cloudinary.com') && url.includes('/upload/') &&
+        !url.includes('/upload/f_auto') && !url.includes('/upload/w_')) {
+        fetchUrl = url.replace('/upload/', `/upload/f_auto,q_auto,w_${width}/`);
+    }
+
+    try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 5000);
+        const response = await fetch(fetchUrl, { signal: controller.signal });
+        clearTimeout(timer);
+        if (!response.ok) return url;
+        const arrayBuffer = await response.arrayBuffer();
+        const contentType = response.headers.get('content-type') || 'image/jpeg';
+        const base64 = Buffer.from(arrayBuffer).toString('base64');
+        return `data:${contentType.split(';')[0]};base64,${base64}`;
+    } catch {
+        return url; // fallback to original URL on any error
+    }
+}
+
+/**
+ * Converts all photo `url` fields in the photos array to base64 data URIs.
+ * Fetches up to `concurrency` images in parallel.
+ * @param {Array<{url?: string, [key: string]: any}>} photos
+ * @param {number} [concurrency=6]
+ * @returns {Promise<Array>}
+ */
+async function prefetchPhotosAsBase64(photos, concurrency = 6) {
+    if (!photos || !photos.length) return photos;
+
+    const results = [...photos];
+    for (let i = 0; i < results.length; i += concurrency) {
+        const batch = results.slice(i, i + concurrency);
+        await Promise.all(
+            batch.map(async (photo, batchIdx) => {
+                if (!photo || !photo.url) return;
+                const b64 = await fetchImageAsBase64(photo.url, 800);
+                results[i + batchIdx] = { ...photo, url: b64 };
+            })
+        );
+    }
+    return results;
+}
+
 const severityOrder = {
     critica: 0,
     alta: 1,
@@ -213,16 +269,33 @@ class InspectionReportService {
         }
 
         const recommendationGroups = this._buildRecommendationGroups(sortedObservations, summary);
+
+        // Pre-fetch all photos as base64 so Puppeteer makes zero external requests.
+        // This moves the network wait to Node.js (fast, no Chromium thread deadlocks).
+        logger.info('Pre-fetching photos as base64', { count: serializedPhotos.length, inspectionId });
+        const base64Photos = await prefetchPhotosAsBase64(serializedPhotos, 6);
+
+        // Also prefetch inspector and admin signatures if they have URLs
+        let base64InspectorSig = inspectorSignature ? { ...inspectorSignature } : null;
+        if (base64InspectorSig?.url) {
+            base64InspectorSig.url = await fetchImageAsBase64(base64InspectorSig.url, 400);
+        }
+        let base64AdminSig = adminSignature ? { ...adminSignature } : null;
+        if (base64AdminSig?.url) {
+            base64AdminSig.url = await fetchImageAsBase64(base64AdminSig.url, 400);
+        }
+
+        logger.info('Photos pre-fetched, building HTML', { inspectionId });
         const html = buildInspectionReportHtml({
             inspection: { ...inspection },
             metadata,
             areas: sortedAreas,
             observations: sortedObservations,
-            photos: serializedPhotos,
+            photos: base64Photos,
             summary: summary ? { ...summary } : null,
             recommendations: recommendationGroups,
-            inspectorSignature: inspectorSignature ? { ...inspectorSignature } : null,
-            adminSignature,
+            inspectorSignature: base64InspectorSig,
+            adminSignature: base64AdminSig,
             logoUrl: config.pdf.companyLogo,
             generatedAt: new Date().toISOString()
         });
@@ -240,19 +313,9 @@ class InspectionReportService {
             page.setDefaultNavigationTimeout(60000);
             page.setDefaultTimeout(60000);
             await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 60000 });
-            await Promise.race([
-                page.evaluate(() => Promise.all(
-                    // eslint-disable-next-line no-undef
-                    Array.from(document.images).map(img =>
-                        img.complete ? Promise.resolve() : new Promise((res) => {
-                            img.onload = res;
-                            img.onerror = res;
-                            setTimeout(res, 2000);
-                        })
-                    )
-                )),
-                new Promise((res) => setTimeout(res, 4000))
-            ]);
+            // All images are now base64 data URIs — no external requests needed.
+            // Just give Chromium a tiny moment to finish layout rendering.
+            await new Promise((res) => setTimeout(res, 500));
 
             const pdfBinary = await page.pdf({
                 format: 'A4',
