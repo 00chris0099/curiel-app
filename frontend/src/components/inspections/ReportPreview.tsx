@@ -374,23 +374,31 @@ export const ReportPreview = ({ inspectionId, projectName, isOpen, onClose }: Re
                     {!isLoading && !error && pageCount > 0 && (
                         <div
                             ref={scrollRef}
-                            className="h-full overflow-auto flex flex-col items-center py-4 px-2 sm:px-4 touch-pan-y"
+                            className="h-full w-full overflow-auto flex flex-col items-center py-4 px-2 sm:px-4 touch-pan-y"
                         >
-                            <div className="flex flex-col items-center" style={{ gap: `${PAGE_GAP}px` }}>
+                            <div
+                                className="flex flex-col items-center"
+                                style={{
+                                    width: `${Math.max(scaledWidth, 300)}px`,
+                                    minWidth: '100%',
+                                    gap: `${PAGE_GAP}px`,
+                                }}
+                            >
                                 {Array.from({ length: pageCount }, (_, i) => i + 1).map((pageNum) => (
                                     <div
                                         key={pageNum}
-                                        className="relative flex justify-center shrink-0"
+                                        className="relative flex justify-center shrink-0 w-full overflow-visible"
                                         style={{
-                                            width: `${scaledWidth}px`,
-                                            height: `${scaledHeight + 24}px`,
+                                            height: `${scaledHeight + 28}px`,
                                         }}
                                     >
                                         <div
                                             style={{
                                                 width: `${BASE_WIDTH}px`,
-                                                transform: `scale(${scale})`,
-                                                transformOrigin: 'top left',
+                                                position: 'absolute',
+                                                left: '50%',
+                                                transform: `translateX(-50%) scale(${scale})`,
+                                                transformOrigin: 'top center',
                                             }}
                                         >
                                             {/* Page canvas */}
